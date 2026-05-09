@@ -39,7 +39,7 @@ export function PrTracesList() {
           {traces.map((t) => (
             <Link
               key={t.short_id}
-              to={`/${t.owner_login}/${params.repo}/pull/${t.pr_number}/${t.short_id}`}
+              to={`/${params.owner}/${params.repo}/pull/${t.pr_number}/${t.short_id}`}
               className={styles.item}
               aria-label={`Open trace ${t.short_id}`}
             >
