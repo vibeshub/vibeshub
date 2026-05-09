@@ -39,7 +39,17 @@ def create_app() -> FastAPI:
         Path(__file__).resolve().parent.parent / "frontend_dist"
     )
     if (frontend_dist / "index.html").is_file():
-        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="spa")
+        if (frontend_dist / "assets").is_dir():
+            app.mount(
+                "/assets",
+                StaticFiles(directory=frontend_dist / "assets"),
+                name="spa-assets",
+            )
+        index_html = (frontend_dist / "index.html").read_text()
+
+        @app.get("/{full_path:path}", response_class=HTMLResponse)
+        async def _spa(full_path: str) -> str:
+            return index_html
     else:
         @app.get("/", response_class=HTMLResponse)
         async def _root() -> str:
