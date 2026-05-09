@@ -116,7 +116,14 @@ async def delete_trace(
         raise HTTPException(status_code=403, detail="not the trace owner")
 
     from app.storage.models import utcnow
+    blob_path = trace.blob_path
     trace.deleted_at = utcnow()
-    await blob_store.delete(trace.blob_path)
     await session.commit()
+    # Best-effort blob delete after the soft-delete is durable. If this
+    # fails the trace is already invisible to readers (deleted_at filter);
+    # the orphan blob can be reaped later.
+    try:
+        await blob_store.delete(blob_path)
+    except Exception:
+        pass
     return Response(status_code=204)
