@@ -54,7 +54,7 @@ class Trace(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    render: Mapped[Optional["Render"]] = relationship(back_populates="trace", uselist=False)
+    renders: Mapped[list["Render"]] = relationship(back_populates="trace")
 
 
 class Render(Base):
@@ -63,10 +63,10 @@ class Render(Base):
     trace_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("traces.id", ondelete="CASCADE"), primary_key=True
     )
+    renderer_version: Mapped[str] = mapped_column(String(64), primary_key=True)
     html: Mapped[str] = mapped_column(Text)
     rendered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
-    renderer_version: Mapped[str] = mapped_column(String(64))
 
-    trace: Mapped[Trace] = relationship(back_populates="render")
+    trace: Mapped[Trace] = relationship(back_populates="renders")
