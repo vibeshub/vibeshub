@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:deploy": "npm run build && bash scripts/copy-dist-to-backend.sh"
+    "build:deploy": "npm run build && bash scripts/copy-dist-to-backend.sh",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
   },
   "dependencies": {
     "react": "^19.2.6",
@@ -17,6 +18,7 @@
     "react-router-dom": "^7.15.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^25.6.2",
