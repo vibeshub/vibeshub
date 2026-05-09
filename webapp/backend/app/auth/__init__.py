@@ -1,3 +1,3 @@
-from app.auth.github import GitHubClient, GitHubUser, GitHubPull, GitHubAuthError
+from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient, GitHubPull, GitHubUser
 
-__all__ = ["GitHubClient", "GitHubUser", "GitHubPull", "GitHubAuthError"]
+__all__ = ["GitHubAPIError", "GitHubAuthError", "GitHubClient", "GitHubPull", "GitHubUser"]

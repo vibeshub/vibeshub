@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pr_url import parse_pr_url
 from app.api.schemas import IngestRequest, IngestResponse
-from app.auth.github import GitHubAuthError, GitHubClient
+from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
 from app.redact import redact_jsonl
 from app.short_id import generate
@@ -52,7 +52,13 @@ async def ingest(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    pr = await github.get_pull(token, parsed.owner, parsed.repo, parsed.number)
+    try:
+        pr = await github.get_pull(token, parsed.owner, parsed.repo, parsed.number)
+    except GitHubAPIError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=f"PR not found: {body.pr_url}")
+        raise HTTPException(status_code=502, detail=f"github upstream error: {msg}")
 
     if pr.repo_is_private:
         raise HTTPException(
