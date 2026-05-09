@@ -15,10 +15,20 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
+# Strip async driver suffixes; keep psycopg3 as the sync driver too
+# (postgresql+psycopg works for both sync and async).
 _url = make_url(settings.database_url)
+_drivername_map = {
+    "sqlite+aiosqlite": "sqlite",
+    "postgresql+psycopg_async": "postgresql+psycopg",
+    # bare "postgresql" defaults to psycopg2 in SQLAlchemy; force psycopg3
+    "postgresql": "postgresql+psycopg",
+    "postgres": "postgresql+psycopg",
+}
+_sync_drv = _drivername_map.get(_url.drivername, _url.drivername)
 config.set_main_option(
     "sqlalchemy.url",
-    str(_url.set(drivername=_url.drivername.split("+")[0])),
+    str(_url.set(drivername=_sync_drv)),
 )
 
 target_metadata = Base.metadata
