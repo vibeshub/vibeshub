@@ -79,3 +79,70 @@ async def test_get_trace_by_short_id(client, respx_mock):
 async def test_get_trace_404(client):
     response = client.get("/api/traces/notfound99")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_trace_by_owner(client, respx_mock):
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/alice/repo/pulls/3"
+    ).respond(
+        200,
+        json={
+            "number": 3, "title": "x", "user": {"login": "alice"},
+            "html_url": "https://github.com/alice/repo/pull/3",
+            "head": {"repo": {"private": False, "full_name": "alice/repo"}},
+            "base": {"repo": {"private": False, "full_name": "alice/repo"}},
+        },
+    )
+    short_id = client.post(
+        "/api/ingest",
+        json={"transcript_jsonl": "{}\n",
+              "pr_url": "https://github.com/alice/repo/pull/3"},
+        headers={"Authorization": "Bearer ghp_test"},
+    ).json()["short_id"]
+
+    resp = client.delete(
+        f"/api/traces/{short_id}",
+        headers={"Authorization": "Bearer ghp_test"},
+    )
+    assert resp.status_code == 204
+
+    assert client.get(f"/api/traces/{short_id}").status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_trace_rejects_other_user(client, respx_mock):
+    # First user (alice) creates the trace
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/alice/repo/pulls/3"
+    ).respond(
+        200,
+        json={
+            "number": 3, "title": "x", "user": {"login": "alice"},
+            "html_url": "https://github.com/alice/repo/pull/3",
+            "head": {"repo": {"private": False, "full_name": "alice/repo"}},
+            "base": {"repo": {"private": False, "full_name": "alice/repo"}},
+        },
+    )
+    short_id = client.post(
+        "/api/ingest",
+        json={"transcript_jsonl": "{}\n",
+              "pr_url": "https://github.com/alice/repo/pull/3"},
+        headers={"Authorization": "Bearer ghp_test"},
+    ).json()["short_id"]
+
+    # bob attempts to delete
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "bob", "id": 8}
+    )
+    resp = client.delete(
+        f"/api/traces/{short_id}",
+        headers={"Authorization": "Bearer ghp_test_bob"},
+    )
+    assert resp.status_code == 403

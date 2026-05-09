@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import TraceSummary
-from app.deps import get_blob_store, get_session
+from app.auth.github import GitHubAuthError, GitHubClient
+from app.deps import get_blob_store, get_github, get_session
 from app.short_id import looks_like_short_id
 from app.storage.blob import BlobStore
 from app.storage.models import Trace
@@ -81,3 +84,39 @@ async def get_trace_raw(
         raise HTTPException(status_code=404, detail="not found")
     data = await blob_store.get(trace.blob_path)
     return Response(content=data, media_type="application/x-ndjson")
+
+
+@router.delete("/api/traces/{short_id}", status_code=204)
+async def delete_trace(
+    short_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+    session: AsyncSession = Depends(get_session),
+    blob_store: BlobStore = Depends(get_blob_store),
+    github: GitHubClient = Depends(get_github),
+):
+    if not looks_like_short_id(short_id):
+        raise HTTPException(status_code=404)
+
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="missing bearer token")
+    token = authorization.split(None, 1)[1].strip()
+
+    try:
+        user = await github.verify_token(token)
+    except GitHubAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    stmt = select(Trace).where(
+        Trace.short_id == short_id, Trace.deleted_at.is_(None)
+    )
+    trace = (await session.execute(stmt)).scalar_one_or_none()
+    if trace is None:
+        raise HTTPException(status_code=404)
+    if trace.owner_login != user.login:
+        raise HTTPException(status_code=403, detail="not the trace owner")
+
+    from app.storage.models import utcnow
+    trace.deleted_at = utcnow()
+    await blob_store.delete(trace.blob_path)
+    await session.commit()
+    return Response(status_code=204)
