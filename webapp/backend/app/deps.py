@@ -14,7 +14,10 @@ from app.storage.db import create_all, engine_for, session_maker_for
 async def init_state(app: FastAPI, settings: Settings | None = None) -> None:
     settings = settings or get_settings()
     engine = engine_for(settings.database_url)
-    if settings.database_url.startswith("sqlite"):
+    # Only auto-bootstrap the schema for in-memory SQLite (tests). Any other
+    # backend — including a misconfigured file-based SQLite or Postgres —
+    # must be migrated via Alembic.
+    if ":memory:" in settings.database_url:
         await create_all(engine)
     app.state.settings = settings
     app.state.db_engine = engine
