@@ -2,9 +2,12 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.engine import make_url
 
 from app.settings import get_settings
-from app.storage.models import Base  # imported in Phase B; commented out for now
+# Base is defined in Phase B (Task B1). Alembic isn't invoked until then,
+# so this dangling import is intentional — it'll resolve when B1 lands.
+from app.storage.models import Base
 
 config = context.config
 
@@ -12,9 +15,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
+_url = make_url(settings.database_url)
 config.set_main_option(
     "sqlalchemy.url",
-    settings.database_url.replace("+aiosqlite", "").replace("+psycopg", ""),
+    str(_url.set(drivername=_url.drivername.split("+")[0])),
 )
 
 target_metadata = Base.metadata
