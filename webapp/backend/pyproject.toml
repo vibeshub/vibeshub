@@ -27,6 +27,7 @@ dev = [
 azure = [
     "azure-storage-blob>=12.19",
     "azure-identity>=1.15",
+    "aiohttp>=3.9",
 ]
 
 [build-system]

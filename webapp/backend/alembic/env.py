@@ -28,7 +28,8 @@ _drivername_map = {
 _sync_drv = _drivername_map.get(_url.drivername, _url.drivername)
 config.set_main_option(
     "sqlalchemy.url",
-    str(_url.set(drivername=_sync_drv)),
+    # str(URL) redacts the password to '***' in SQLAlchemy 2.x — must opt out.
+    _url.set(drivername=_sync_drv).render_as_string(hide_password=False),
 )
 
 target_metadata = Base.metadata
