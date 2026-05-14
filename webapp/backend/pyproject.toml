@@ -21,6 +21,12 @@ dev = [
     "pytest-asyncio>=0.24",
     "respx>=0.21",
     "aiosqlite>=0.20",
+    "azure-storage-blob>=12.19",
+    "azure-identity>=1.15",
+]
+azure = [
+    "azure-storage-blob>=12.19",
+    "azure-identity>=1.15",
 ]
 
 [build-system]

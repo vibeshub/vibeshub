@@ -8,6 +8,9 @@ class Settings(BaseSettings):
 
     database_url: str = Field(default="sqlite+aiosqlite:///:memory:")
     blob_dir: Path = Field(default=Path("/tmp/vibeshub-blobs"))
+    azure_storage_account_url: str | None = Field(default=None)
+    azure_storage_connection_string: str | None = Field(default=None)
+    azure_blob_container: str | None = Field(default=None)
     github_api_base: str = Field(default="https://api.github.com")
     max_trace_bytes: int = Field(default=50 * 1024 * 1024)
     renderer_version: str = Field(default="claude-code-log:v1")
