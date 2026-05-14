@@ -5,12 +5,18 @@ via `gh pr create`, and posts a comment on the PR linking to the public viewer.
 
 ## Install
 
-Clone the vibeshub repo and add the plugin directory to Claude Code:
+Clone the vibeshub repo, register it as a local plugin marketplace, and install:
 
 ```bash
 git clone https://github.com/<your-org>/vibeshub.git ~/code/vibeshub
-claude plugin install ~/code/vibeshub/plugins/claude-code
+
+# Inside Claude Code:
+/plugin marketplace add ~/code/vibeshub
+/plugin install vibeshub@vibeshub
 ```
+
+The marketplace manifest at [.claude-plugin/marketplace.json](../../.claude-plugin/marketplace.json) points
+Claude Code at this directory.
 
 You'll also need:
 - `gh` CLI, authenticated (`gh auth login`)

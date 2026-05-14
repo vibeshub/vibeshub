@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 COPY pyproject.toml .
-RUN pip install -e .
+RUN pip install -e ".[azure]"
 
 COPY app ./app
 COPY alembic.ini .
