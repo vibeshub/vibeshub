@@ -1,0 +1,30 @@
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+.h1 {
+  font-size: 2rem;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.lede {
+  font-size: 1.1rem;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--space-6) 0;
+}
+
+.section {
+  margin-bottom: var(--space-6);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  background: var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  display: block;
+  overflow-x: auto;
+}

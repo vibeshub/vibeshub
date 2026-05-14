@@ -1,0 +1,33 @@
+# vibeshub backend
+
+FastAPI service that ingests Claude Code transcripts and serves the public viewer.
+
+## Local dev
+
+From repo root:
+
+```bash
+./env/bin/pip install -e "webapp/backend[dev]"
+cd webapp/backend
+../../env/bin/uvicorn app.main:app --reload
+```
+
+By default, the server uses an in-memory SQLite DB and a temp blob dir, both of which reset on restart. Set `VIBESHUB_DATABASE_URL=postgresql+psycopg://...` and `VIBESHUB_BLOB_DIR=/path/to/dir` for persistent local dev.
+
+## Tests
+
+```bash
+cd webapp/backend
+../../env/bin/pytest -v
+```
+
+## Environment variables
+
+| Var | Default | Notes |
+|---|---|---|
+| `VIBESHUB_DATABASE_URL` | `sqlite+aiosqlite:///:memory:` | Use Postgres in production |
+| `VIBESHUB_BLOB_DIR` | `/tmp/vibeshub-blobs` | Mount a Railway volume here in prod |
+| `VIBESHUB_GITHUB_API_BASE` | `https://api.github.com` | Override for tests |
+| `VIBESHUB_MAX_TRACE_BYTES` | `52428800` (50 MB) | Cap on transcript size |
+| `VIBESHUB_RENDERER_VERSION` | `claude-code-log:v1` | Bump to invalidate render cache |
+| `VIBESHUB_PUBLIC_BASE_URL` | `https://vibeshub.app` | Used in `trace_url` responses |

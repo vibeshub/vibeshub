@@ -1,0 +1,14 @@
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: var(--color-fg-muted);
+}
+
+.error {
+  composes: center;
+  color: var(--color-danger);
+  flex-direction: column;
+  gap: var(--space-2);
+}
