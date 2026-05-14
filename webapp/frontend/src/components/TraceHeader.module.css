@@ -1,0 +1,43 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.metaRow {
+  display: flex;
+  gap: var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 0.9rem;
+}
+
+.dot {
+  color: var(--color-border);
+}
