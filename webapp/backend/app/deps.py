@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.github import GitHubClient
 from app.settings import Settings, get_settings
-from app.storage.blob import BlobStore, LocalDirBlobStore
+from app.storage.blob import BlobStore, LocalDirBlobStore, make_azure_blob_store
 from app.storage.db import create_all, engine_for, session_maker_for
 
 
@@ -22,7 +22,10 @@ async def init_state(app: FastAPI, settings: Settings | None = None) -> None:
     app.state.settings = settings
     app.state.db_engine = engine
     app.state.session_maker = session_maker_for(engine)
-    app.state.blob_store = LocalDirBlobStore(settings.blob_dir)
+    if settings.azure_blob_container:
+        app.state.blob_store = make_azure_blob_store(settings)
+    else:
+        app.state.blob_store = LocalDirBlobStore(settings.blob_dir)
     app.state.github = GitHubClient(api_base=settings.github_api_base)
 
 
