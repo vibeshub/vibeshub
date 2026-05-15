@@ -26,4 +26,4 @@ npm run test:e2e     # playwright (boots the dev server)
 npm run build:deploy
 ```
 
-This runs `vite build`, then copies `dist/` into `webapp/backend/frontend_dist/`. The Railway Dockerfile picks up the `frontend_dist/` directory and FastAPI serves it as the SPA.
+This runs `vite build`, then copies `dist/` into `webapp/backend/frontend_dist/`. The Azure deploy Dockerfile at [`deploy/azure/Dockerfile`](../../deploy/azure/Dockerfile) picks up the `frontend_dist/` directory, and FastAPI serves it as the SPA.
