@@ -146,7 +146,7 @@ The hook script (`plugins/claude-code/hooks/on_pr_create.py`):
 ### 5.4 Configuration
 
 `plugins/claude-code/settings.example.json` documents:
-- `vibeshub.serverUrl` (default: `https://vibeshub.app`)
+- `vibeshub.serverUrl` (default: `https://vibeshub.ai`)
 - `vibeshub.skipPreview` (default: `false`) — skip the y/n prompt; off by default in v1.
 
 ## 6. Shared client library
@@ -282,7 +282,7 @@ The page is composed of:
 - One Railway service from the repo's `webapp/backend/` Dockerfile, which also `COPY`s the pre-built frontend dist.
 - Railway Postgres add-on → injected as `DATABASE_URL`.
 - Railway volume mounted at `/data/blobs` → `BLOB_DIR=/data/blobs`.
-- Custom domain (e.g., `vibeshub.app`) attached to the service.
+- Custom domain (e.g., `vibeshub.ai`) attached to the service.
 - No GitHub App, no bot account — comments are posted by the user from their machine via `gh pr comment`.
 
 ## 10. Error handling

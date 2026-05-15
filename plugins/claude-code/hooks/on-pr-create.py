@@ -60,7 +60,7 @@ def main() -> None:
         _bail(str(e))
         return
 
-    server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.app")
+    server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.ai")
 
     from reader import ClaudeCodeTranscriptReader
 
