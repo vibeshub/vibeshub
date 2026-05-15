@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     github_api_base: str = Field(default="https://api.github.com")
     max_trace_bytes: int = Field(default=50 * 1024 * 1024)
     renderer_version: str = Field(default="claude-code-log:v1")
-    public_base_url: str = Field(default="https://vibeshub.app")
+    public_base_url: str = Field(default="https://vibeshub.ai")
 
 
 def get_settings() -> Settings:

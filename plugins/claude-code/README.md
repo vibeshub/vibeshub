@@ -29,7 +29,7 @@ You'll also need:
 
 | Env var | Default | Notes |
 |---|---|---|
-| `VIBESHUB_SERVER_URL` | `https://vibeshub.app` | Override for self-hosting |
+| `VIBESHUB_SERVER_URL` | `https://vibeshub.ai` | Override for self-hosting |
 | `VIBESHUB_AUTO_YES` | unset | Set to `1` to skip the y/N preview |
 
 ## How it works

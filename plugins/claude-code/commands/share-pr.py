@@ -97,7 +97,7 @@ async def _delete(pr_url: str, server_url: str) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
-    server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.app")
+    server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.ai")
     session_id = os.environ.get("CLAUDE_SESSION_ID")
 
     if args and args[0] == "delete":
