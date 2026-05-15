@@ -8,7 +8,7 @@ via `gh pr create`, and posts a comment on the PR linking to the public viewer.
 Clone the vibeshub repo, register it as a local plugin marketplace, and install:
 
 ```bash
-git clone https://github.com/<your-org>/vibeshub.git ~/code/vibeshub
+git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub
 
 # Inside Claude Code:
 /plugin marketplace add ~/code/vibeshub

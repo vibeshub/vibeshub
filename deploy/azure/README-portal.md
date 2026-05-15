@@ -1,6 +1,6 @@
 # Deploying vibeshub to Azure (Portal, no CLI)
 
-End-to-end walkthrough using only the Azure Portal at [https://portal.azure.com](https://portal.azure.com). Companion to [README.md](README.md) (CLI version). Env var reference: `[./.env.example](./.env.example)`.
+End-to-end walkthrough using only the Azure Portal at [https://portal.azure.com](https://portal.azure.com). Companion to [README.md](README.md) (CLI version). Env var reference: [`.env.example`](./.env.example).
 
 You will create six resources, all in the **same region** (e.g. East US) and **same resource group**:
 
@@ -88,7 +88,7 @@ Use ACR Tasks to build directly from your repo — no Docker required.
 2. **Important:** the Dockerfile expects pre-built frontend assets at `webapp/backend/frontend_dist/`. Add a GitHub Action (or a build step in the ACR task YAML) that runs `npm ci && npm run build:deploy` in `webapp/frontend` and commits/copies the output to `webapp/backend/frontend_dist/` before the Docker build. If you can run a single command locally just once, `npm run build:deploy` in `webapp/frontend` produces those files; commit them and the portal task takes over from there.
 3. After the task succeeds, open **Services → Repositories → vibeshub** and confirm the `latest` tag exists.
 
-> If you'd rather not wire up ACR Tasks, the single command `az acr build -r <acr-name> -t vibeshub:latest webapp/backend` (run in Azure Cloud Shell from the portal — top-right `>`_ icon) builds and pushes from the browser without installing anything locally. Cloud Shell still counts as "all in the browser."
+> If you'd rather not wire up ACR Tasks, the single command `az acr build -r <acr-name> -t vibeshub:latest --file deploy/azure/Dockerfile webapp/backend` (run in Azure Cloud Shell from the portal — top-right `>`_ icon, with the repo cloned in Cloud Shell first) builds and pushes from the browser without installing anything locally. Cloud Shell still counts as "all in the browser."
 
 > **Building locally with Docker?** Container Apps requires `linux/amd64`, so on Apple Silicon (or any arm64 host) you must cross-build — a plain `docker build` produces an arm64 image that the portal will reject with *"Selected tag uses an invalid architecture 'arm64'."* Use buildx to build and push in one step:
 >
@@ -96,6 +96,7 @@ Use ACR Tasks to build directly from your repo — no Docker required.
 > az acr login -n <acr-name>
 > docker buildx build --platform linux/amd64 \
 >   -t <acr-name>.azurecr.io/vibeshub:latest \
+>   --file deploy/azure/Dockerfile \
 >   --push webapp/backend
 > ```
 
@@ -112,14 +113,10 @@ The portal no longer has a standalone "Container Apps Environments" create butto
 3. **Container** tab:
   - Untick **Use quickstart image**.
   - Image source: **Azure Container Registry**
-  - 
-    ```properties
-    https://<app-fqdn>.azurecontainerapps.io
-    ```
-    Registry: pick your ACR. Image: `vibeshub`. Tag: `latest`.
+  - Registry: pick your ACR. Image: `vibeshub`. Tag: `latest`.
   - **Authentication: Managed identity** → choose `vibeshub-mi`.
   - CPU / memory: 0.5 vCPU / 1 Gi (fine for low traffic).
-  - **Environment variables** — add each row using the values from `[./.env.example](./.env.example)`:
+  - **Environment variables** — add each row using the values from [`.env.example`](./.env.example):
 
     | Name                                 | Value                                                                              |
     | ------------------------------------ | ---------------------------------------------------------------------------------- |
