@@ -79,9 +79,13 @@ def main() -> None:
     elif isinstance(tool_response, str):
         stdout = tool_response
 
-    from vibeshub_client.gh_token import GhTokenError, get_gh_token
-    from vibeshub_client.parse_pr_url import extract_pr_url_from_gh_stdout
-    from vibeshub_client.pipeline import RunOptions, run_share_pipeline
+    try:
+        from vibeshub_client.gh_token import GhTokenError, get_gh_token
+        from vibeshub_client.parse_pr_url import extract_pr_url_from_gh_stdout
+        from vibeshub_client.pipeline import RunOptions, run_share_pipeline
+    except ImportError as e:
+        _bail(f"failed to import vibeshub_client (is the plugin's Python missing deps?): {e}")
+        return
 
     pr_url = extract_pr_url_from_gh_stdout(stdout)
     if not pr_url:

@@ -1,11 +1,16 @@
 # Adding a new platform plugin
 
 Each platform plugin (Claude Code, Cursor, Codex, ...) is a thin layer over
-the shared `vibeshub-client` library.
+the `vibeshub_client` library. Today it lives bundled inside
+[claude-code/vibeshub_client/](claude-code/vibeshub_client/) so the plugin is
+self-contained for marketplace install; when a second platform is added,
+lift it back out into a shared location and have both plugins vendor or
+symlink it.
 
 To add `<platform>`:
 
-1. Create `plugins/<platform>/` mirroring the layout of `plugins/claude-code/`.
+1. Create `plugins/<platform>/` mirroring the layout of `plugins/claude-code/`,
+   including a `vibeshub_client/` copy so the plugin is self-contained.
 2. Implement `reader.py` with a `TranscriptReader` subclass that:
    - returns the transcript JSONL path for the active session
    - returns a stable `platform_id` string (this becomes the `platform` field

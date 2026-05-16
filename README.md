@@ -17,8 +17,8 @@ Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-co
 ```
 vibeshub/
 ├── plugins/
-│   ├── shared/         # vibeshub-client: redaction, upload, gh-comment
-│   ├── claude-code/    # PostToolUse hook + /share-pr slash command
+│   ├── claude-code/    # PostToolUse hook + /share-pr slash command;
+│   │                   # bundles the vibeshub_client library (redaction, upload, gh-comment)
 │   └── README.md       # how to add a new platform plugin
 ├── webapp/
 │   ├── backend/        # FastAPI + SQLAlchemy + alembic; serves SPA from frontend_dist/
