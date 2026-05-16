@@ -1,6 +1,9 @@
+import asyncio
+
 import pytest
 import respx
 
+from app.auth.github import GitHubPull, GitHubUser
 from app.short_id import looks_like_short_id
 
 
@@ -113,6 +116,54 @@ async def test_ingest_rejects_pr_author_mismatch(client, respx_mock):
     )
     assert response.status_code == 403
     assert "author" in response.json()["detail"].lower()
+
+
+class _ConcurrencyProbeGitHub:
+    """Stand-in for GitHubClient that detects whether verify_token and
+    get_pull are awaited concurrently. Each call signals it started, then
+    waits for the other to also signal. If they're called sequentially,
+    the second call never starts within the timeout window and the test
+    surfaces a non-201 response."""
+
+    def __init__(self):
+        self.verify_started = asyncio.Event()
+        self.pull_started = asyncio.Event()
+
+    async def verify_token(self, token):
+        self.verify_started.set()
+        await asyncio.wait_for(self.pull_started.wait(), timeout=1.0)
+        return GitHubUser(login="alice", id=7)
+
+    async def get_pull(self, token, owner, repo, number):
+        self.pull_started.set()
+        await asyncio.wait_for(self.verify_started.wait(), timeout=1.0)
+        return GitHubPull(
+            number=number,
+            title="t",
+            author_login="alice",
+            html_url=f"https://github.com/{owner}/{repo}/pull/{number}",
+            repo_is_private=False,
+            repo_full_name=f"{owner}/{repo}",
+        )
+
+
+@pytest.mark.asyncio
+async def test_ingest_runs_github_calls_in_parallel(client):
+    probe = _ConcurrencyProbeGitHub()
+    client.app.state.github = probe
+
+    response = client.post(
+        "/api/ingest",
+        json={
+            "transcript_jsonl": '{"type":"user"}\n',
+            "pr_url": "https://github.com/alice/repo/pull/3",
+        },
+        headers={"Authorization": "Bearer ghp_test"},
+    )
+
+    assert response.status_code == 201, response.text
+    assert probe.verify_started.is_set()
+    assert probe.pull_started.is_set()
 
 
 @pytest.mark.asyncio

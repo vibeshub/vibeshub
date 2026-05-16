@@ -78,6 +78,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
 
     plugin_root = Path(__file__).resolve().parents[1]
     hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_log = tmp_path / "hook.log"
 
     payload = {
         "session_id": session_id,
@@ -93,6 +94,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     env["HOME"] = str(fake_home)
     env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
     env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(hook_log)
     env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
 
     proc = subprocess.run(
@@ -109,6 +111,16 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     assert body["pr_url"] == "https://github.com/alice/repo/pull/3"
     assert body["platform"] == "claude-code"
     assert "[vibeshub] trace uploaded" in proc.stderr
+
+    # Diagnostics for the upload attempt are written to the hook log.
+    log_text = hook_log.read_text()
+    upload_line = next(
+        (line for line in log_text.splitlines() if "trace uploaded" in line),
+        "",
+    )
+    assert upload_line, f"no upload line in log:\n{log_text}"
+    assert "bytes=" in upload_line, upload_line
+    assert "elapsed=" in upload_line, upload_line
 
 
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):

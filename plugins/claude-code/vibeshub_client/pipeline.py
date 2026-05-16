@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -25,6 +26,8 @@ class RunResult:
     short_id: str | None = None
     trace_url: str | None = None
     skip_reason: str | None = None
+    payload_bytes: int | None = None
+    upload_elapsed_seconds: float | None = None
 
 
 async def run_share_pipeline(
@@ -45,7 +48,9 @@ async def run_share_pipeline(
         session_id=options.session_id,
         redaction_count_client=report.total(),
     )
+    payload_bytes = len(redacted)
 
+    started = time.monotonic()
     try:
         result = await upload_trace(
             server_url=options.server_url,
@@ -53,7 +58,13 @@ async def run_share_pipeline(
             payload=payload,
         )
     except UploadError as e:
-        return RunResult(uploaded=False, skip_reason=f"upload failed: {e}")
+        return RunResult(
+            uploaded=False,
+            skip_reason=f"upload failed: {e}",
+            payload_bytes=payload_bytes,
+            upload_elapsed_seconds=time.monotonic() - started,
+        )
+    upload_elapsed = time.monotonic() - started
 
     try:
         post_pr_comment(
@@ -66,10 +77,14 @@ async def run_share_pipeline(
             short_id=result.short_id,
             trace_url=result.trace_url,
             skip_reason=f"comment failed: {e}",
+            payload_bytes=payload_bytes,
+            upload_elapsed_seconds=upload_elapsed,
         )
 
     return RunResult(
         uploaded=True,
         short_id=result.short_id,
         trace_url=result.trace_url,
+        payload_bytes=payload_bytes,
+        upload_elapsed_seconds=upload_elapsed,
     )
