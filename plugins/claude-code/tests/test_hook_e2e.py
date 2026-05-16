@@ -93,7 +93,6 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     env["HOME"] = str(fake_home)
     env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
     env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
-    env["VIBESHUB_AUTO_YES"] = "1"
     env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
 
     proc = subprocess.run(
