@@ -1,17 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from vibeshub_client.post_comment import build_comment_body, post_pr_comment
-from vibeshub_client.preview import (
-    confirm_via_tty,
-    format_summary,
-    has_interactive_tty,
-)
 from vibeshub_client.reader import TranscriptReader
 from vibeshub_client.redact import redact_jsonl
 from vibeshub_client.upload import IngestPayload, UploadError, upload_trace
@@ -23,7 +16,6 @@ class RunOptions:
     server_url: str
     token: str
     pr_url: str
-    confirm: bool = True
     session_id: Optional[str] = None
 
 
@@ -44,26 +36,6 @@ async def run_share_pipeline(
     transcript_path: Path = reader.find_session(hook_input)
     raw = transcript_path.read_bytes()
     redacted, report = redact_jsonl(raw)
-    message_count = redacted.count(b"\n")
-
-    auto_share_note: str | None = None
-    if options.confirm:
-        if os.environ.get("VIBESHUB_AUTO_NO") == "1":
-            return RunResult(uploaded=False, skip_reason="VIBESHUB_AUTO_NO=1")
-        if os.environ.get("VIBESHUB_AUTO_YES") != "1":
-            summary = format_summary(
-                message_count=message_count,
-                byte_size=len(redacted),
-                redactions=report.counts,
-            )
-            if has_interactive_tty():
-                if not confirm_via_tty(summary):
-                    return RunResult(uploaded=False, skip_reason="user declined")
-            else:
-                # No way to ask the user — installing the plugin is consent.
-                # Note it on the success result so it's visible in the log
-                # and stderr. Set VIBESHUB_AUTO_NO=1 to opt out.
-                auto_share_note = "no interactive terminal, auto-shared"
 
     payload = IngestPayload(
         transcript_jsonl=redacted.decode("utf-8", errors="replace"),
@@ -100,5 +72,4 @@ async def run_share_pipeline(
         uploaded=True,
         short_id=result.short_id,
         trace_url=result.trace_url,
-        skip_reason=auto_share_note,
     )

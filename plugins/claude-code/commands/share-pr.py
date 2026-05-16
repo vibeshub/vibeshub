@@ -49,7 +49,6 @@ async def _share(pr_url: str, server_url: str, session_id: str | None) -> None:
         server_url=server_url,
         token=get_gh_token(),
         pr_url=pr_url,
-        confirm=os.environ.get("VIBESHUB_AUTO_YES") != "1",
         session_id=session_id,
     )
     reader = ClaudeCodeTranscriptReader()

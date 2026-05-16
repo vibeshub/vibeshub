@@ -30,7 +30,6 @@ You'll also need:
 | Env var | Default | Notes |
 |---|---|---|
 | `VIBESHUB_SERVER_URL` | `https://vibeshub.ai` | Override for self-hosting |
-| `VIBESHUB_AUTO_YES` | unset | Set to `1` to skip the y/N preview |
 
 ## How it works
 
@@ -41,10 +40,12 @@ command included `gh pr create`. If so, the hook:
    `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`.
 2. Runs client-side redaction over the JSONL (AWS keys, GitHub tokens, OpenAI
    keys, Anthropic keys, JWTs, env-style assignments, and high-entropy tokens).
-3. Prints a one-line summary on your terminal and prompts `y/N` (unless
-   `VIBESHUB_AUTO_YES=1`).
-4. Uploads to vibeshub using your `gh auth token` for identity.
-5. Posts a `gh pr comment` linking to the public trace.
+3. Uploads to vibeshub using your `gh auth token` for identity.
+4. Posts a `gh pr comment` linking to the public trace.
+
+Installing the plugin is consent for upload. To stop uploading, uninstall the
+plugin or remove the hook entry from your Claude Code settings. After-the-fact
+deletion of any trace is available via `/share-pr delete <pr-url>`.
 
 ## Slash command
 
@@ -58,5 +59,5 @@ re-share after fixing something) or delete an existing trace:
 ## Privacy
 
 Traces are public by default. Two redaction passes (client + server) catch
-known secret patterns, but neither is a guarantee. The y/N preview shows the
-redaction summary so you can spot-check before uploading.
+known secret patterns, but neither is a guarantee. You can also delete any
+trace after the fact via `/share-pr delete <pr-url>`.
