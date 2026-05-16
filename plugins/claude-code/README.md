@@ -20,10 +20,9 @@ Claude Code at this directory.
 
 You'll also need:
 - `gh` CLI, authenticated (`gh auth login`)
-- Python 3.12+
-- `pip install -e <vibeshub-repo>/plugins/shared` and
-  `pip install -e <vibeshub-repo>/plugins/claude-code` so the hook script can
-  import the client library
+- Python 3.12+ with `httpx` available to whatever `python3` resolves to when
+  Claude Code runs the hook (e.g. `pip install httpx`, or
+  `pip install -e <vibeshub-repo>/plugins/claude-code` to pull in deps)
 
 ## Configure
 
