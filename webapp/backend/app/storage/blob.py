@@ -28,6 +28,12 @@ class BlobStore(ABC):
     @abstractmethod
     async def delete(self, key: str) -> None: ...
 
+    async def smoke_check(self) -> None:
+        """Verify the backend is reachable. Default is a no-op; backends
+        backed by external services (e.g. Azure Blob) override this to issue
+        a cheap reachability call so misconfigurations surface at startup."""
+        return
+
 
 def _safe_join(root: Path, key: str) -> Path:
     target = (root / key).resolve()
@@ -78,6 +84,9 @@ class AzureBlobStore(BlobStore):
             await self._container.delete_blob(key)
         except _AzureNotFound:
             return
+
+    async def smoke_check(self) -> None:
+        await self._container.get_container_properties()
 
 
 def make_azure_blob_store(settings: "Settings") -> AzureBlobStore:
