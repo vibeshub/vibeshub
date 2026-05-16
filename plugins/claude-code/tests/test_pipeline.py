@@ -74,7 +74,7 @@ async def test_pipeline_happy_path(tmp_path: Path):
     assert result.skip_reason is None
     assert posted == [(
         "https://github.com/alice/repo/pull/3",
-        f"Claude Code trace for this PR: https://vibeshub.test/alice/repo/pull/3/abc1234567\n\nUploaded by the PR author. Traces are public by default.",
+        f"Claude Code trace for this PR: https://vibeshub.test/alice/repo/pull/3/abc1234567\n\nUploaded by the PR author.",
     )]
     # Diagnostic fields surfaced so the hook can log them.
     assert result.payload_bytes is not None and result.payload_bytes > 0
