@@ -63,6 +63,7 @@ async def test_upload_success():
         captured["url"] = req.full_url
         captured["headers"] = dict(req.header_items())
         captured["body"] = req.data
+        captured["timeout"] = timeout
         return _ok_response()
 
     with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
@@ -78,6 +79,34 @@ async def test_upload_success():
     # urllib title-cases header names
     assert captured["headers"]["Authorization"] == "Bearer ghp_test"
     assert json.loads(captured["body"])["pr_url"] == "https://github.com/alice/repo/pull/3"
+
+
+@pytest.mark.asyncio
+async def test_upload_default_timeout_is_60s():
+    """Default socket-read timeout must be 60s so it doesn't starve the
+    server's worst-case happy path (two sequential GitHub calls @ 10s
+    each + blob put + DB commit). See plugins/claude-code investigation
+    of the 30s read-timeout incident."""
+    payload = IngestPayload(
+        transcript_jsonl="{}\n",
+        pr_url="https://github.com/alice/repo/pull/3",
+        platform="claude-code",
+    )
+
+    captured: dict = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["timeout"] = timeout
+        return _ok_response()
+
+    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
+        await upload_trace(
+            server_url="https://vibeshub.test",
+            token="ghp_test",
+            payload=payload,
+        )
+
+    assert captured["timeout"] == 60.0
 
 
 @pytest.mark.asyncio

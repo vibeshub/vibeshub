@@ -124,14 +124,18 @@ def main() -> None:
         _bail(f"share failed: {e}")
         return
 
+    diag = ""
+    if result.payload_bytes is not None and result.upload_elapsed_seconds is not None:
+        diag = f" (bytes={result.payload_bytes} elapsed={result.upload_elapsed_seconds:.2f}s)"
+
     if result.uploaded:
         msg = f"trace uploaded: {result.trace_url}"
         if result.skip_reason:
             msg += f" (note: {result.skip_reason})"
-        _log(msg)
+        _log(msg + diag)
         print(f"[vibeshub] {msg}", file=sys.stderr)
     else:
-        _log(f"skipped: {result.skip_reason}")
+        _log(f"skipped: {result.skip_reason}{diag}")
         print(f"[vibeshub] skipped: {result.skip_reason}", file=sys.stderr)
 
 

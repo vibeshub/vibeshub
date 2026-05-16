@@ -45,7 +45,7 @@ async def upload_trace(
     server_url: str,
     token: str,
     payload: IngestPayload,
-    timeout: float = 30.0,
+    timeout: float = 60.0,
 ) -> UploadResult:
     url = f"{server_url.rstrip('/')}/api/ingest"
     headers = {

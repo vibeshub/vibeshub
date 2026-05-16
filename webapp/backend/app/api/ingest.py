@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -43,22 +44,32 @@ async def ingest(
     token = _bearer_token(authorization)
 
     try:
-        user = await github.verify_token(token)
-    except GitHubAuthError as e:
-        raise HTTPException(status_code=401, detail=str(e))
-
-    try:
         parsed = parse_pr_url(body.pr_url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    try:
-        pr = await github.get_pull(token, parsed.owner, parsed.repo, parsed.number)
-    except GitHubAPIError as e:
-        msg = str(e)
+    # Fire both GitHub calls concurrently — they're independent and
+    # together account for most of the request's wall-clock time.
+    user_result, pull_result = await asyncio.gather(
+        github.verify_token(token),
+        github.get_pull(token, parsed.owner, parsed.repo, parsed.number),
+        return_exceptions=True,
+    )
+
+    if isinstance(user_result, GitHubAuthError):
+        raise HTTPException(status_code=401, detail=str(user_result))
+    if isinstance(pull_result, GitHubAPIError):
+        msg = str(pull_result)
         if "not found" in msg.lower():
             raise HTTPException(status_code=404, detail=f"PR not found: {body.pr_url}")
         raise HTTPException(status_code=502, detail=f"github upstream error: {msg}")
+    if isinstance(user_result, BaseException):
+        raise user_result
+    if isinstance(pull_result, BaseException):
+        raise pull_result
+
+    user = user_result
+    pr = pull_result
 
     if pr.repo_is_private:
         raise HTTPException(
