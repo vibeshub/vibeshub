@@ -10,7 +10,7 @@ export function TraceFrame({ html, title }: Props) {
     <div className={styles.wrapper}>
       <iframe
         className={styles.iframe}
-        sandbox="allow-same-origin"
+        sandbox="allow-scripts"
         srcDoc={html}
         title={title}
       />
