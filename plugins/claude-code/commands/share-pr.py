@@ -67,7 +67,9 @@ async def _delete(pr_url: str, server_url: str) -> None:
     plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).resolve().parent.parent))
     sys.path.insert(0, str(plugin_root))
 
-    import httpx
+    import json
+    from urllib import error as urllib_error
+    from urllib import request as urllib_request
 
     from vibeshub_client.gh_token import get_gh_token
 
@@ -75,23 +77,37 @@ async def _delete(pr_url: str, server_url: str) -> None:
     owner, repo = parts[-4], parts[-3]
     number = parts[-1]
     list_url = f"{server_url.rstrip('/')}/api/traces/{owner}/{repo}/pull/{number}"
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        r = await client.get(list_url)
-        r.raise_for_status()
-        traces = r.json().get("traces", [])
-        if not traces:
-            print("no traces found for that PR", file=sys.stderr)
-            return
-        short_id = traces[0]["short_id"]
-        token = get_gh_token()
-        d = await client.delete(
+
+    def _list() -> list[dict]:
+        with urllib_request.urlopen(list_url, timeout=15.0) as resp:
+            if resp.status >= 400:
+                raise RuntimeError(f"list failed: HTTP {resp.status}")
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("traces", [])
+
+    def _do_delete(short_id: str, token: str) -> tuple[int, str]:
+        req = urllib_request.Request(
             f"{server_url.rstrip('/')}/api/traces/{short_id}",
             headers={"Authorization": f"Bearer {token}"},
+            method="DELETE",
         )
-        if d.status_code == 204:
-            print(f"deleted trace {short_id}")
-        else:
-            print(f"delete failed: {d.status_code} {d.text}", file=sys.stderr)
+        try:
+            with urllib_request.urlopen(req, timeout=15.0) as resp:
+                return resp.status, resp.read().decode("utf-8", errors="replace")
+        except urllib_error.HTTPError as e:
+            return e.code, e.read().decode("utf-8", errors="replace")
+
+    traces = await asyncio.to_thread(_list)
+    if not traces:
+        print("no traces found for that PR", file=sys.stderr)
+        return
+    short_id = traces[0]["short_id"]
+    token = get_gh_token()
+    status, body = await asyncio.to_thread(_do_delete, short_id, token)
+    if status == 204:
+        print(f"deleted trace {short_id}")
+    else:
+        print(f"delete failed: {status} {body}", file=sys.stderr)
 
 
 def main() -> None:

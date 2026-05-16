@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from dataclasses import asdict, dataclass
-
-import httpx
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 
 class UploadError(Exception):
@@ -26,6 +28,18 @@ class UploadResult:
     trace_url: str
 
 
+def _post_json(url: str, *, headers: dict, body: bytes, timeout: float) -> tuple[int, bytes]:
+    req = urllib_request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, resp.read()
+    except urllib_error.HTTPError as e:
+        # Non-2xx response: surface status + body so the caller can format an error.
+        return e.code, e.read()
+    except (urllib_error.URLError, TimeoutError, OSError) as e:
+        raise UploadError(f"network error: {e}") from e
+
+
 async def upload_trace(
     *,
     server_url: str,
@@ -38,20 +52,19 @@ async def upload_trace(
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        try:
-            response = await client.post(url, json=asdict(payload), headers=headers)
-        except httpx.HTTPError as e:
-            raise UploadError(f"network error: {e}") from e
+    body = json.dumps(asdict(payload)).encode("utf-8")
 
-    if response.status_code != 201:
-        raise UploadError(
-            f"upload failed: {response.status_code} {response.text}"
-        )
+    status, raw = await asyncio.to_thread(
+        _post_json, url, headers=headers, body=body, timeout=timeout
+    )
 
-    body = response.json()
+    if status != 201:
+        text = raw.decode("utf-8", errors="replace")
+        raise UploadError(f"upload failed: {status} {text}")
+
+    data = json.loads(raw.decode("utf-8"))
     return UploadResult(
-        trace_id=body["trace_id"],
-        short_id=body["short_id"],
-        trace_url=body["trace_url"],
+        trace_id=data["trace_id"],
+        short_id=data["short_id"],
+        trace_url=data["trace_url"],
     )
