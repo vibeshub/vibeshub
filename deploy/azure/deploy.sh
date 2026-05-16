@@ -150,16 +150,29 @@ echo "==> Deployed."
 echo "    URL: https://$FQDN"
 
 # Surface a likely-misconfigured PUBLIC_BASE_URL so trace_url responses are correct.
-expected="https://$FQDN"
+# Accept either the default FQDN or any bound custom hostname.
 configured=""
 for pair in "${ENV_PAIRS[@]}"; do
   case "$pair" in
     VIBESHUB_PUBLIC_BASE_URL=*) configured="${pair#VIBESHUB_PUBLIC_BASE_URL=}" ;;
   esac
 done
-if [ -n "$configured" ] && [ "$configured" != "$expected" ]; then
+
+accepted=("https://$FQDN")
+while IFS= read -r host; do
+  [ -n "$host" ] && accepted+=("https://$host")
+done < <(az containerapp hostname list -n "$APP" -g "$RG" --query "[].name" -o tsv 2>/dev/null || true)
+
+matched=0
+for a in "${accepted[@]}"; do
+  if [ "$configured" = "$a" ]; then matched=1; break; fi
+done
+
+if [ -n "$configured" ] && [ "$matched" -eq 0 ]; then
   echo
   echo "NOTE: VIBESHUB_PUBLIC_BASE_URL in .env is '$configured'"
-  echo "      but the live FQDN is             '$expected'."
+  echo "      but it doesn't match the default FQDN or any bound custom hostname."
+  echo "      Accepted origins for this Container App:"
+  for a in "${accepted[@]}"; do echo "        $a"; done
   echo "      Update .env and re-run so trace_url responses use the right origin."
 fi
