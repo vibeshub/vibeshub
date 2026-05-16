@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
-from typing import IO
-
 
 def format_summary(message_count: int, byte_size: int, redactions: dict[str, int]) -> str:
     if byte_size >= 1024:
@@ -24,25 +20,32 @@ def parse_yes_no(s: str) -> bool:
     return s.strip().lower() in ("y", "yes")
 
 
-def confirm_via_tty(summary: str) -> bool:
-    """
-    Print summary and ask y/N on the controlling terminal. Reads /dev/tty
-    directly so we work even when stdin/stdout are piped (which they are when
-    run as a Claude Code hook — stdin is the JSON payload).
+def has_interactive_tty() -> bool:
+    """Return True if /dev/tty can be opened for interactive prompting.
 
-    Returns False if no tty is available (e.g., headless mode) or the user
-    answers anything other than y/yes.
-
-    Override: set VIBESHUB_AUTO_YES=1 to skip the prompt and assume yes.
+    Claude Code's hook subprocesses (especially under the VSCode extension)
+    typically have no controlling terminal, so this returns False there.
+    Callers should branch on this rather than calling confirm_via_tty
+    speculatively — the two failure modes (no tty vs. user said no) need
+    to be distinguished.
     """
-    if os.environ.get("VIBESHUB_AUTO_YES") == "1":
-        return True
     try:
-        with open("/dev/tty", "r+") as tty:
-            tty.write(summary)
-            tty.write("Upload to vibeshub? [y/N] ")
-            tty.flush()
-            response = tty.readline()
+        with open("/dev/tty", "r+"):
+            return True
     except OSError:
         return False
+
+
+def confirm_via_tty(summary: str) -> bool:
+    """Prompt y/N on /dev/tty. Caller must verify has_interactive_tty() first.
+
+    Reads /dev/tty directly so it works even when stdin/stdout are piped
+    (which they are when run as a Claude Code hook — stdin is the JSON
+    payload). Returns False on any non-yes response.
+    """
+    with open("/dev/tty", "r+") as tty:
+        tty.write(summary)
+        tty.write("Upload to vibeshub? [y/N] ")
+        tty.flush()
+        response = tty.readline()
     return parse_yes_no(response)
