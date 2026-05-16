@@ -138,3 +138,9 @@ Then install the Claude Code plugin per [../../plugins/claude-code/README.md](..
 | `VIBESHUB_PUBLIC_BASE_URL` | Origin used to build the `trace_url` returned by the API |
 
 See [../../webapp/backend/README.md](../../webapp/backend/README.md) for the full list, including renderer + size limits.
+
+## Troubleshooting
+
+The container runs a startup credential smoke-check before serving traffic: it verifies the DB is reachable (`SELECT 1`) and the Azure Blob container is reachable (`get_container_properties`). If a deploy is marked unhealthy immediately and rolls back, check the container log stream for lines starting with `smoke-check:` — those will show which dependency (`db` or `blob`) failed and the underlying error.
+
+Operators no longer need to run `check_db.py` for routine "is DB reachable" verification — the startup logs cover it. `check_db.py` is still useful for deeper one-off diagnosis.
