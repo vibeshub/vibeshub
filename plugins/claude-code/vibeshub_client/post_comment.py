@@ -6,7 +6,7 @@ import subprocess
 def build_comment_body(trace_url: str) -> str:
     return (
         f"Claude Code trace for this PR: {trace_url}\n\n"
-        "Uploaded by the PR author. Traces are public by default."
+        "Uploaded by the PR author."
     )
 
 

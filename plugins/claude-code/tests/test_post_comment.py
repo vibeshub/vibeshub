@@ -9,7 +9,8 @@ from vibeshub_client.post_comment import build_comment_body, post_pr_comment
 def test_build_comment_body_includes_url():
     body = build_comment_body("https://vibeshub.test/alice/repo/pull/3/abc")
     assert "https://vibeshub.test/alice/repo/pull/3/abc" in body
-    assert "public by default" in body.lower()
+    assert "Uploaded by the PR author." in body
+    assert "public by default" not in body.lower()
 
 
 def test_post_pr_comment_invokes_gh(monkeypatch):
