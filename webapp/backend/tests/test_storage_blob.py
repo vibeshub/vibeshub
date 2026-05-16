@@ -35,3 +35,10 @@ async def test_delete(blob_store: LocalDirBlobStore):
     await blob_store.delete("traces/abc.jsonl")
     with pytest.raises(FileNotFoundError):
         await blob_store.get("traces/abc.jsonl")
+
+
+@pytest.mark.asyncio
+async def test_smoke_check_is_noop(blob_store: LocalDirBlobStore):
+    # LocalDirBlobStore inherits the ABC default no-op smoke_check.
+    # Should return None without raising.
+    assert await blob_store.smoke_check() is None

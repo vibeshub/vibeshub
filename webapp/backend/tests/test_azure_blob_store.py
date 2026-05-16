@@ -74,3 +74,19 @@ def test_factory_requires_auth_method():
     settings = Settings(azure_blob_container="traces")
     with pytest.raises(ValueError, match="ACCOUNT_URL.*CONNECTION_STRING"):
         make_azure_blob_store(settings)
+
+
+@pytest.mark.asyncio
+async def test_smoke_check_calls_get_container_properties(store, container_client):
+    container_client.get_container_properties = AsyncMock(return_value={"name": "traces"})
+    await store.smoke_check()
+    container_client.get_container_properties.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
+async def test_smoke_check_propagates_errors(store, container_client):
+    container_client.get_container_properties = AsyncMock(
+        side_effect=RuntimeError("auth boom")
+    )
+    with pytest.raises(RuntimeError, match="auth boom"):
+        await store.smoke_check()
