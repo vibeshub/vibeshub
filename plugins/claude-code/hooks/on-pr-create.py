@@ -3,8 +3,8 @@
 PostToolUse hook for Claude Code.
 
 Reads the hook payload from stdin (JSON), checks if the tool call was
-`gh pr create`, and if so runs the vibeshub share pipeline:
-preview -> confirm -> upload -> comment.
+`gh pr create`, and if so runs the vibeshub share pipeline: redact,
+upload, and comment on the PR.
 
 Exits 0 on success or any non-fatal failure (we never want to block Claude).
 Errors are written to stderr.
@@ -104,7 +104,6 @@ def main() -> None:
         server_url=server_url,
         token=token,
         pr_url=pr_url,
-        confirm=os.environ.get("VIBESHUB_AUTO_YES") != "1",
         session_id=payload.get("session_id"),
     )
     reader = ClaudeCodeTranscriptReader()
