@@ -1,8 +1,8 @@
+import json
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import respx
 
 from vibeshub_client.pipeline import RunOptions, run_share_pipeline
 from vibeshub_client.reader import TranscriptReader
@@ -19,21 +19,38 @@ class FakeReader(TranscriptReader):
         return "fake"
 
 
+class _FakeResponse:
+    def __init__(self, status: int, body: bytes):
+        self.status = status
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
 @pytest.mark.asyncio
-async def test_pipeline_happy_path(tmp_path: Path, respx_mock: respx.MockRouter):
+async def test_pipeline_happy_path(tmp_path: Path):
     transcript = tmp_path / "session.jsonl"
     transcript.write_text(
         '{"type":"user","message":{"role":"user","content":"hi"}}\n'
         '{"type":"assistant","message":{"role":"assistant","content":"hello"}}\n'
     )
 
-    respx_mock.post("https://vibeshub.test/api/ingest").respond(
+    response = _FakeResponse(
         201,
-        json={
-            "trace_id": "00000000-0000-0000-0000-000000000001",
-            "short_id": "abc1234567",
-            "trace_url": "https://vibeshub.test/alice/repo/pull/3/abc1234567",
-        },
+        json.dumps(
+            {
+                "trace_id": "00000000-0000-0000-0000-000000000001",
+                "short_id": "abc1234567",
+                "trace_url": "https://vibeshub.test/alice/repo/pull/3/abc1234567",
+            }
+        ).encode("utf-8"),
     )
 
     posted: list[tuple[str, str]] = []
@@ -48,7 +65,8 @@ async def test_pipeline_happy_path(tmp_path: Path, respx_mock: respx.MockRouter)
     )
     reader = FakeReader(transcript)
 
-    with patch("vibeshub_client.pipeline.post_pr_comment", side_effect=fake_post):
+    with patch("vibeshub_client.upload.urllib_request.urlopen", return_value=response), \
+         patch("vibeshub_client.pipeline.post_pr_comment", side_effect=fake_post):
         result = await run_share_pipeline(reader=reader, hook_input={}, options=options)
 
     assert result.uploaded is True
