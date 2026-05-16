@@ -115,9 +115,13 @@ MI_ID="$(az identity show -g "$RG" -n "$MI" --query id -o tsv)"
 if az containerapp show -n "$APP" -g "$RG" >/dev/null 2>&1; then
   echo
   echo "==> Container App '$APP' exists — updating image and env..."
+  # Force a new revision: `update` is a no-op when the image string is unchanged (e.g. :latest).
+  # Assigned on its own line so `set -e` aborts if not in a repo (inline $() wouldn't).
+  SHORT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
   az containerapp update \
     -n "$APP" -g "$RG" \
     --image "$IMAGE" \
+    --revision-suffix "r${SHORT_SHA}" \
     --set-env-vars "${ENV_PAIRS[@]}"
   # Re-assert the user-assigned identity. `containerapp update` does not
   # touch identity, so if the MI was detached out-of-band (or the app
