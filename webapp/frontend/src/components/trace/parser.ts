@@ -30,6 +30,17 @@ function getStr(obj: unknown, key: string): string | null {
   return null;
 }
 
+// Text injected into a user message as a wrapper (e.g. <ide_opened_file>...,
+// <system-reminder>..., <command-message>...) is the whole string wrapped in
+// a single matching tag. Free-form user prompts virtually never match this.
+function isSystemWrapperText(text: string): boolean {
+  const trimmed = text.trim();
+  const m = trimmed.match(
+    /^<([a-zA-Z][a-zA-Z0-9_-]*)>[\s\S]*<\/([a-zA-Z][a-zA-Z0-9_-]*)>$/,
+  );
+  return m !== null && m[1] === m[2];
+}
+
 export function buildSession(records: AnyRec[]): Session {
   const meta: SessionMeta = {
     sessionId: null,
@@ -110,8 +121,22 @@ export function buildSession(records: AnyRec[]): Session {
       meta.assistantThinkMs += (r.durationMs as number) || 0;
     }
 
-    if (r.type === "user" && msg && typeof msg.content === "string" && !meta.firstPrompt) {
-      meta.firstPrompt = msg.content;
+    if (r.type === "user" && msg && !meta.firstPrompt) {
+      if (typeof msg.content === "string") {
+        meta.firstPrompt = msg.content;
+      } else if (Array.isArray(msg.content)) {
+        for (const c of msg.content as AnyRec[]) {
+          if (
+            c.type === "text" &&
+            typeof c.text === "string" &&
+            c.text.length > 0 &&
+            !isSystemWrapperText(c.text)
+          ) {
+            meta.firstPrompt = c.text;
+            break;
+          }
+        }
+      }
     }
     if (r.type === "user" && msg && Array.isArray(msg.content)) {
       for (const c of msg.content as AnyRec[]) {
@@ -181,23 +206,28 @@ export function buildSession(records: AnyRec[]): Session {
 
     if (r.type === "user" && r.message) {
       const msg = r.message as AnyRec;
+      const ts = String(r.timestamp ?? "");
+      const uuid = String(r.uuid ?? "");
       if (typeof msg.content === "string") {
-        stream.push({
-          kind: "user_prompt",
-          text: msg.content,
-          ts: String(r.timestamp ?? ""),
-          uuid: String(r.uuid ?? ""),
-        });
+        stream.push({ kind: "user_prompt", text: msg.content, ts, uuid });
       } else if (Array.isArray(msg.content)) {
         for (const c of msg.content as AnyRec[]) {
-          if (c.type === "text" && typeof c.text === "string" && c.text.length > 0) {
-            stream.push({
-              kind: "system_text",
-              text: c.text,
-              ts: String(r.timestamp ?? ""),
-              uuid: String(r.uuid ?? ""),
-              source: "user_text",
-            });
+          if (
+            c.type === "text" &&
+            typeof c.text === "string" &&
+            c.text.length > 0
+          ) {
+            if (isSystemWrapperText(c.text)) {
+              stream.push({
+                kind: "system_text",
+                text: c.text,
+                ts,
+                uuid,
+                source: "user_text",
+              });
+            } else {
+              stream.push({ kind: "user_prompt", text: c.text, ts, uuid });
+            }
           }
         }
       }
@@ -263,6 +293,36 @@ export function buildSession(records: AnyRec[]): Session {
     (a, b) => a + b,
     0,
   );
+
+  // Newer Claude Code logs (e.g. claude-vscode) don't emit
+  // `system`/`turn_duration` records; approximate per-turn duration as the
+  // time from each user prompt to the last assistant action before the next.
+  if (meta.assistantThinkMs === 0) {
+    let turnStart: number | null = null;
+    let turnEnd: number | null = null;
+    const flush = () => {
+      if (turnStart !== null && turnEnd !== null && turnEnd > turnStart) {
+        meta.assistantThinkMs += turnEnd - turnStart;
+      }
+    };
+    for (const e of stream) {
+      if (e.kind === "user_prompt") {
+        flush();
+        const t = Date.parse(e.ts);
+        turnStart = Number.isNaN(t) ? null : t;
+        turnEnd = null;
+      } else if (
+        turnStart !== null &&
+        (e.kind === "assistant_text" ||
+          e.kind === "thinking" ||
+          e.kind === "tool_use")
+      ) {
+        const t = Date.parse(e.ts);
+        if (!Number.isNaN(t)) turnEnd = t;
+      }
+    }
+    flush();
+  }
 
   return { meta, stream };
 }
