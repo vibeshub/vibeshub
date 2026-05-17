@@ -374,6 +374,33 @@
   align-items: center;
   white-space: nowrap;
 }
+.vibeshub-viewer .user-prompt-jump {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.vibeshub-viewer .user-prompt-jump:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  color: var(--text-strong);
+}
+.vibeshub-viewer .user-prompt-jump .iconbtn-icon {
+  width: 12px;
+  height: 12px;
+}
 .vibeshub-viewer .user-prompt-text {
   color: var(--text-strong);
   font-size: 15.5px;

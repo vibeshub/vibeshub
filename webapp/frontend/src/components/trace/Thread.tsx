@@ -42,6 +42,10 @@ export function Thread({
   const root = session.meta.cwd;
   const totalPrompts = session.meta.userPromptCount;
   const nextPrompt = buildNextPromptIndex(stream);
+  const promptUuids: string[] = [];
+  for (const ev of stream) {
+    if (ev.kind === "user_prompt" && ev.uuid) promptUuids.push(ev.uuid);
+  }
 
   const out: React.ReactNode[] = [];
   let promptCounter = -1;
@@ -60,6 +64,7 @@ export function Thread({
           event={e}
           idx={promptCounter}
           total={totalPrompts}
+          nextPromptUuid={promptUuids[promptCounter + 1]}
           key={key}
         />,
       );

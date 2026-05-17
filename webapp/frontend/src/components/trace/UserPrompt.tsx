@@ -1,13 +1,20 @@
 import type { UserPromptEvent } from "./types";
 import { fmtTimestamp } from "./format";
+import { IconArrowDown } from "./icons";
 
 interface Props {
   event: UserPromptEvent;
   idx: number;
   total: number;
+  nextPromptUuid?: string;
 }
 
-export function UserPrompt({ event, idx, total }: Props) {
+export function UserPrompt({ event, idx, total, nextPromptUuid }: Props) {
+  function jumpToNext() {
+    if (!nextPromptUuid) return;
+    const el = document.querySelector(`[data-uuid="${nextPromptUuid}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   return (
     <div className="user-prompt" data-uuid={event.uuid}>
       <div className="user-prompt-avatar">U</div>
@@ -19,6 +26,17 @@ export function UserPrompt({ event, idx, total }: Props) {
           </span>
           <span>·</span>
           <span>{fmtTimestamp(event.ts)}</span>
+          {nextPromptUuid && (
+            <button
+              type="button"
+              className="user-prompt-jump"
+              onClick={jumpToNext}
+              title="Jump to next prompt"
+              aria-label="Jump to next prompt"
+            >
+              <IconArrowDown />
+            </button>
+          )}
         </div>
         <div className="user-prompt-text">{event.text}</div>
       </div>
