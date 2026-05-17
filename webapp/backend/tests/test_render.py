@@ -12,7 +12,7 @@ def test_render_returns_html_with_message_text():
     data = (FIXTURES / "sample-session.jsonl").read_bytes()
     html = render_jsonl_to_html(data)
     assert html.lstrip().startswith("<")
-    assert "2 + 2" in html or "It's 4" in html
+    assert "startup credential smoke-check" in html
 
 
 def test_render_injects_storage_shim_before_any_script():
