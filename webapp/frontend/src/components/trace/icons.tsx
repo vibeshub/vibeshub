@@ -103,6 +103,20 @@ export function IconSun() {
   );
 }
 
+export function IconArrowDown() {
+  return (
+    <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M8 3 V13 M4 9 L8 13 L12 9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconMoon() {
   return (
     <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="none" aria-hidden>
