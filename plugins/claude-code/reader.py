@@ -26,7 +26,14 @@ class ClaudeCodeTranscriptReader(TranscriptReader):
             raise ValueError("hook_input missing session_id")
 
         home = Path(os.environ.get("HOME", "/"))
-        transcript = (
+        # Claude Code hook payloads carry the canonical transcript_path.
+        # cwd-encoding is fragile — it breaks when the shell drifts into a
+        # subdir mid-session — so prefer the payload path when present.
+        candidates: list[Path] = []
+        payload_path = hook_input.get("transcript_path")
+        if payload_path:
+            candidates.append(Path(payload_path))
+        candidates.append(
             home
             / ".claude"
             / "projects"
@@ -36,8 +43,9 @@ class ClaudeCodeTranscriptReader(TranscriptReader):
 
         # Brief retry: the writer may not have flushed yet.
         for _ in range(2):
-            if transcript.is_file():
-                return transcript
+            for c in candidates:
+                if c.is_file():
+                    return c
             time.sleep(0.2)
 
-        raise FileNotFoundError(f"transcript not found: {transcript}")
+        raise FileNotFoundError(f"transcript not found: {candidates[-1]}")
