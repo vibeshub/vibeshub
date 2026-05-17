@@ -41,6 +41,13 @@ function isSystemWrapperText(text: string): boolean {
   return m !== null && m[1] === m[2];
 }
 
+// Synthetic user records injected by Claude Code itself (e.g. the Skill tool
+// body, replayed verbatim back to the model with `isMeta: true` and a
+// `sourceToolUseID`). They share `role: "user"` but are not user-authored.
+function isMetaUserRecord(r: AnyRec): boolean {
+  return r.isMeta === true;
+}
+
 export function buildSession(records: AnyRec[]): Session {
   const meta: SessionMeta = {
     sessionId: null,
@@ -121,7 +128,7 @@ export function buildSession(records: AnyRec[]): Session {
       meta.assistantThinkMs += (r.durationMs as number) || 0;
     }
 
-    if (r.type === "user" && msg && !meta.firstPrompt) {
+    if (r.type === "user" && msg && !meta.firstPrompt && !isMetaUserRecord(r)) {
       if (typeof msg.content === "string") {
         meta.firstPrompt = msg.content;
       } else if (Array.isArray(msg.content)) {
@@ -139,14 +146,31 @@ export function buildSession(records: AnyRec[]): Session {
       }
     }
     if (r.type === "user" && msg && Array.isArray(msg.content)) {
+      const sourceId = getStr(r, "sourceToolUseID");
       for (const c of msg.content as AnyRec[]) {
         if (c.type === "tool_result") {
-          toolResultsById.set(String(c.tool_use_id), {
+          const id = String(c.tool_use_id);
+          const prev = toolResultsById.get(id);
+          toolResultsById.set(id, {
             content: c.content,
             isError: c.is_error as boolean | undefined,
             toolUseResult: (r.toolUseResult ?? undefined) as
               | ToolResult["toolUseResult"]
               | undefined,
+            injectedText: prev?.injectedText,
+          });
+        } else if (
+          isMetaUserRecord(r) &&
+          sourceId &&
+          c.type === "text" &&
+          typeof c.text === "string"
+        ) {
+          const prev = toolResultsById.get(sourceId);
+          toolResultsById.set(sourceId, {
+            content: prev?.content,
+            isError: prev?.isError,
+            toolUseResult: prev?.toolUseResult,
+            injectedText: c.text,
           });
         }
       }
@@ -205,6 +229,7 @@ export function buildSession(records: AnyRec[]): Session {
     }
 
     if (r.type === "user" && r.message) {
+      if (isMetaUserRecord(r)) continue;
       const msg = r.message as AnyRec;
       const ts = String(r.timestamp ?? "");
       const uuid = String(r.uuid ?? "");

@@ -86,6 +86,7 @@ describe("buildSession", () => {
     const promptsFromRecords: string[] = [];
     for (const r of records as Array<Record<string, unknown>>) {
       if (!(r.type === "user" && r.message)) continue;
+      if (r.isMeta === true) continue;
       const content = (r.message as { content: unknown }).content;
       if (typeof content === "string") {
         promptsFromRecords.push(content);
@@ -214,5 +215,121 @@ describe("buildSession with array-content user messages (IDE format)", () => {
     // total ≈ 61.352s
     expect(session.meta.assistantThinkMs).toBeGreaterThan(60_000);
     expect(session.meta.assistantThinkMs).toBeLessThan(62_000);
+  });
+});
+
+describe("buildSession with skill-injected meta records", () => {
+  // When the Skill tool is invoked, Claude Code emits a synthetic user record
+  // with `isMeta: true` and `sourceToolUseID` pointing at the Skill tool_use.
+  // Its content[].text is the skill body the model receives. These records
+  // must NOT appear as user prompts in the rendered trace.
+  const fixture = [
+    JSON.stringify({
+      type: "user",
+      message: { role: "user", content: "actual user prompt" },
+      uuid: "u1",
+      timestamp: "2026-05-17T03:25:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id: "msg_1",
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_skill1",
+            name: "Skill",
+            input: { skill: "superpowers:using-superpowers" },
+          },
+        ],
+      },
+      uuid: "a1",
+      timestamp: "2026-05-17T03:25:10.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_skill1",
+            content: "Launching skill: superpowers:using-superpowers",
+          },
+        ],
+      },
+      uuid: "u2",
+      timestamp: "2026-05-17T03:25:11.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Base directory for this skill: /tmp/foo\n\nSkill body content here.",
+          },
+        ],
+      },
+      isMeta: true,
+      sourceToolUseID: "toolu_skill1",
+      uuid: "u3",
+      timestamp: "2026-05-17T03:25:11.500Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id: "msg_2",
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [{ type: "text", text: "done" }],
+      },
+      uuid: "a2",
+      timestamp: "2026-05-17T03:25:20.000Z",
+      sessionId: "s1",
+    }),
+  ].join("\n");
+
+  it("does not emit isMeta user records as user_prompt events", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const prompts = session.stream.filter((e) => e.kind === "user_prompt");
+    expect(prompts).toHaveLength(1);
+    expect((prompts[0] as { text: string }).text).toBe("actual user prompt");
+  });
+
+  it("does not emit isMeta user records as system_text events", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const sys = session.stream.filter((e) => e.kind === "system_text");
+    expect(sys).toHaveLength(0);
+  });
+
+  it("does not pick an isMeta record as firstPrompt", () => {
+    const session = buildSession(parseJsonl(fixture));
+    expect(session.meta.firstPrompt).toBe("actual user prompt");
+  });
+
+  it("does not count isMeta records toward userPromptCount", () => {
+    const session = buildSession(parseJsonl(fixture));
+    expect(session.meta.userPromptCount).toBe(1);
+  });
+
+  it("attaches the meta record text to the Skill tool_use as injectedText", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const skill = session.stream.find(
+      (e) => e.kind === "tool_use" && e.name === "Skill",
+    );
+    expect(skill).toBeDefined();
+    const result = (skill as { result: { injectedText?: string } | null })
+      .result;
+    expect(result?.injectedText).toBe(
+      "Base directory for this skill: /tmp/foo\n\nSkill body content here.",
+    );
   });
 });
