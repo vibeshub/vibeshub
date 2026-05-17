@@ -15,6 +15,34 @@ def test_render_returns_html_with_message_text():
     assert "2 + 2" in html or "It's 4" in html
 
 
+def test_render_injects_storage_shim_before_any_script():
+    """
+    The trace HTML is rendered inside a sandboxed iframe (sandbox="allow-scripts",
+    no allow-same-origin), so window.localStorage throws SecurityError on access.
+    claude-code-log's search code touches localStorage unguarded, which kills
+    initSearch and breaks every toggle that depends on it.
+
+    We inject a tiny shim that installs an in-memory localStorage/sessionStorage
+    when the real ones are unreachable. To be effective, it must run before any
+    other script on the page.
+    """
+    data = (FIXTURES / "sample-session.jsonl").read_bytes()
+    html = render_jsonl_to_html(data)
+
+    shim_marker = 'id="vibeshub-storage-shim"'
+    assert shim_marker in html, "expected storage shim to be injected"
+
+    # The shim must be the very first <script> in the document so it runs
+    # before any other script touches localStorage.
+    first_script_pos = html.lower().find("<script")
+    assert first_script_pos != -1
+    shim_pos = html.find(shim_marker)
+    next_script_pos = html.lower().find("<script", first_script_pos + 1)
+    assert first_script_pos < shim_pos < next_script_pos, (
+        "first <script> tag in the document must be the shim"
+    )
+
+
 @pytest.mark.asyncio
 async def test_rendered_endpoint_returns_html_then_caches(client, respx_mock):
     respx_mock.get("https://api.github.test/user").respond(
