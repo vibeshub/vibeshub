@@ -76,16 +76,30 @@ describe("buildSession", () => {
     const promptsFromStream = session.stream
       .filter((e) => e.kind === "user_prompt")
       .map((e) => (e as { text: string }).text);
+    const isWrapped = (s: string) => {
+      const t = s.trim();
+      const m = t.match(
+        /^<([a-zA-Z][a-zA-Z0-9_-]*)>[\s\S]*<\/([a-zA-Z][a-zA-Z0-9_-]*)>$/,
+      );
+      return m !== null && m[1] === m[2];
+    };
     const promptsFromRecords: string[] = [];
     for (const r of records as Array<Record<string, unknown>>) {
-      if (
-        r.type === "user" &&
-        r.message &&
-        typeof (r.message as { content: unknown }).content === "string"
-      ) {
-        promptsFromRecords.push(
-          (r.message as { content: string }).content,
-        );
+      if (!(r.type === "user" && r.message)) continue;
+      const content = (r.message as { content: unknown }).content;
+      if (typeof content === "string") {
+        promptsFromRecords.push(content);
+      } else if (Array.isArray(content)) {
+        for (const c of content as Array<Record<string, unknown>>) {
+          if (
+            c.type === "text" &&
+            typeof c.text === "string" &&
+            c.text.length > 0 &&
+            !isWrapped(c.text)
+          ) {
+            promptsFromRecords.push(c.text);
+          }
+        }
       }
     }
     expect(promptsFromStream).toEqual(promptsFromRecords);
@@ -118,5 +132,87 @@ describe("buildSession", () => {
   it("includes a pr_link event in the stream when the trace has one", () => {
     const prLink = session.stream.find((e) => e.kind === "pr_link");
     expect(prLink).toBeDefined();
+  });
+});
+
+describe("buildSession with array-content user messages (IDE format)", () => {
+  // Newer Claude Code (e.g. claude-vscode) wraps the first user prompt in an
+  // array of content items, prepending system wrappers like <ide_opened_file>.
+  // The parser must still recognize the user-typed text as a user prompt.
+  const fixture = [
+    JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "<ide_opened_file>The user opened the file /foo/App.tsx in the IDE.</ide_opened_file>",
+          },
+          { type: "text", text: "first user prompt here" },
+        ],
+      },
+      uuid: "u1",
+      timestamp: "2026-05-17T03:25:28.648Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id: "msg_1",
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [{ type: "text", text: "ok" }],
+      },
+      uuid: "a1",
+      timestamp: "2026-05-17T03:26:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "user",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: "second prompt" }],
+      },
+      uuid: "u2",
+      timestamp: "2026-05-17T03:30:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id: "msg_2",
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [{ type: "text", text: "done" }],
+      },
+      uuid: "a2",
+      timestamp: "2026-05-17T03:30:30.000Z",
+      sessionId: "s1",
+    }),
+  ].join("\n");
+
+  it("treats user-typed text in array content as a user_prompt", () => {
+    const session = buildSession(parseJsonl(fixture));
+    expect(session.meta.userPromptCount).toBe(2);
+    expect(session.meta.firstPrompt).toBe("first user prompt here");
+  });
+
+  it("classifies fully tag-wrapped text as system_text, not user prompt", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const systemTexts = session.stream.filter((e) => e.kind === "system_text");
+    expect(systemTexts.length).toBe(1);
+    expect((systemTexts[0] as { text: string }).text).toMatch(
+      /^<ide_opened_file>/,
+    );
+  });
+
+  it("derives assistantThinkMs from timestamps when turn_duration events are absent", () => {
+    const session = buildSession(parseJsonl(fixture));
+    // turn 1: 03:25:28.648 → 03:26:00.000 ≈ 31.352s
+    // turn 2: 03:30:00.000 → 03:30:30.000 = 30s
+    // total ≈ 61.352s
+    expect(session.meta.assistantThinkMs).toBeGreaterThan(60_000);
+    expect(session.meta.assistantThinkMs).toBeLessThan(62_000);
   });
 });
