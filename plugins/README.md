@@ -24,6 +24,6 @@ To add `<platform>`:
    `plugins/claude-code/README.md`.
 
 The server doesn't need to change to accept a new platform — the `platform`
-field is free-form on `/api/ingest`. If the new platform's transcript shape
-isn't supported by `claude-code-log`, the server's render endpoint will return
-`render_failed` and the frontend will fall back to raw JSONL.
+field is free-form on `/api/ingest`. The viewer parses Claude Code's JSONL
+shape; if your platform emits a different shape, the parser will skip records
+it doesn't recognize and show whatever it can extract.

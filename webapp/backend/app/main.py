@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import health, ingest as ingest_api, traces as traces_api, render as render_api
+from app.api import health, ingest as ingest_api, traces as traces_api
 from app.deps import init_state
 
 
@@ -33,7 +33,6 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(ingest_api.router)
     app.include_router(traces_api.router)
-    app.include_router(render_api.router)
 
     frontend_dist = _frontend_dist_override or (
         Path(__file__).resolve().parent.parent / "frontend_dist"

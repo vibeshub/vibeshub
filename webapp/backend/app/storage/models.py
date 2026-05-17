@@ -7,13 +7,12 @@ from typing import Optional
 from sqlalchemy import (
     BigInteger,
     DateTime,
-    ForeignKey,
     Integer,
     String,
     Text,
     Uuid,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 def utcnow() -> datetime:
@@ -53,20 +52,3 @@ class Trace(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
-    renders: Mapped[list["Render"]] = relationship(back_populates="trace")
-
-
-class Render(Base):
-    __tablename__ = "renders"
-
-    trace_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("traces.id", ondelete="CASCADE"), primary_key=True
-    )
-    renderer_version: Mapped[str] = mapped_column(String(64), primary_key=True)
-    html: Mapped[str] = mapped_column(Text)
-    rendered_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow
-    )
-
-    trace: Mapped[Trace] = relationship(back_populates="renders")

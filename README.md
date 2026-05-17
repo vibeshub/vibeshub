@@ -7,8 +7,9 @@ Host Claude Code conversation traces and link them to the pull requests they pro
 1. The Claude Code plugin's `PostToolUse` hook fires after any `Bash` invocation that contains `gh pr create`.
 2. The hook locates the session's `~/.claude/projects/.../*.jsonl` transcript and runs client-side redaction (AWS / GitHub / OpenAI / Anthropic keys, JWTs, env-style assignments, high-entropy tokens).
 3. It uploads to the backend with your `gh auth token` as identity.
-4. The backend stores the transcript blob, runs a second redaction pass, renders it via [`claude-code-log`](https://pypi.org/project/claude-code-log/), and returns a public URL.
+4. The backend stores the transcript blob, runs a second redaction pass, and returns a public URL.
 5. The plugin posts that URL as a comment on the PR.
+6. Visiting the URL loads the SPA, which fetches the raw JSONL from the backend and renders it as a single-page trace viewer (hero + collapsible tool cards + activity timeline + light/dark theme).
 
 Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-code/](plugins/claude-code/) — see [plugins/README.md](plugins/README.md).
 

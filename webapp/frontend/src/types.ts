@@ -15,9 +15,3 @@ export interface TraceSummary {
 export interface TraceListResponse {
   traces: TraceSummary[];
 }
-
-export interface RenderError {
-  error: "render_failed";
-  fallback: "raw";
-  message?: string;
-}

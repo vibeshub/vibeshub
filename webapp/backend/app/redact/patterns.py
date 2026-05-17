@@ -36,7 +36,7 @@ def redact_jsonl(data: bytes) -> tuple[bytes, RedactionReport]:
     """
     Apply redaction patterns to raw JSONL bytes. Operates on bytes so we don't
     need to parse-and-reserialize each line; that would change formatting and
-    risk altering claude-code-log's expected schema.
+    risk altering the downstream parser's expected schema.
     """
     report = RedactionReport()
     out = data
