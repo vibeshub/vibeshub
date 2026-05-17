@@ -34,5 +34,4 @@ cd webapp/backend
 | `VIBESHUB_AZURE_STORAGE_CONNECTION_STRING` | _(unset)_ | Fallback auth (account key or Azurite); ignored if account URL is set |
 | `VIBESHUB_GITHUB_API_BASE` | `https://api.github.com` | Override for tests |
 | `VIBESHUB_MAX_TRACE_BYTES` | `52428800` (50 MB) | Cap on transcript size |
-| `VIBESHUB_RENDERER_VERSION` | `claude-code-log:v1` | Bump to invalidate render cache |
 | `VIBESHUB_PUBLIC_BASE_URL` | `https://vibeshub.ai` | Used in `trace_url` responses |

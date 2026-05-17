@@ -13,9 +13,8 @@ async def test_full_pipeline(client, respx_mock):
       2. GET /api/traces/<owner>/<repo>/pull/<n>
       3. GET /api/traces/{short_id}
       4. GET /api/traces/{short_id}/raw
-      5. GET /api/traces/{short_id}/rendered
-      6. DELETE /api/traces/{short_id}
-      7. GET /api/traces/{short_id}  -> 404
+      5. DELETE /api/traces/{short_id}
+      6. GET /api/traces/{short_id}  -> 404
     """
     respx_mock.get("https://api.github.test/user").respond(
         200, json={"login": "alice", "id": 7}
@@ -47,6 +46,5 @@ async def test_full_pipeline(client, respx_mock):
     assert client.get("/api/traces/alice/repo/pull/3").status_code == 200
     assert client.get(f"/api/traces/{sid}").status_code == 200
     assert client.get(f"/api/traces/{sid}/raw").status_code == 200
-    assert client.get(f"/api/traces/{sid}/rendered").status_code == 200
     assert client.delete(f"/api/traces/{sid}", headers=auth).status_code == 204
     assert client.get(f"/api/traces/{sid}").status_code == 404

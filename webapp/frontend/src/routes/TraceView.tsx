@@ -1,30 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  fetchRawJsonl,
-  fetchRenderedHtml,
-  fetchTrace,
-  RenderFailedError,
-} from "../api";
+import { fetchRawJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
-import { RawFallback } from "../components/RawFallback";
-import { TraceFrame } from "../components/TraceFrame";
 import { TraceHeader } from "../components/TraceHeader";
+import { TraceViewer } from "../components/trace/TraceViewer";
+import { buildSession, parseJsonl } from "../components/trace/parser";
+import type { Session } from "../components/trace/types";
 import styles from "./TraceView.module.css";
 
-type RenderedState =
+type BodyState =
   | { kind: "loading" }
-  | { kind: "html"; html: string }
-  | { kind: "raw"; jsonl: string }
+  | { kind: "ready"; jsonl: string }
   | { kind: "error"; message: string };
 
 export function TraceView() {
   const { shortId } = useParams<{ shortId: string }>();
   const [trace, setTrace] = useState<TraceSummary | null>(null);
   const [traceErr, setTraceErr] = useState<string | null>(null);
-  const [body, setBody] = useState<RenderedState>({ kind: "loading" });
+  const [body, setBody] = useState<BodyState>({ kind: "loading" });
 
   useEffect(() => {
     if (!shortId) return;
@@ -38,21 +33,15 @@ export function TraceView() {
   useEffect(() => {
     if (!shortId) return;
     setBody({ kind: "loading" });
-    fetchRenderedHtml(shortId)
-      .then((html) => setBody({ kind: "html", html }))
-      .catch(async (e) => {
-        if (e instanceof RenderFailedError) {
-          try {
-            const jsonl = await fetchRawJsonl(shortId);
-            setBody({ kind: "raw", jsonl });
-          } catch (rawErr) {
-            setBody({ kind: "error", message: String(rawErr) });
-          }
-        } else {
-          setBody({ kind: "error", message: String(e) });
-        }
-      });
+    fetchRawJsonl(shortId)
+      .then((jsonl) => setBody({ kind: "ready", jsonl }))
+      .catch((e) => setBody({ kind: "error", message: String(e) }));
   }, [shortId]);
+
+  const session: Session | null = useMemo(() => {
+    if (body.kind !== "ready") return null;
+    return buildSession(parseJsonl(body.jsonl));
+  }, [body]);
 
   if (traceErr) return <ErrorState message={traceErr} />;
   if (!trace) return <LoadingState label="Loading trace…" />;
@@ -60,12 +49,14 @@ export function TraceView() {
   return (
     <div className={styles.container}>
       <TraceHeader trace={trace} />
-      {body.kind === "loading" && <LoadingState label="Rendering trace…" />}
-      {body.kind === "html" && (
-        <TraceFrame html={body.html} title={`Trace ${trace.short_id}`} />
-      )}
-      {body.kind === "raw" && <RawFallback jsonl={body.jsonl} />}
+      {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
+      {body.kind === "ready" && session && (
+        <TraceViewer
+          session={session}
+          rawHref={`/api/traces/${trace.short_id}/raw`}
+        />
+      )}
     </div>
   );
 }
