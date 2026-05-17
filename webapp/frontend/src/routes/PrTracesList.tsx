@@ -26,7 +26,17 @@ export function PrTracesList() {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>
-        {params.owner}/{params.repo} #{params.number}
+        <Link to={`/${params.owner}`} className={styles.crumb}>
+          {params.owner}
+        </Link>
+        <span className={styles.crumbSep}>/</span>
+        <Link
+          to={`/${params.owner}/${params.repo}`}
+          className={styles.crumb}
+        >
+          {params.repo}
+        </Link>{" "}
+        #{params.number}
       </h1>
       <p className={styles.subtitle}>
         Claude Code traces uploaded for this pull request

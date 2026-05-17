@@ -41,3 +41,20 @@
 .dot {
   color: var(--color-border);
 }
+
+.crumb {
+  color: var(--text-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crumb:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.crumbSep {
+  color: var(--text-faint);
+  margin: 0 2px;
+  font-weight: 400;
+}

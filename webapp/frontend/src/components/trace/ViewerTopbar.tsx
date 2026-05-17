@@ -1,12 +1,15 @@
+import { Link } from "react-router-dom";
 import type { Session } from "./types";
 import { IconLink, IconMoon, IconSun } from "./icons";
 import { useTheme } from "./theme";
 
 interface Props {
   session: Session;
+  repoOwner?: string;
+  repoName?: string;
 }
 
-export function ViewerTopbar({ session }: Props) {
+export function ViewerTopbar({ session, repoOwner, repoName }: Props) {
   const { resolved, toggle } = useTheme();
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
@@ -21,12 +24,31 @@ export function ViewerTopbar({ session }: Props) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <div className="brand">
+        <Link className="brand" to="/" style={{ textDecoration: "none" }}>
           <span className="brand-mark">v</span>
           <span>vibeshub</span>
-          <span className="brand-sep">/</span>
-          <span className="brand-trace">trace/{id}</span>
-        </div>
+        </Link>
+        {repoOwner && (
+          <>
+            <span className="brand-sep">/</span>
+            <Link className="topbar-link" to={`/${repoOwner}`}>
+              {repoOwner}
+            </Link>
+          </>
+        )}
+        {repoOwner && repoName && (
+          <>
+            <span className="brand-sep">/</span>
+            <Link
+              className="topbar-link"
+              to={`/${repoOwner}/${repoName}`}
+            >
+              {repoName}
+            </Link>
+          </>
+        )}
+        <span className="brand-sep">/</span>
+        <span className="brand-trace">trace/{id}</span>
         <div className="topbar-spacer" />
         <div className="topbar-actions">
           <button

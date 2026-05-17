@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { TraceSummary } from "../types";
 import styles from "./TraceHeader.module.css";
 
@@ -8,6 +9,7 @@ interface Props {
 export function TraceHeader({ trace }: Props) {
   const dateStr = new Date(trace.created_at).toLocaleString();
   const sizeKb = Math.max(1, Math.round(trace.byte_size / 1024));
+  const [repoOwner, repoName] = trace.repo_full_name.split("/");
 
   return (
     <header className={styles.header}>
@@ -25,7 +27,17 @@ export function TraceHeader({ trace }: Props) {
       </div>
       <div className={styles.metaRow}>
         <span>
-          <strong>{trace.repo_full_name}</strong> #{trace.pr_number}
+          <Link to={`/${repoOwner}`} className={styles.crumb}>
+            {repoOwner}
+          </Link>
+          <span className={styles.crumbSep}>/</span>
+          <Link
+            to={`/${repoOwner}/${repoName}`}
+            className={styles.crumb}
+          >
+            {repoName}
+          </Link>{" "}
+          #{trace.pr_number}
         </span>
         <span className={styles.dot}>·</span>
         <span>{trace.platform}</span>
@@ -36,7 +48,12 @@ export function TraceHeader({ trace }: Props) {
         <span className={styles.dot}>·</span>
         <span>{dateStr}</span>
         <span className={styles.dot}>·</span>
-        <span>uploaded by @{trace.owner_login}</span>
+        <span>
+          uploaded by{" "}
+          <Link to={`/${trace.owner_login}`} className={styles.crumb}>
+            @{trace.owner_login}
+          </Link>
+        </span>
       </div>
     </header>
   );

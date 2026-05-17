@@ -8,9 +8,16 @@ import { Thread } from "./Thread";
 interface Props {
   session: Session;
   rawHref: string;
+  repoOwner?: string;
+  repoName?: string;
 }
 
-export function TraceViewer({ session, rawHref }: Props) {
+export function TraceViewer({
+  session,
+  rawHref,
+  repoOwner,
+  repoName,
+}: Props) {
   const [showReasoning, setShowReasoning] = useState(false);
   const [showSystemEvents, setShowSystemEvents] = useState(false);
 
@@ -18,7 +25,11 @@ export function TraceViewer({ session, rawHref }: Props) {
 
   return (
     <div className="vibeshub-viewer">
-      <ViewerTopbar session={session} />
+      <ViewerTopbar
+        session={session}
+        repoOwner={repoOwner}
+        repoName={repoName}
+      />
       <Hero session={session} />
       {empty ? (
         <div className="empty-state">
