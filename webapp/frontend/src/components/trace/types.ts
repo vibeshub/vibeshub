@@ -46,6 +46,10 @@ export interface ToolResult {
   content: unknown;
   isError?: boolean;
   toolUseResult?: { stdout?: string; stderr?: string } & Record<string, unknown>;
+  // For Skill (and similar) tools, Claude Code replays the loaded skill body
+  // back to the model as a synthetic `isMeta:true` user message keyed to the
+  // tool_use. Captured here so the UI can show what the model actually saw.
+  injectedText?: string;
 }
 
 export interface UserPromptEvent {

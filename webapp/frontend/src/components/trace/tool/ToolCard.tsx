@@ -55,7 +55,7 @@ function renderBody(event: ToolUseEvent, root: string | null, followingPrompt: s
     case "Agent":
       return <AgentBody input={event.input} />;
     case "Skill":
-      return <SkillBody input={event.input} />;
+      return <SkillBody input={event.input} result={event.result} />;
     default:
       return <GenericBody input={event.input} result={event.result} />;
   }
