@@ -206,3 +206,49 @@ async def test_returns_link_header_when_requested(respx_mock: respx.MockRouter):
     )
     assert body == [{"name": "r1"}]
     assert link is not None and "rel=\"next\"" in link
+
+
+@pytest.mark.asyncio
+async def test_200_without_etag_does_not_send_if_none_match_on_refresh(
+    respx_mock: respx.MockRouter,
+):
+    respx_mock.get(f"{API}/users/x").mock(side_effect=[
+        httpx.Response(200, json={"v": 1}),  # no ETag header
+        httpx.Response(200, json={"v": 2}),
+    ])
+    c = PublicGitHubClient(API, fallback_token="fb", ttl_seconds=0)
+    body1 = await c.get_json("/users/x", viewer_token=None)
+    body2 = await c.get_json("/users/x", viewer_token=None)
+    assert body1 == {"v": 1}
+    assert body2 == {"v": 2}
+    # Second request has no If-None-Match because the first response had no ETag.
+    assert "if-none-match" not in respx_mock.calls[1].request.headers
+
+
+@pytest.mark.asyncio
+async def test_locks_dict_does_not_leak_on_errors(respx_mock: respx.MockRouter):
+    respx_mock.get(f"{API}/users/missing").respond(404)
+    c = PublicGitHubClient(API, fallback_token="fb", ttl_seconds=60)
+    with pytest.raises(GitHubNotFound):
+        await c.get_json("/users/missing", viewer_token=None)
+    # Lock for the failed key was pruned because no cache entry exists.
+    # We don't assert on _locks size directly via public API; use internal
+    # state via a leading-underscore attribute — acceptable in a same-package
+    # test.
+    assert "/users/missing" not in {k[0] for k in c._locks}
+
+
+@pytest.mark.asyncio
+async def test_locks_dict_pruned_on_lru_eviction(respx_mock: respx.MockRouter):
+    respx_mock.get(url__regex=rf"{API}/users/.*").respond(
+        200, json={"ok": True}, headers={"ETag": '"e"'}
+    )
+    c = PublicGitHubClient(API, fallback_token="fb", ttl_seconds=60, max_entries=2)
+    await c.get_json("/users/a", viewer_token=None)
+    await c.get_json("/users/b", viewer_token=None)
+    await c.get_json("/users/c", viewer_token=None)  # evicts /users/a
+    # /users/a was evicted; its lock should be gone too.
+    keys = {k[0] for k in c._locks}
+    assert "/users/a" not in keys
+    assert "/users/b" in keys
+    assert "/users/c" in keys

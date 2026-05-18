@@ -117,68 +117,80 @@ class PublicGitHubClient:
             return cached.payload, cached.link
 
         lock = self._locks.setdefault(key, asyncio.Lock())
-        async with lock:
-            # Recheck after acquiring (someone else may have refreshed).
-            cached = self._cache.get(key)
-            now = monotonic()
-            if cached is not None and cached.expires_at > now:
-                self._cache.move_to_end(key)
-                log.info(
-                    "github.public_client path=%s cache_state=hit source=cache",
-                    path,
-                )
-                return cached.payload, cached.link
-
-            cache_state = "stale" if cached else "miss"
-            log.info(
-                "github.public_client path=%s cache_state=%s source=network",
-                path, cache_state,
-            )
-
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            }
-            if cached and cached.etag:
-                headers["If-None-Match"] = cached.etag
-
-            try:
-                async with httpx.AsyncClient(timeout=self._timeout) as http:
-                    resp = await http.get(
-                        f"{self._api_base}{path}",
-                        params=params,
-                        headers=headers,
+        try:
+            async with lock:
+                # Recheck after acquiring (someone else may have refreshed).
+                cached = self._cache.get(key)
+                now = monotonic()
+                if cached is not None and cached.expires_at > now:
+                    self._cache.move_to_end(key)
+                    log.info(
+                        "github.public_client path=%s cache_state=hit source=cache",
+                        path,
                     )
-            except httpx.HTTPError as exc:
-                raise GitHubUpstreamError(0, str(exc)) from exc
+                    return cached.payload, cached.link
 
-            if resp.status_code == 304 and cached is not None:
-                cached.expires_at = monotonic() + self._ttl
-                self._cache.move_to_end(key)
-                return cached.payload, cached.link
-
-            if resp.status_code == 200:
-                payload = resp.json()
-                entry = _Entry(
-                    etag=resp.headers.get("ETag"),
-                    payload=payload,
-                    expires_at=monotonic() + self._ttl,
-                    link=resp.headers.get("Link"),
+                cache_state = "stale" if cached else "miss"
+                log.info(
+                    "github.public_client path=%s cache_state=%s source=network",
+                    path, cache_state,
                 )
-                self._cache[key] = entry
-                self._cache.move_to_end(key)
-                while len(self._cache) > self._max_entries:
-                    self._cache.popitem(last=False)
-                return payload, entry.link
 
-            if resp.status_code == 401:
-                raise GitHubAuthError("upstream 401")
-            if resp.status_code == 404:
-                raise GitHubNotFound(path)
-            if resp.status_code == 403 and resp.headers.get(
-                "X-RateLimit-Remaining"
-            ) == "0":
-                reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-                raise GitHubRateLimited(reset_at_epoch=reset)
-            raise GitHubUpstreamError(resp.status_code, resp.text)
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                }
+                if cached and cached.etag:
+                    headers["If-None-Match"] = cached.etag
+
+                try:
+                    async with httpx.AsyncClient(timeout=self._timeout) as http:
+                        resp = await http.get(
+                            f"{self._api_base}{path}",
+                            params=params,
+                            headers=headers,
+                        )
+                except httpx.HTTPError as exc:
+                    raise GitHubUpstreamError(0, str(exc)) from exc
+
+                if resp.status_code == 304 and cached is not None:
+                    cached.expires_at = monotonic() + self._ttl
+                    self._cache.move_to_end(key)
+                    return cached.payload, cached.link
+
+                if resp.status_code == 200:
+                    payload = resp.json()
+                    entry = _Entry(
+                        etag=resp.headers.get("ETag"),
+                        payload=payload,
+                        expires_at=monotonic() + self._ttl,
+                        link=resp.headers.get("Link"),
+                    )
+                    self._cache[key] = entry
+                    self._cache.move_to_end(key)
+                    while len(self._cache) > self._max_entries:
+                        evicted_key, _ = self._cache.popitem(last=False)
+                        self._locks.pop(evicted_key, None)
+                    return payload, entry.link
+
+                if resp.status_code == 401:
+                    raise GitHubAuthError("upstream 401")
+                if resp.status_code == 404:
+                    raise GitHubNotFound(path)
+                if resp.status_code == 403 and resp.headers.get(
+                    "X-RateLimit-Remaining"
+                ) == "0":
+                    reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
+                    raise GitHubRateLimited(reset_at_epoch=reset)
+                raise GitHubUpstreamError(resp.status_code, resp.text)
+        finally:
+            # Drop the lock entry when no cache entry exists for this key.
+            # 200 path: cache entry was just stored, lock stays so future
+            # stale-revalidations still single-flight.
+            # 304 path: cache entry was present going in and remains, lock
+            # stays.
+            # Error paths (401/404/403/5xx/network): no cache entry exists,
+            # so prune the lock to prevent unbounded growth.
+            if key not in self._cache:
+                self._locks.pop(key, None)
