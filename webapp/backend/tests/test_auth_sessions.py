@@ -81,7 +81,7 @@ async def test_load_user_by_session_expired_returns_none(client):
 
 
 @pytest.mark.asyncio
-async def test_load_user_slides_expiry_after_throttle_window(client, monkeypatch):
+async def test_load_user_slides_expiry_after_throttle_window(client):
     app = client.app
     SessionLocal = app.state.session_maker
 

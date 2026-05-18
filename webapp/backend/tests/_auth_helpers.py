@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 from app.auth.crypto import TokenCipher
 from app.auth.sessions import SESSION_COOKIE_NAME, create_session
