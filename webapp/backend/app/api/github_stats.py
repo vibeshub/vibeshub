@@ -143,3 +143,77 @@ async def list_user_repos(
         "repos": [_project_repo_list_item(p) for p in payload],
         "has_next": _has_next_from_link(link),
     }
+
+
+MAX_STAR_AGG_PAGES = 3
+STAR_AGG_PER_PAGE = 100
+
+
+@router.get("/users/{login}")
+async def get_user(
+    login: str,
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    gh: PublicGitHubClient = Depends(get_public_github),
+):
+    if not settings.github_fallback_token and user is None:
+        raise HTTPException(status_code=503, detail="github_not_configured")
+    token = _viewer_token(user, settings)
+    try:
+        profile = await gh.get_json(f"/users/{login}", viewer_token=token)
+    except Exception as exc:
+        raise _handle_errors(exc, not_found_detail="user_not_found") from exc
+
+    total_stars = 0
+    lang_counts: dict[str, int] = {}
+    stars_truncated = False
+
+    public_repos = int(profile.get("public_repos", 0) or 0)
+    if public_repos > 0:
+        try:
+            for page in range(1, MAX_STAR_AGG_PAGES + 1):
+                items = await gh.get_json(
+                    f"/users/{login}/repos",
+                    viewer_token=token,
+                    params={
+                        "sort": "pushed",
+                        "per_page": STAR_AGG_PER_PAGE,
+                        "page": page,
+                    },
+                )
+                if not items:
+                    break
+                for repo in items:
+                    total_stars += int(repo.get("stargazers_count", 0) or 0)
+                    lang = repo.get("language")
+                    if lang:
+                        lang_counts[lang] = lang_counts.get(lang, 0) + 1
+                if len(items) < STAR_AGG_PER_PAGE:
+                    break
+            else:
+                # Hit the cap. If GitHub reports more than we walked, mark truncated.
+                if public_repos > MAX_STAR_AGG_PAGES * STAR_AGG_PER_PAGE:
+                    stars_truncated = True
+        except Exception as exc:
+            raise _handle_errors(exc, not_found_detail="user_not_found") from exc
+
+    top_languages = [
+        lang for lang, _count in sorted(
+            lang_counts.items(), key=lambda kv: (-kv[1], kv[0])
+        )
+    ][:3]
+
+    return {
+        "login": profile["login"],
+        "name": profile.get("name"),
+        "bio": profile.get("bio"),
+        "avatar_url": profile.get("avatar_url"),
+        "html_url": profile["html_url"],
+        "followers": profile.get("followers", 0),
+        "following": profile.get("following", 0),
+        "public_repos": public_repos,
+        "total_public_stars": total_stars,
+        "top_languages": top_languages,
+        "created_at": profile.get("created_at"),
+        "stars_truncated": stars_truncated,
+    }
