@@ -1,4 +1,3 @@
-import asyncio
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -25,7 +24,12 @@ def test_login_redirects_to_github_with_correct_scope(client):
 
 def test_login_rejects_open_redirect_next(client):
     """An off-host `next` must be ignored — only same-origin paths are honored."""
-    for bad in ("https://evil.com/x", "//evil.com/x", "javascript:alert(1)"):
+    for bad in (
+        "https://evil.com/x",
+        "//evil.com/x",
+        "javascript:alert(1)",
+        "/\\evil.com",
+    ):
         r = client.get(
             f"/api/auth/github/login?next={bad}", follow_redirects=False
         )

@@ -4,9 +4,11 @@ import logging
 from urllib.parse import urlparse
 
 import httpx
+from authlib.integrations.base_client.errors import MismatchingStateError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.crypto import TokenCipher
@@ -32,6 +34,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def _validated_next(next_value: str | None) -> str:
     """Accept only same-origin paths. Anything else falls back to '/'."""
     if not next_value:
+        return "/"
+    if "\\" in next_value:
         return "/"
     if not next_value.startswith("/") or next_value.startswith("//"):
         return "/"
@@ -117,14 +121,16 @@ async def github_callback(
     oauth = request.app.state.oauth
     try:
         token = await oauth.github.authorize_access_token(request)
+    except MismatchingStateError:
+        log.info("auth.login.failure reason=state_mismatch")
+        return RedirectResponse(
+            url="/?auth_error=state_mismatch", status_code=303
+        )
     except Exception as exc:
-        reason = type(exc).__name__
-        if "state" in reason.lower():
-            log.info("auth.login.failure reason=state_mismatch")
-            return RedirectResponse(
-                url="/?auth_error=state_mismatch", status_code=303
-            )
-        log.warning("auth.login.failure reason=github_error err=%s", reason)
+        log.warning(
+            "auth.login.failure reason=github_error err=%s",
+            type(exc).__name__,
+        )
         return RedirectResponse(url="/?auth_error=github_error", status_code=303)
 
     access_token = token.get("access_token")
@@ -174,6 +180,23 @@ async def github_callback(
             token_scopes=scopes_str,
         )
         session.add(existing)
+        try:
+            await session.flush()
+        except IntegrityError:
+            # TODO: a concurrent callback for the same github_id won this race
+            # and inserted first. Rollback our pending insert, reload the
+            # existing row, and update it instead.
+            await session.rollback()
+            existing = (await session.execute(
+                select(User).where(User.github_id == profile["id"])
+            )).scalar_one()
+            existing.github_login = profile["login"]
+            existing.name = profile.get("name")
+            existing.avatar_url = profile.get("avatar_url")
+            existing.email = primary_email
+            existing.encrypted_access_token = cipher.encrypt(access_token)
+            existing.token_scopes = scopes_str
+            await session.flush()
     else:
         existing.github_login = profile["login"]
         existing.name = profile.get("name")
@@ -181,8 +204,7 @@ async def github_callback(
         existing.email = primary_email
         existing.encrypted_access_token = cipher.encrypt(access_token)
         existing.token_scopes = scopes_str
-
-    await session.flush()
+        await session.flush()
 
     sid = await create_session(session, existing.id)
     await session.commit()
