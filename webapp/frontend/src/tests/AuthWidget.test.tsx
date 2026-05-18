@@ -51,6 +51,11 @@ describe("AuthWidget", () => {
     );
 
     expect(screen.getByText("@alice")).toBeInTheDocument();
+
+    // Open the dropdown
+    fireEvent.click(screen.getByRole("button", { name: /@alice/i }));
+
+    // Now Sign out is in the DOM
     fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
     expect(signOut).toHaveBeenCalled();
   });
