@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchRepoOverview } from "../api";
-import type { RepoOverview } from "../types";
+import type {
+  RepoContributorEntry,
+  RepoOverview,
+  TraceSummary,
+} from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
@@ -28,10 +32,13 @@ function relativeFrom(iso: string | null): string {
   return `${d} day${d === 1 ? "" : "s"} ago`;
 }
 
+type RepoTab = "traces" | "prs" | "contributors";
+
 export function RepoPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const [data, setData] = useState<RepoOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<RepoTab>("traces");
 
   useEffect(() => {
     if (!owner || !repo) return;
@@ -132,13 +139,25 @@ export function RepoPage() {
         </div>
 
         <div className="tabs">
-          <button className="tab active" type="button">
+          <button
+            className={`tab${tab === "traces" ? " active" : ""}`}
+            type="button"
+            onClick={() => setTab("traces")}
+          >
             Traces <span className="count">{data.stats.trace_count}</span>
           </button>
-          <button className="tab" type="button">
+          <button
+            className={`tab${tab === "prs" ? " active" : ""}`}
+            type="button"
+            onClick={() => setTab("prs")}
+          >
             Pull requests <span className="count">{data.stats.pr_count}</span>
           </button>
-          <button className="tab" type="button">
+          <button
+            className={`tab${tab === "contributors" ? " active" : ""}`}
+            type="button"
+            onClick={() => setTab("contributors")}
+          >
             Contributors{" "}
             <span className="count">{data.stats.contributor_count}</span>
           </button>
@@ -146,23 +165,33 @@ export function RepoPage() {
 
         <div className="split">
           <div>
-            {data.traces.length === 0 ? (
-              <div className="trace-list">
-                <div className="empty">No traces yet.</div>
-              </div>
-            ) : (
-              <div className="trace-list">
-                {data.traces.map((t) => (
-                  <TraceListRow key={t.short_id} trace={t} showUploader />
-                ))}
-              </div>
+            {tab === "traces" && (
+              <>
+                {data.traces.length === 0 ? (
+                  <div className="trace-list">
+                    <div className="empty">No traces yet.</div>
+                  </div>
+                ) : (
+                  <div className="trace-list">
+                    {data.traces.map((t) => (
+                      <TraceListRow key={t.short_id} trace={t} showUploader />
+                    ))}
+                  </div>
+                )}
+
+                <div className="list-footer">
+                  <span>
+                    Showing {data.traces.length} of {data.stats.trace_count} traces
+                  </span>
+                </div>
+              </>
             )}
 
-            <div className="list-footer">
-              <span>
-                Showing {data.traces.length} of {data.stats.trace_count} traces
-              </span>
-            </div>
+            {tab === "prs" && <PrList owner={owner} repo={repo} traces={data.traces} />}
+
+            {tab === "contributors" && (
+              <ContributorList contributors={data.contributors} />
+            )}
           </div>
 
           <aside>
@@ -232,5 +261,141 @@ export function RepoPage() {
         <span>vibeshub</span>
       </footer>
     </div>
+  );
+}
+
+interface PrGroup {
+  pr_number: number;
+  pr_title: string | null;
+  pr_url: string;
+  traces: TraceSummary[];
+}
+
+function PrList({
+  owner,
+  repo,
+  traces,
+}: {
+  owner: string;
+  repo: string;
+  traces: TraceSummary[];
+}) {
+  if (traces.length === 0) {
+    return (
+      <div className="trace-list">
+        <div className="empty">No pull requests yet.</div>
+      </div>
+    );
+  }
+
+  const groups = new Map<number, PrGroup>();
+  for (const t of traces) {
+    const existing = groups.get(t.pr_number);
+    if (existing) {
+      existing.traces.push(t);
+    } else {
+      groups.set(t.pr_number, {
+        pr_number: t.pr_number,
+        pr_title: t.pr_title,
+        pr_url: t.pr_url,
+        traces: [t],
+      });
+    }
+  }
+  const prs = [...groups.values()].sort((a, b) => b.pr_number - a.pr_number);
+
+  return (
+    <>
+      <div className="trace-list">
+        {prs.map((pr) => {
+          const latest = pr.traces[0];
+          const href = `/${owner}/${repo}/pull/${pr.pr_number}/${latest.short_id}`;
+          return (
+            <Link key={pr.pr_number} className="trace-row" to={href}>
+              <div className="trace-body">
+                <div className="trace-row-top">
+                  <span className="ref">#{pr.pr_number}</span>
+                  <span className="trace-title">
+                    {pr.pr_title ?? `PR #${pr.pr_number}`}
+                  </span>
+                </div>
+                <div className="trace-meta">
+                  <span>
+                    {pr.traces.length}{" "}
+                    {pr.traces.length === 1 ? "trace" : "traces"}
+                  </span>
+                  <span className="sep">·</span>
+                  <a
+                    href={pr.pr_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    view on GitHub ↗
+                  </a>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="list-footer">
+        <span>
+          Showing {prs.length} {prs.length === 1 ? "PR" : "PRs"}
+        </span>
+      </div>
+    </>
+  );
+}
+
+function ContributorList({
+  contributors,
+}: {
+  contributors: RepoContributorEntry[];
+}) {
+  if (contributors.length === 0) {
+    return (
+      <div className="trace-list">
+        <div className="empty">No contributors yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="trace-list">
+        {contributors.map((c) => (
+          <Link key={c.login} className="trace-row" to={`/${c.login}`}>
+            <div
+              className="trace-icon"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(0.68 0.13 50), oklch(0.55 0.10 290))",
+                color: "white",
+                fontWeight: 600,
+              }}
+            >
+              {c.login.charAt(0).toUpperCase()}
+            </div>
+            <div className="trace-body">
+              <div className="trace-row-top">
+                <span className="trace-title">@{c.login}</span>
+              </div>
+              <div className="trace-meta">
+                <span>
+                  {c.trace_count} {c.trace_count === 1 ? "trace" : "traces"}
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="list-footer">
+        <span>
+          Showing {contributors.length}{" "}
+          {contributors.length === 1 ? "contributor" : "contributors"}
+        </span>
+      </div>
+    </>
   );
 }
