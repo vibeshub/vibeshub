@@ -57,3 +57,97 @@ describe("api", () => {
     await expect(fetchRawJsonl("zzz")).rejects.toThrow(/404/);
   });
 });
+
+import {
+  fetchMe,
+  logout,
+  fetchGithubUser,
+  fetchGithubUserRepos,
+  fetchGithubRepo,
+} from "../api";
+
+describe("api / auth + github", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fetchMe returns null on 204", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
+    const me = await fetchMe();
+    expect(me).toBeNull();
+  });
+
+  it("fetchMe returns the user on 200", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "u-1",
+          login: "alice",
+          name: "Alice",
+          avatar_url: "https://avatars/alice.png",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const me = await fetchMe();
+    expect(me).not.toBeNull();
+    expect(me!.login).toBe("alice");
+  });
+
+  it("logout POSTs and resolves on 204", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
+    await logout();
+    const call = spy.mock.calls[0];
+    expect(call[0]).toBe("/api/auth/logout");
+    expect((call[1] as RequestInit).method).toBe("POST");
+  });
+
+  it("fetchGithubUser returns the parsed profile", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          login: "octo", name: "Octo", bio: null, avatar_url: "",
+          html_url: "", followers: 1, following: 0, public_repos: 1,
+          total_public_stars: 5, top_languages: ["Go"],
+          created_at: "2008-01-14T04:33:35Z", stars_truncated: false,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const u = await fetchGithubUser("octo");
+    expect(u.login).toBe("octo");
+    expect(u.top_languages).toEqual(["Go"]);
+  });
+
+  it("fetchGithubUserRepos paginates", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ repos: [], has_next: false }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    await fetchGithubUserRepos("octo", 2);
+    const url = spy.mock.calls[0][0] as string;
+    expect(url).toContain("page=2");
+  });
+
+  it("fetchGithubRepo returns the parsed repo", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          full_name: "octo/hello", name: "hello", description: "", html_url: "",
+          default_branch: "main", stargazers_count: 1, forks_count: 0,
+          watchers_count: 1, open_issues_count: 0, primary_language: "Ruby",
+          license_spdx: "MIT", topics: [], created_at: "", updated_at: "",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const r = await fetchGithubRepo("octo", "hello");
+    expect(r.primary_language).toBe("Ruby");
+  });
+});

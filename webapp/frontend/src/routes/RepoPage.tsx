@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchRepoOverview } from "../api";
+import { fetchGithubRepo, fetchRepoOverview } from "../api";
 import type {
+  GithubRepo,
   RepoContributorEntry,
   RepoOverview,
   TraceSummary,
@@ -37,6 +38,8 @@ type RepoTab = "traces" | "prs" | "contributors";
 export function RepoPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const [data, setData] = useState<RepoOverview | null>(null);
+  const [ghRepo, setGhRepo] = useState<GithubRepo | null>(null);
+  const [ghError, setGhError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<RepoTab>("traces");
 
@@ -47,6 +50,15 @@ export function RepoPage() {
     fetchRepoOverview(owner, repo)
       .then(setData)
       .catch((e) => setError(String(e)));
+  }, [owner, repo]);
+
+  useEffect(() => {
+    if (!owner || !repo) return;
+    setGhError(null);
+    setGhRepo(null);
+    fetchGithubRepo(owner, repo)
+      .then(setGhRepo)
+      .catch((e) => setGhError(String(e)));
   }, [owner, repo]);
 
   if (!owner || !repo) return null;
@@ -100,42 +112,57 @@ export function RepoPage() {
         </section>
 
         <div className="stat-strip">
-          <div className="stat-cell">
-            <div className="stat-label">Traces</div>
-            <div className="stat-value">{data.stats.trace_count}</div>
-            <div className="stat-sub">
-              {data.stats.pr_count} {data.stats.pr_count === 1 ? "PR" : "PRs"}
+          {ghError || !ghRepo ? (
+            <div className="stat-cell">
+              <div className="stat-label">GitHub</div>
+              <div className="stat-value">—</div>
+              <div className="stat-sub">
+                {ghError ? "Stats unavailable" : "Loading…"}
+              </div>
             </div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Messages</div>
-            <div className="stat-value">
-              {compactCount(data.stats.message_count)}
-            </div>
-            <div className="stat-sub">
-              {data.stats.trace_count > 0
-                ? `avg ${Math.round(
-                    data.stats.message_count / data.stats.trace_count,
-                  )} / trace`
-                : "—"}
-            </div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Size</div>
-            <div className="stat-value">
-              {compactCount(Math.round(data.stats.byte_size / 1024))} KB
-            </div>
-            <div className="stat-sub">total trace data</div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Contributors</div>
-            <div className="stat-value">{data.stats.contributor_count}</div>
-            <div className="stat-sub">
-              {data.stats.last_trace_at
-                ? `last upload ${relativeFrom(data.stats.last_trace_at)}`
-                : "—"}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="stat-cell">
+                <div className="stat-label">Stars</div>
+                <div className="stat-value">
+                  {compactCount(ghRepo.stargazers_count)}
+                </div>
+                <div className="stat-sub">
+                  {compactCount(ghRepo.watchers_count)} watching
+                </div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Forks</div>
+                <div className="stat-value">
+                  {compactCount(ghRepo.forks_count)}
+                </div>
+                <div className="stat-sub">
+                  {compactCount(ghRepo.open_issues_count)} open issues
+                </div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Language</div>
+                <div className="stat-value" style={{ fontSize: 16 }}>
+                  {ghRepo.primary_language ?? "—"}
+                </div>
+                <div className="stat-sub">
+                  {ghRepo.license_spdx ?? "no license"}
+                </div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Updated</div>
+                <div className="stat-value" style={{ fontSize: 16 }}>
+                  {ghRepo.updated_at
+                    ? relativeFrom(ghRepo.updated_at)
+                    : "—"}
+                </div>
+                <div className="stat-sub">
+                  default branch{" "}
+                  {ghRepo.default_branch ?? "—"}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="tabs">

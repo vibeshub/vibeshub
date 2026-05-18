@@ -3,17 +3,26 @@ import respx
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture
+TEST_FERNET_KEY = "uPL4kPYxOJ-9pTewq6Vg0_LZeQyzrIw0idl_Ld_AQ7E="
+
+
+@pytest.fixture(autouse=True)
 def _settings_env(tmp_path, monkeypatch):
     monkeypatch.setenv("VIBESHUB_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     monkeypatch.setenv("VIBESHUB_BLOB_DIR", str(tmp_path / "blobs"))
     monkeypatch.setenv("VIBESHUB_GITHUB_API_BASE", "https://api.github.test")
     monkeypatch.setenv("VIBESHUB_PUBLIC_BASE_URL", "https://vibeshub.test")
+    # Auth / OAuth / cache config — fixed test values.
+    monkeypatch.setenv("VIBESHUB_GITHUB_OAUTH_CLIENT_ID", "Iv1.test")
+    monkeypatch.setenv("VIBESHUB_GITHUB_OAUTH_CLIENT_SECRET", "test-secret")
+    monkeypatch.setenv("VIBESHUB_GITHUB_FALLBACK_TOKEN", "ghp_fallback")
+    monkeypatch.setenv("VIBESHUB_SESSION_SECRET", "x" * 32)
+    monkeypatch.setenv("VIBESHUB_TOKEN_ENCRYPTION_KEY", TEST_FERNET_KEY)
+    monkeypatch.setenv("VIBESHUB_COOKIE_SECURE", "false")
 
 
 @pytest.fixture
 def client(_settings_env):
-    # Lazy import so env vars are seen by Settings()
     from app.main import create_app
     app = create_app()
     with TestClient(app) as c:

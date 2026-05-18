@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import (
     BigInteger,
     DateTime,
+    ForeignKey,
     Integer,
     String,
     Text,
@@ -51,4 +52,49 @@ class Trace(Base):
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    # `github_id` is the immutable identity. github_login can be renamed; we
+    # upsert on github_id and refresh github_login on each login.
+    github_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    github_login: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Fernet ciphertext of the OAuth access token. Always set on insert.
+    encrypted_access_token: Mapped[str] = mapped_column(Text)
+    # Comma-separated OAuth scopes the token was issued with. Plaintext.
+    token_scopes: Mapped[str] = mapped_column(String(255), default="")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    # Opaque session id from `secrets.token_urlsafe(32)` (43 chars). String(64)
+    # leaves room for a future `v1.<id>` prefix without another migration.
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
     )

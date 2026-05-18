@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { AuthWidget } from "./AuthWidget";
 import { IconMoon, IconSun } from "./trace/icons";
 import { useTheme } from "./trace/theme";
 
@@ -40,6 +41,7 @@ export function PageTopbar({ crumbs }: Props) {
         ))}
         <div className="topbar-spacer" />
         <div className="topbar-actions">
+          <AuthWidget />
           <button
             className="iconbtn"
             onClick={toggle}

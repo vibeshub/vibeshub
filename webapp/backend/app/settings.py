@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     max_trace_bytes: int = Field(default=50 * 1024 * 1024)
     public_base_url: str = Field(default="https://vibeshub.ai")
 
+    # OAuth + sessions + cache config. All default to empty/secure so the app
+    # boots for contributors who haven't set up OAuth — auth routes return
+    # 503 oauth_not_configured if github_oauth_client_id is empty.
+    github_oauth_client_id: str = Field(default="")
+    github_oauth_client_secret: str = Field(default="")
+    github_fallback_token: str = Field(default="")
+    session_secret: str = Field(default="")
+    token_encryption_key: str = Field(default="")
+    cookie_secure: bool = Field(default=True)
+
 
 def get_settings() -> Settings:
     return Settings()

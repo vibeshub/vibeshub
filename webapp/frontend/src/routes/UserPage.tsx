@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchUserOverview } from "../api";
-import type { UserOverview, UserRepoEntry } from "../types";
+import { fetchGithubUser, fetchUserOverview } from "../api";
+import type { GithubUser, UserOverview, UserRepoEntry } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
@@ -33,6 +33,8 @@ type UserTab = "traces" | "repos";
 export function UserPage() {
   const { owner } = useParams<{ owner: string }>();
   const [data, setData] = useState<UserOverview | null>(null);
+  const [ghUser, setGhUser] = useState<GithubUser | null>(null);
+  const [ghError, setGhError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<UserTab>("traces");
 
@@ -43,6 +45,15 @@ export function UserPage() {
     fetchUserOverview(owner)
       .then(setData)
       .catch((e) => setError(String(e)));
+  }, [owner]);
+
+  useEffect(() => {
+    if (!owner) return;
+    setGhError(null);
+    setGhUser(null);
+    fetchGithubUser(owner)
+      .then(setGhUser)
+      .catch((e) => setGhError(String(e)));
   }, [owner]);
 
   if (!owner) return null;
@@ -90,47 +101,56 @@ export function UserPage() {
         </section>
 
         <div className="stat-strip">
-          <div className="stat-cell">
-            <div className="stat-label">Traces</div>
-            <div className="stat-value">{data.stats.trace_count}</div>
-            <div className="stat-sub">
-              across {data.stats.repo_count}{" "}
-              {data.stats.repo_count === 1 ? "repo" : "repos"}
+          {ghError || !ghUser ? (
+            <div className="stat-cell">
+              <div className="stat-label">GitHub</div>
+              <div className="stat-value">—</div>
+              <div className="stat-sub">
+                {ghError ? "Stats unavailable" : "Loading…"}
+              </div>
             </div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Messages</div>
-            <div className="stat-value">
-              {compactCount(data.stats.message_count)}
-            </div>
-            <div className="stat-sub">
-              {data.stats.trace_count > 0
-                ? `avg ${Math.round(
-                    data.stats.message_count / data.stats.trace_count,
-                  )} / trace`
-                : "—"}
-            </div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Size</div>
-            <div className="stat-value">
-              {compactCount(Math.round(data.stats.byte_size / 1024))} KB
-            </div>
-            <div className="stat-sub">total trace data</div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-label">Last upload</div>
-            <div className="stat-value">
-              {data.stats.last_trace_at
-                ? relativeFrom(data.stats.last_trace_at)
-                : "—"}
-            </div>
-            <div className="stat-sub">
-              {data.stats.last_trace_at
-                ? new Date(data.stats.last_trace_at).toLocaleDateString()
-                : "no uploads yet"}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="stat-cell">
+                <div className="stat-label">Public repos</div>
+                <div className="stat-value">
+                  {compactCount(ghUser.public_repos)}
+                </div>
+                <div className="stat-sub">on github.com/{owner}</div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Stars</div>
+                <div className="stat-value">
+                  {compactCount(ghUser.total_public_stars)}
+                </div>
+                <div className="stat-sub">
+                  {ghUser.stars_truncated
+                    ? "from top 300 repos"
+                    : "across public repos"}
+                </div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Followers</div>
+                <div className="stat-value">
+                  {compactCount(ghUser.followers)}
+                </div>
+                <div className="stat-sub">
+                  following {compactCount(ghUser.following)}
+                </div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-label">Top languages</div>
+                <div className="stat-value" style={{ fontSize: 16 }}>
+                  {ghUser.top_languages.length > 0
+                    ? ghUser.top_languages.join(" · ")
+                    : "—"}
+                </div>
+                <div className="stat-sub">
+                  joined {ghUser.created_at?.slice(0, 4) ?? "—"}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="tabs">

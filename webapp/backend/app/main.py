@@ -4,9 +4,17 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import health, ingest as ingest_api, traces as traces_api
+from app.api import (
+    auth as auth_api,
+    github_stats as github_stats_api,
+    health,
+    ingest as ingest_api,
+    traces as traces_api,
+)
 from app.deps import init_state
+from app.settings import get_settings
 
 
 _PLACEHOLDER_HTML = """<!doctype html>
@@ -18,21 +26,39 @@ _PLACEHOLDER_HTML = """<!doctype html>
 </body></html>"""
 
 
-# Test override hook — set via monkeypatch in tests to point at a known dir.
 _frontend_dist_override: Path | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_state(app)
-    yield
+    try:
+        yield
+    finally:
+        await app.state.public_github.aclose()
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
     app = FastAPI(title="vibeshub", version="0.1.0", lifespan=lifespan)
+
+    # SessionMiddleware drives Authlib's `state` storage during the OAuth
+    # dance. Its cookie ("oauth_state") is distinct from our app session
+    # cookie ("vibeshub_session"); short-lived (10 min).
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret or "dev-placeholder-secret-not-for-prod",
+        session_cookie="oauth_state",
+        same_site="lax",
+        https_only=settings.cookie_secure,
+        max_age=600,
+    )
+
     app.include_router(health.router)
     app.include_router(ingest_api.router)
     app.include_router(traces_api.router)
+    app.include_router(auth_api.router)
+    app.include_router(github_stats_api.router)
 
     frontend_dist = _frontend_dist_override or (
         Path(__file__).resolve().parent.parent / "frontend_dist"
