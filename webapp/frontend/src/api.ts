@@ -1,4 +1,9 @@
-import type { TraceListResponse, TraceSummary } from "./types";
+import type {
+  RepoOverview,
+  TraceListResponse,
+  TraceSummary,
+  UserOverview,
+} from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -36,4 +41,19 @@ export async function fetchRawJsonl(shortId: string): Promise<string> {
     throw new ApiError(r.status, await r.text());
   }
   return r.text();
+}
+
+export async function fetchUserOverview(login: string): Promise<UserOverview> {
+  const r = await fetch(`/api/users/${encodeURIComponent(login)}`);
+  return jsonOrThrow<UserOverview>(r);
+}
+
+export async function fetchRepoOverview(
+  owner: string,
+  repo: string,
+): Promise<RepoOverview> {
+  const r = await fetch(
+    `/api/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+  );
+  return jsonOrThrow<RepoOverview>(r);
 }

@@ -55,6 +55,8 @@ export function TraceView() {
         <TraceViewer
           session={session}
           rawHref={`/api/traces/${trace.short_id}/raw`}
+          repoOwner={trace.repo_full_name.split("/")[0]}
+          repoName={trace.repo_full_name.split("/")[1]}
         />
       )}
     </div>

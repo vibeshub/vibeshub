@@ -2,7 +2,9 @@ import { Route, Routes } from "react-router-dom";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
 import { PrTracesList } from "./routes/PrTracesList";
+import { RepoPage } from "./routes/RepoPage";
 import { TraceView } from "./routes/TraceView";
+import { UserPage } from "./routes/UserPage";
 
 export function App() {
   return (
@@ -16,6 +18,8 @@ export function App() {
         path=":owner/:repo/pull/:number/:shortId"
         element={<TraceView />}
       />
+      <Route path=":owner/:repo" element={<RepoPage />} />
+      <Route path=":owner" element={<UserPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

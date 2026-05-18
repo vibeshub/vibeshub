@@ -9,6 +9,22 @@
   margin: 0 0 var(--space-2) 0;
 }
 
+.crumb {
+  color: inherit;
+  text-decoration: none;
+}
+
+.crumb:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.crumbSep {
+  color: var(--text-faint);
+  margin: 0 2px;
+  font-weight: 400;
+}
+
 .subtitle {
   color: var(--color-fg-muted);
   margin: 0 0 var(--space-6) 0;

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import TraceSummary
@@ -48,6 +48,119 @@ async def list_pr_traces(
     ).order_by(Trace.created_at.desc())
     rows = (await session.execute(stmt)).scalars().all()
     return {"traces": [_to_summary(t).model_dump() for t in rows]}
+
+
+@router.get("/api/users/{login}")
+async def get_user_overview(
+    login: str,
+    session: AsyncSession = Depends(get_session),
+):
+    # All traces hosted under repos owned by this user (repo_full_name like "{login}/...")
+    prefix = f"{login}/"
+    list_stmt = (
+        select(Trace)
+        .where(
+            Trace.repo_full_name.startswith(prefix),
+            Trace.deleted_at.is_(None),
+        )
+        .order_by(Trace.created_at.desc())
+    )
+    rows = (await session.execute(list_stmt)).scalars().all()
+
+    repo_stmt = (
+        select(
+            Trace.repo_full_name,
+            func.count(Trace.id).label("trace_count"),
+        )
+        .where(
+            Trace.repo_full_name.startswith(prefix),
+            Trace.deleted_at.is_(None),
+        )
+        .group_by(Trace.repo_full_name)
+        .order_by(func.count(Trace.id).desc())
+    )
+    repo_rows = (await session.execute(repo_stmt)).all()
+    repos = [
+        {
+            "repo_full_name": r.repo_full_name,
+            "repo_name": r.repo_full_name.split("/", 1)[1]
+            if "/" in r.repo_full_name
+            else r.repo_full_name,
+            "trace_count": int(r.trace_count),
+        }
+        for r in repo_rows
+    ]
+
+    total_messages = sum(t.message_count for t in rows)
+    total_bytes = sum(t.byte_size for t in rows)
+    last_at = rows[0].created_at.isoformat() if rows else None
+
+    return {
+        "login": login,
+        "stats": {
+            "trace_count": len(rows),
+            "repo_count": len(repos),
+            "message_count": total_messages,
+            "byte_size": total_bytes,
+            "last_trace_at": last_at,
+        },
+        "repos": repos,
+        "traces": [_to_summary(t).model_dump() for t in rows],
+    }
+
+
+@router.get("/api/repos/{owner}/{repo}")
+async def get_repo_overview(
+    owner: str,
+    repo: str,
+    session: AsyncSession = Depends(get_session),
+):
+    full_name = f"{owner}/{repo}"
+    list_stmt = (
+        select(Trace)
+        .where(
+            Trace.repo_full_name == full_name,
+            Trace.deleted_at.is_(None),
+        )
+        .order_by(Trace.created_at.desc())
+    )
+    rows = (await session.execute(list_stmt)).scalars().all()
+
+    contrib_stmt = (
+        select(Trace.owner_login, func.count(Trace.id).label("trace_count"))
+        .where(
+            Trace.repo_full_name == full_name,
+            Trace.deleted_at.is_(None),
+        )
+        .group_by(Trace.owner_login)
+        .order_by(func.count(Trace.id).desc())
+    )
+    contrib_rows = (await session.execute(contrib_stmt)).all()
+    contributors = [
+        {"login": c.owner_login, "trace_count": int(c.trace_count)}
+        for c in contrib_rows
+    ]
+
+    pr_count = len({t.pr_number for t in rows})
+    total_messages = sum(t.message_count for t in rows)
+    total_bytes = sum(t.byte_size for t in rows)
+    last_at = rows[0].created_at.isoformat() if rows else None
+
+    return {
+        "owner": owner,
+        "repo": repo,
+        "repo_full_name": full_name,
+        "stats": {
+            "trace_count": len(rows),
+            "pr_count": pr_count,
+            "contributor_count": len(contributors),
+            "message_count": total_messages,
+            "byte_size": total_bytes,
+            "last_trace_at": last_at,
+        },
+        "contributors": contributors,
+        "traces": [_to_summary(t).model_dump() for t in rows],
+    }
 
 
 @router.get("/api/traces/{short_id}", response_model=TraceSummary)
