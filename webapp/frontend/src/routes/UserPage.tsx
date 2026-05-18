@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchUserOverview } from "../api";
-import type { UserOverview } from "../types";
+import type { UserOverview, UserRepoEntry } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
@@ -28,10 +28,13 @@ function relativeFrom(iso: string | null): string {
   return `${d} day${d === 1 ? "" : "s"} ago`;
 }
 
+type UserTab = "traces" | "repos";
+
 export function UserPage() {
   const { owner } = useParams<{ owner: string }>();
   const [data, setData] = useState<UserOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<UserTab>("traces");
 
   useEffect(() => {
     if (!owner) return;
@@ -131,33 +134,47 @@ export function UserPage() {
         </div>
 
         <div className="tabs">
-          <button className="tab active" type="button">
+          <button
+            className={`tab${tab === "traces" ? " active" : ""}`}
+            type="button"
+            onClick={() => setTab("traces")}
+          >
             Traces <span className="count">{data.stats.trace_count}</span>
           </button>
-          <button className="tab" type="button">
+          <button
+            className={`tab${tab === "repos" ? " active" : ""}`}
+            type="button"
+            onClick={() => setTab("repos")}
+          >
             Repositories <span className="count">{data.stats.repo_count}</span>
           </button>
         </div>
 
         <div className="split">
           <div>
-            {data.traces.length === 0 ? (
-              <div className="trace-list">
-                <div className="empty">No traces yet.</div>
-              </div>
-            ) : (
-              <div className="trace-list">
-                {data.traces.map((t) => (
-                  <TraceListRow key={t.short_id} trace={t} showRepoChip />
-                ))}
-              </div>
+            {tab === "traces" && (
+              <>
+                {data.traces.length === 0 ? (
+                  <div className="trace-list">
+                    <div className="empty">No traces yet.</div>
+                  </div>
+                ) : (
+                  <div className="trace-list">
+                    {data.traces.map((t) => (
+                      <TraceListRow key={t.short_id} trace={t} showRepoChip />
+                    ))}
+                  </div>
+                )}
+
+                <div className="list-footer">
+                  <span>
+                    Showing {data.traces.length} of {data.stats.trace_count} traces
+                  </span>
+                </div>
+              </>
             )}
 
-            <div className="list-footer">
-              <span>
-                Showing {data.traces.length} of {data.stats.trace_count} traces
-              </span>
-            </div>
+            {tab === "repos" && <RepoList repos={data.repos} />}
           </div>
 
           <aside>
@@ -203,5 +220,55 @@ export function UserPage() {
         <span>vibeshub</span>
       </footer>
     </div>
+  );
+}
+
+function RepoList({ repos }: { repos: UserRepoEntry[] }) {
+  if (repos.length === 0) {
+    return (
+      <div className="trace-list">
+        <div className="empty">No repositories yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="trace-list">
+        {repos.map((r) => (
+          <Link
+            key={r.repo_full_name}
+            className="trace-row"
+            to={`/${r.repo_full_name}`}
+          >
+            <div
+              className="trace-icon"
+              style={{
+                background: "var(--accent)",
+                color: "white",
+                fontWeight: 600,
+              }}
+            >
+              {r.repo_name.charAt(0).toLowerCase()}
+            </div>
+            <div className="trace-body">
+              <div className="trace-row-top">
+                <span className="trace-title">{r.repo_full_name}</span>
+              </div>
+              <div className="trace-meta">
+                <span>
+                  {r.trace_count} {r.trace_count === 1 ? "trace" : "traces"}
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="list-footer">
+        <span>
+          Showing {repos.length} {repos.length === 1 ? "repo" : "repos"}
+        </span>
+      </div>
+    </>
   );
 }
