@@ -4,7 +4,7 @@ import logging
 from time import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.crypto import TokenCipher
 from app.auth.sessions import get_current_user
@@ -29,10 +29,18 @@ def _viewer_token(user: User | None, settings: Settings) -> str | None:
     if user is None:
         return None
     cipher = TokenCipher(settings.token_encryption_key)
+    # If decryption fails (most likely cause: encryption-key rotation where
+    # this user's ciphertext was encrypted under an old key not in the
+    # current MultiFernet), fall back to anonymous so the request still
+    # succeeds. Key rotation MUST re-encrypt all tokens before old keys
+    # are dropped — this log line is the signal that didn't happen.
     try:
         return cipher.decrypt(user.encrypted_access_token)
     except Exception:
-        log.warning("github_stats viewer_token decrypt failed")
+        log.error(
+            "github_stats viewer_token decrypt failed user_id=%s",
+            user.id,
+        )
         return None
 
 
@@ -50,7 +58,8 @@ def _handle_errors(exc: Exception, *, not_found_detail: str) -> HTTPException:
         return HTTPException(status_code=502, detail="github_upstream_error")
     if isinstance(exc, GitHubUpstreamError):
         return HTTPException(status_code=502, detail="github_upstream_error")
-    raise exc
+    log.exception("github_stats unexpected error: %s", type(exc).__name__)
+    return HTTPException(status_code=500, detail="internal_error")
 
 
 @router.get("/repos/{owner}/{name}")

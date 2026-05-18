@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 import respx
 from tests._auth_helpers import authed_cookies
@@ -72,7 +70,8 @@ def test_repo_endpoint_uses_fallback_pat_when_anon(
     route = respx_mock.get(f"{API}/repos/octo/hello").respond(
         200, json=_repo_payload()
     )
-    client.get("/api/github/repos/octo/hello")
+    r = client.get("/api/github/repos/octo/hello")
+    assert r.status_code == 200
     assert route.calls[0].request.headers["authorization"] == "Bearer ghp_fallback"
 
 
@@ -86,5 +85,6 @@ async def test_repo_endpoint_uses_viewer_token_when_logged_in(
     route = respx_mock.get(f"{API}/repos/octo/hello").respond(
         200, json=_repo_payload()
     )
-    client.get("/api/github/repos/octo/hello", cookies=cookies)
+    r = client.get("/api/github/repos/octo/hello", cookies=cookies)
+    assert r.status_code == 200
     assert route.calls[0].request.headers["authorization"] == "Bearer gho_alice"
