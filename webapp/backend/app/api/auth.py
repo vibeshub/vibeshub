@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 import httpx
 from authlib.integrations.base_client.errors import MismatchingStateError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -16,6 +16,7 @@ from app.auth.sessions import (
     DEFAULT_SESSION_TTL_DAYS,
     SESSION_COOKIE_NAME,
     create_session,
+    delete_session,
     get_current_user,
 )
 from app.deps import get_app_settings, get_session
@@ -216,3 +217,24 @@ async def github_callback(
         profile["id"], profile["login"],
     )
     return response
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    response: Response,
+    settings: Settings = Depends(get_app_settings),
+    sid: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    session: AsyncSession = Depends(get_session),
+):
+    if sid:
+        await delete_session(session, sid)
+        await session.commit()
+        log.info("auth.logout")
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        path="/",
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+    )
+    return None
