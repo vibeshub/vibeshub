@@ -88,3 +88,55 @@ async def test_repo_endpoint_uses_viewer_token_when_logged_in(
     r = client.get("/api/github/repos/octo/hello", cookies=cookies)
     assert r.status_code == 200
     assert route.calls[0].request.headers["authorization"] == "Bearer gho_alice"
+
+
+def _repo_list_payload(names):
+    return [
+        {
+            "name": n,
+            "description": f"{n} repo",
+            "html_url": f"https://github.com/octo/{n}",
+            "stargazers_count": 1,
+            "forks_count": 0,
+            "language": "Python",
+            "pushed_at": "2024-01-01T00:00:00Z",
+        }
+        for n in names
+    ]
+
+
+def test_user_repos_first_page(client, respx_mock: respx.MockRouter):
+    respx_mock.get(
+        f"{API}/users/octo/repos",
+        params={"sort": "pushed", "per_page": "30", "page": "1"},
+    ).respond(
+        200,
+        json=_repo_list_payload(["a", "b", "c"]),
+        headers={
+            "Link": '<https://api.github.test/users/octo/repos?page=2>; rel="next"',
+        },
+    )
+    r = client.get("/api/github/users/octo/repos")
+    assert r.status_code == 200
+    body = r.json()
+    assert [x["name"] for x in body["repos"]] == ["a", "b", "c"]
+    assert body["has_next"] is True
+
+
+def test_user_repos_last_page_has_next_false(
+    client, respx_mock: respx.MockRouter,
+):
+    respx_mock.get(
+        f"{API}/users/octo/repos",
+        params={"sort": "pushed", "per_page": "30", "page": "5"},
+    ).respond(200, json=_repo_list_payload(["z"]))
+    r = client.get("/api/github/users/octo/repos?page=5")
+    assert r.status_code == 200
+    assert r.json()["has_next"] is False
+
+
+def test_user_repos_404(client, respx_mock: respx.MockRouter):
+    respx_mock.get(f"{API}/users/missing/repos").respond(404)
+    r = client.get("/api/github/users/missing/repos")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "user_not_found"
