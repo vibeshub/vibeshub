@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from app.auth.sessions import SESSION_COOKIE_NAME
 from tests._auth_helpers import authed_cookies
 
