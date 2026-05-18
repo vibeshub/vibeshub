@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import (
     BigInteger,
     DateTime,
+    ForeignKey,
     Integer,
     String,
     Text,
@@ -52,9 +53,6 @@ class Trace(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
-
-from sqlalchemy import ForeignKey
 
 
 class User(Base):

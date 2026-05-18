@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.storage.db import engine_for, session_maker_for, create_all
-from app.storage.models import Trace
+from app.storage.db import create_all, engine_for, session_maker_for
+from app.storage.models import Trace, User, UserSession
 
 
 @pytest.mark.asyncio
@@ -32,21 +36,12 @@ async def test_session_can_persist_trace():
 
 
 @pytest.mark.asyncio
-async def test_user_and_session_models_round_trip(tmp_path):
-    from sqlalchemy.ext.asyncio import create_async_engine
-    from sqlalchemy import select
-    from app.storage.models import Base, User, UserSession
-    from datetime import datetime, timedelta, timezone
-    import uuid
+async def test_user_session_persistence():
+    engine = engine_for("sqlite+aiosqlite:///:memory:")
+    await create_all(engine)
+    SessionLocal = session_maker_for(engine)
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-    Session = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with Session() as session:
+    async with SessionLocal() as session:
         u = User(
             github_id=42,
             github_login="alice",
@@ -71,3 +66,28 @@ async def test_user_and_session_models_round_trip(tmp_path):
             select(UserSession).where(UserSession.id == "sess_abc")
         )).scalar_one()
         assert loaded.user_id == u.id
+
+
+@pytest.mark.asyncio
+async def test_user_github_id_is_unique():
+    engine = engine_for("sqlite+aiosqlite:///:memory:")
+    await create_all(engine)
+    SessionLocal = session_maker_for(engine)
+
+    async with SessionLocal() as session:
+        session.add(
+            User(
+                github_id=99,
+                github_login="alice",
+                encrypted_access_token="ct1",
+            )
+        )
+        session.add(
+            User(
+                github_id=99,
+                github_login="bob",
+                encrypted_access_token="ct2",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await session.commit()
