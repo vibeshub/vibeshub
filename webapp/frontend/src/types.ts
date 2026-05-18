@@ -59,3 +59,57 @@ export interface RepoOverview {
   contributors: RepoContributorEntry[];
   traces: TraceSummary[];
 }
+
+export interface MeResponse {
+  id: string;
+  login: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
+export interface GithubUser {
+  login: string;
+  name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  html_url: string;
+  followers: number;
+  following: number;
+  public_repos: number;
+  total_public_stars: number;
+  top_languages: string[];
+  created_at: string;
+  stars_truncated: boolean;
+}
+
+export interface GithubRepo {
+  full_name: string;
+  name: string;
+  description: string | null;
+  html_url: string;
+  default_branch: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  watchers_count: number;
+  open_issues_count: number;
+  primary_language: string | null;
+  license_spdx: string | null;
+  topics: string[];
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface GithubRepoListItem {
+  name: string;
+  description: string | null;
+  html_url: string;
+  stargazers_count: number;
+  forks_count: number;
+  language: string | null;
+  pushed_at: string | null;
+}
+
+export interface GithubRepoListPage {
+  repos: GithubRepoListItem[];
+  has_next: boolean;
+}

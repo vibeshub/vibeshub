@@ -1,4 +1,8 @@
 import type {
+  GithubRepo,
+  GithubRepoListPage,
+  GithubUser,
+  MeResponse,
   RepoOverview,
   TraceListResponse,
   TraceSummary,
@@ -56,4 +60,43 @@ export async function fetchRepoOverview(
     `/api/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
   );
   return jsonOrThrow<RepoOverview>(r);
+}
+
+export async function fetchMe(): Promise<MeResponse | null> {
+  const r = await fetch("/api/auth/me");
+  if (r.status === 204) return null;
+  if (!r.ok) throw new ApiError(r.status, await r.text());
+  return (await r.json()) as MeResponse;
+}
+
+export async function logout(): Promise<void> {
+  const r = await fetch("/api/auth/logout", { method: "POST" });
+  if (r.status !== 204) {
+    throw new ApiError(r.status, await r.text());
+  }
+}
+
+export async function fetchGithubUser(login: string): Promise<GithubUser> {
+  const r = await fetch(`/api/github/users/${encodeURIComponent(login)}`);
+  return jsonOrThrow<GithubUser>(r);
+}
+
+export async function fetchGithubUserRepos(
+  login: string,
+  page = 1,
+): Promise<GithubRepoListPage> {
+  const r = await fetch(
+    `/api/github/users/${encodeURIComponent(login)}/repos?page=${page}`,
+  );
+  return jsonOrThrow<GithubRepoListPage>(r);
+}
+
+export async function fetchGithubRepo(
+  owner: string,
+  name: string,
+): Promise<GithubRepo> {
+  const r = await fetch(
+    `/api/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
+  );
+  return jsonOrThrow<GithubRepo>(r);
 }
