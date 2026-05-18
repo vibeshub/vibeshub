@@ -62,9 +62,13 @@ class PublicGitHubClient:
         self._timeout = timeout
         self._cache: OrderedDict[CacheKey, _Entry] = OrderedDict()
         self._locks: dict[CacheKey, asyncio.Lock] = {}
+        self._http = httpx.AsyncClient(timeout=timeout)
 
     def cache_size(self) -> int:
         return len(self._cache)
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     async def get_json(
         self,
@@ -145,12 +149,11 @@ class PublicGitHubClient:
                     headers["If-None-Match"] = cached.etag
 
                 try:
-                    async with httpx.AsyncClient(timeout=self._timeout) as http:
-                        resp = await http.get(
-                            f"{self._api_base}{path}",
-                            params=params,
-                            headers=headers,
-                        )
+                    resp = await self._http.get(
+                        f"{self._api_base}{path}",
+                        params=params,
+                        headers=headers,
+                    )
                 except httpx.HTTPError as exc:
                     raise GitHubUpstreamError(0, str(exc)) from exc
 

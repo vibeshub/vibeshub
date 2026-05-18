@@ -36,7 +36,36 @@ async def init_state(app: FastAPI, settings: Settings | None = None) -> None:
         fallback_token=settings.github_fallback_token,
         ttl_seconds=60,
     )
+    _validate_auth_config(settings)
     await smoke_check(settings, engine, app.state.blob_store)
+
+
+def _validate_auth_config(settings: Settings) -> None:
+    """Fail fast in prod-like environments when auth secrets are unset.
+
+    With `cookie_secure=False` (local dev), we allow missing secrets so
+    contributors can run the app without OAuth set up; auth routes still
+    return 503 oauth_not_configured at request time. With cookie_secure=True
+    (any HTTPS deployment), we refuse to boot — better to fail the revision
+    than serve traffic with a publicly-known fallback session-signing key.
+    """
+    import logging
+    log = logging.getLogger(__name__)
+    missing = []
+    if not settings.session_secret:
+        missing.append("VIBESHUB_SESSION_SECRET")
+    if not settings.token_encryption_key:
+        missing.append("VIBESHUB_TOKEN_ENCRYPTION_KEY")
+    if not missing:
+        return
+    if settings.cookie_secure:
+        raise RuntimeError(
+            f"Missing required auth secrets in production: {', '.join(missing)}"
+        )
+    log.warning(
+        "auth secrets unset (cookie_secure=False, assumed dev): %s",
+        ", ".join(missing),
+    )
 
 
 def get_app_settings(request: Request) -> Settings:

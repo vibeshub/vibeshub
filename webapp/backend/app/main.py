@@ -32,7 +32,10 @@ _frontend_dist_override: Path | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_state(app)
-    yield
+    try:
+        yield
+    finally:
+        await app.state.public_github.aclose()
 
 
 def create_app() -> FastAPI:
