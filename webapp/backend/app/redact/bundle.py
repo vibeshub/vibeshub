@@ -1,0 +1,149 @@
+"""Unpack a gzipped tar bundle from /api/ingest, validate membership, run
+the existing redact pass on each file, return structured pieces ready for
+blob writes.
+
+Allowed members (exactly):
+    main.jsonl                          (required, exactly 1)
+    agents/<agent_id>.jsonl             (0..N)
+    agents/<agent_id>.meta.json         (0..N, must pair with jsonl above)
+
+<agent_id> must match /^a[0-9a-f]{16}$/. Everything else is rejected.
+"""
+from __future__ import annotations
+
+import io
+import json
+import re
+import tarfile
+from dataclasses import dataclass
+
+from app.redact.patterns import RedactionReport, redact_jsonl
+
+
+AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
+AGENT_JSONL_RE = re.compile(r"^agents/(a[0-9a-f]{16})\.jsonl$")
+AGENT_META_RE = re.compile(r"^agents/(a[0-9a-f]{16})\.meta\.json$")
+
+
+class BundleError(Exception):
+    """Raised when the bundle is malformed, oversized, or contains
+    disallowed members. Caller maps to HTTP 400 or 413."""
+
+
+@dataclass
+class AgentPiece:
+    agent_id: str
+    jsonl_bytes: bytes           # redacted
+    meta: dict                   # parsed and validated
+
+
+@dataclass
+class UnpackedBundle:
+    main_bytes: bytes            # redacted
+    agents: list[AgentPiece]
+    total_redactions: int
+
+
+def _validate_meta(meta_bytes: bytes, agent_id: str) -> dict:
+    try:
+        meta = json.loads(meta_bytes.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise BundleError(f"agent {agent_id} meta is not valid utf-8 JSON: {e}")
+    if not isinstance(meta, dict):
+        raise BundleError(f"agent {agent_id} meta must be a JSON object")
+    for required in ("agentType", "description"):
+        if required not in meta:
+            raise BundleError(f"agent {agent_id} meta missing key: {required}")
+    if "toolUseId" not in meta:
+        meta["toolUseId"] = None
+    return meta
+
+
+def unpack_and_redact(tar_bytes: bytes, *, max_total_bytes: int) -> UnpackedBundle:
+    try:
+        tar = tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r:*")
+    except tarfile.ReadError as e:
+        raise BundleError(f"malformed tar: {e}")
+    except tarfile.TarError as e:
+        raise BundleError(f"malformed tar: {e}")
+
+    main_bytes: bytes | None = None
+    agent_jsonls: dict[str, bytes] = {}
+    agent_metas: dict[str, bytes] = {}
+    total_bytes = 0
+
+    try:
+        for member in tar:
+            if not member.isfile():
+                raise BundleError(f"non-file tar member: {member.name}")
+
+            name = member.name
+            if name == "main.jsonl":
+                pass
+            elif (m := AGENT_JSONL_RE.match(name)):
+                agent_id = m.group(1)
+                if not AGENT_ID_RE.match(agent_id):
+                    raise BundleError(f"invalid agent_id in member: {name}")
+            elif (m := AGENT_META_RE.match(name)):
+                agent_id = m.group(1)
+                if not AGENT_ID_RE.match(agent_id):
+                    raise BundleError(f"invalid agent_id in member: {name}")
+            else:
+                raise BundleError(f"disallowed tar member: {name}")
+
+            total_bytes += member.size
+            if total_bytes > max_total_bytes:
+                raise BundleError(f"bundle size {total_bytes} exceeds limit {max_total_bytes}")
+
+            extracted = tar.extractfile(member)
+            if extracted is None:
+                raise BundleError(f"could not extract member: {name}")
+            data = extracted.read()
+
+            if name == "main.jsonl":
+                main_bytes = data
+            elif (jm := AGENT_JSONL_RE.match(name)):
+                agent_jsonls[jm.group(1)] = data
+            elif (mm := AGENT_META_RE.match(name)):
+                agent_metas[mm.group(1)] = data
+    finally:
+        tar.close()
+
+    if main_bytes is None:
+        raise BundleError("bundle missing required member: main.jsonl")
+
+    jsonl_ids = set(agent_jsonls.keys())
+    meta_ids = set(agent_metas.keys())
+    if jsonl_ids - meta_ids:
+        missing = next(iter(jsonl_ids - meta_ids))
+        raise BundleError(f"agent {missing}: jsonl present but meta.json missing")
+    if meta_ids - jsonl_ids:
+        missing = next(iter(meta_ids - jsonl_ids))
+        raise BundleError(f"agent {missing}: meta.json present but jsonl missing")
+
+    total_report = RedactionReport()
+    redacted_main, main_report = redact_jsonl(main_bytes)
+    for k, v in main_report.counts.items():
+        total_report.counts[k] = total_report.counts.get(k, 0) + v
+
+    agents: list[AgentPiece] = []
+    for agent_id in sorted(jsonl_ids):
+        redacted_jsonl, jr = redact_jsonl(agent_jsonls[agent_id])
+        for k, v in jr.counts.items():
+            total_report.counts[k] = total_report.counts.get(k, 0) + v
+        redacted_meta_bytes, mr = redact_jsonl(agent_metas[agent_id])
+        for k, v in mr.counts.items():
+            total_report.counts[k] = total_report.counts.get(k, 0) + v
+        meta = _validate_meta(redacted_meta_bytes, agent_id)
+
+        agents.append(AgentPiece(
+            agent_id=agent_id,
+            jsonl_bytes=redacted_jsonl,
+            meta=meta,
+        ))
+
+    return UnpackedBundle(
+        main_bytes=redacted_main,
+        agents=agents,
+        total_redactions=total_report.total(),
+    )
