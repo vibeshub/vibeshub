@@ -121,7 +121,7 @@ if az containerapp show -n "$APP" -g "$RG" >/dev/null 2>&1; then
   az containerapp update \
     -n "$APP" -g "$RG" \
     --image "$IMAGE" \
-    --revision-suffix "r${SHORT_SHA}" \
+    --revision-suffix "r${SHORT_SHA}-$(date -u +%y%m%d%H%M%S)" \
     --set-env-vars "${ENV_PAIRS[@]}"
   # Re-assert the user-assigned identity. `containerapp update` does not
   # touch identity, so if the MI was detached out-of-band (or the app
