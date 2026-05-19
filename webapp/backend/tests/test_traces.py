@@ -1,4 +1,30 @@
+import io
+import tarfile
+
 import pytest
+
+
+def make_bundle(members: dict[str, bytes]) -> bytes:
+    """Build a gzipped tar bundle from {name: bytes} members, in the same
+    shape produced by the plugin and consumed by `unpack_and_redact`."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for name, data in members.items():
+            info = tarfile.TarInfo(name=name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def _ingest_headers(pr_url: str) -> dict[str, str]:
+    return {
+        "X-Vibeshub-Pr-Url": pr_url,
+        "X-Vibeshub-Platform": "claude-code",
+        "X-Vibeshub-Plugin-Version": "0.2.0",
+        "X-Vibeshub-Client-Redactions": "0",
+        "Content-Type": "application/x-tar",
+        "Authorization": "Bearer ghp_test",
+    }
 
 
 @pytest.mark.asyncio
@@ -24,14 +50,11 @@ async def test_list_pr_traces_after_ingest(client, respx_mock):
             "base": {"repo": {"private": False, "full_name": "alice/repo"}},
         },
     )
-    payload = {
-        "transcript_jsonl": '{"type":"user"}\n',
-        "pr_url": "https://github.com/alice/repo/pull/3",
-    }
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
     ingest_resp = client.post(
         "/api/ingest",
-        json=payload,
-        headers={"Authorization": "Bearer ghp_test"},
+        content=body,
+        headers=_ingest_headers("https://github.com/alice/repo/pull/3"),
     )
     assert ingest_resp.status_code == 201
     short_id = ingest_resp.json()["short_id"]
@@ -62,9 +85,8 @@ async def test_get_trace_by_short_id(client, respx_mock):
     )
     ingest_resp = client.post(
         "/api/ingest",
-        json={"transcript_jsonl": "{}\n",
-              "pr_url": "https://github.com/alice/repo/pull/3"},
-        headers={"Authorization": "Bearer ghp_test"},
+        content=make_bundle({"main.jsonl": b"{}\n"}),
+        headers=_ingest_headers("https://github.com/alice/repo/pull/3"),
     )
     short_id = ingest_resp.json()["short_id"]
 
@@ -99,9 +121,8 @@ async def test_delete_trace_by_owner(client, respx_mock):
     )
     short_id = client.post(
         "/api/ingest",
-        json={"transcript_jsonl": "{}\n",
-              "pr_url": "https://github.com/alice/repo/pull/3"},
-        headers={"Authorization": "Bearer ghp_test"},
+        content=make_bundle({"main.jsonl": b"{}\n"}),
+        headers=_ingest_headers("https://github.com/alice/repo/pull/3"),
     ).json()["short_id"]
 
     resp = client.delete(
@@ -132,9 +153,8 @@ async def test_delete_trace_rejects_other_user(client, respx_mock):
     )
     short_id = client.post(
         "/api/ingest",
-        json={"transcript_jsonl": "{}\n",
-              "pr_url": "https://github.com/alice/repo/pull/3"},
-        headers={"Authorization": "Bearer ghp_test"},
+        content=make_bundle({"main.jsonl": b"{}\n"}),
+        headers=_ingest_headers("https://github.com/alice/repo/pull/3"),
     ).json()["short_id"]
 
     # bob attempts to delete
@@ -171,11 +191,10 @@ def _ingest_for(client, respx_mock, owner: str, repo: str, number: int,
     )
     r = client.post(
         "/api/ingest",
-        json={
-            "transcript_jsonl": '{"type":"user"}\n',
-            "pr_url": f"https://github.com/{owner}/{repo}/pull/{number}",
-        },
-        headers={"Authorization": "Bearer ghp_test"},
+        content=make_bundle({"main.jsonl": b'{"type":"user"}\n'}),
+        headers=_ingest_headers(
+            f"https://github.com/{owner}/{repo}/pull/{number}"
+        ),
     )
     assert r.status_code == 201, r.text
     return r.json()["short_id"]

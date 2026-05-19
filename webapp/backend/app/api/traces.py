@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import TraceSummary
+from app.api.schemas import AgentSummary, TraceSummary
 from app.auth.github import GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_session
 from app.short_id import looks_like_short_id
@@ -30,6 +31,8 @@ def _to_summary(t: Trace) -> TraceSummary:
         byte_size=t.byte_size,
         message_count=t.message_count,
         created_at=t.created_at.isoformat(),
+        agent_count=t.agent_count or 0,
+        agents=[AgentSummary(**a) for a in (t.agents or [])],
     )
 
 
@@ -195,7 +198,40 @@ async def get_trace_raw(
     trace = (await session.execute(stmt)).scalar_one_or_none()
     if trace is None:
         raise HTTPException(status_code=404, detail="not found")
-    data = await blob_store.get(trace.blob_path)
+    if trace.blob_prefix is None:
+        # Should not happen post-migration. 500 so we notice.
+        raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
+    data = await blob_store.get(f"{trace.blob_prefix}main.jsonl")
+    return Response(content=data, media_type="application/x-ndjson")
+
+
+@router.get("/api/traces/{short_id}/agents/{agent_id}")
+async def get_agent_raw(
+    short_id: str,
+    agent_id: str,
+    session: AsyncSession = Depends(get_session),
+    blob_store: BlobStore = Depends(get_blob_store),
+):
+    if not looks_like_short_id(short_id):
+        raise HTTPException(status_code=404, detail="not found")
+    if not re.match(r"^a[0-9a-f]{16}$", agent_id):
+        raise HTTPException(status_code=404, detail="not found")
+
+    stmt = select(Trace).where(
+        Trace.short_id == short_id,
+        Trace.deleted_at.is_(None),
+    )
+    trace = (await session.execute(stmt)).scalar_one_or_none()
+    if trace is None:
+        raise HTTPException(status_code=404, detail="not found")
+    if trace.blob_prefix is None:
+        raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
+
+    known_ids = {a["agent_id"] for a in (trace.agents or [])}
+    if agent_id not in known_ids:
+        raise HTTPException(status_code=404, detail="agent not found")
+
+    data = await blob_store.get(f"{trace.blob_prefix}agents/{agent_id}.jsonl")
     return Response(content=data, media_type="application/x-ndjson")
 
 
@@ -229,14 +265,24 @@ async def delete_trace(
         raise HTTPException(status_code=403, detail="not the trace owner")
 
     from app.storage.models import utcnow
-    blob_path = trace.blob_path
+    # Build the full key list before deleting (so a mid-flight crash
+    # doesn't leave the DB row pointing at a half-deleted layout).
+    keys_to_delete = []
+    if trace.blob_prefix:
+        keys_to_delete.append(f"{trace.blob_prefix}main.jsonl")
+        for a in (trace.agents or []):
+            keys_to_delete.append(f"{trace.blob_prefix}agents/{a['agent_id']}.jsonl")
+            keys_to_delete.append(f"{trace.blob_prefix}agents/{a['agent_id']}.meta.json")
+    elif trace.blob_path:
+        keys_to_delete.append(trace.blob_path)
+
+    # Soft-delete the row, then best-effort blob cleanup.
     trace.deleted_at = utcnow()
     await session.commit()
-    # Best-effort blob delete after the soft-delete is durable. If this
-    # fails the trace is already invisible to readers (deleted_at filter);
-    # the orphan blob can be reaped later.
-    try:
-        await blob_store.delete(blob_path)
-    except Exception:
-        pass
+
+    for key in keys_to_delete:
+        try:
+            await blob_store.delete(key)
+        except FileNotFoundError:
+            pass
     return Response(status_code=204)
