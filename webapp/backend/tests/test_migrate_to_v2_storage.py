@@ -115,3 +115,26 @@ async def test_run_migration_processes_all_rows(db_session, blob_store, make_leg
             await db_session.execute(select(Trace).where(Trace.short_id == sid))
         ).scalar_one()
         assert refreshed.blob_prefix == f"traces/{sid}/"
+
+
+@pytest.mark.asyncio
+async def test_run_migration_continues_when_cleanup_fails(db_session, blob_store, make_legacy_trace, monkeypatch):
+    """A flaky cleanup on the first row must not abort the second row."""
+    await make_legacy_trace("aaaaaaaaaa")
+    await make_legacy_trace("bbbbbbbbbb")
+
+    real_delete = blob_store.delete
+    deleted: list[str] = []
+    async def flaky_delete(key: str) -> None:
+        deleted.append(key)
+        if key == "traces/aaaaaaaaaa.jsonl":
+            raise RuntimeError("transient backend error")
+        await real_delete(key)
+    monkeypatch.setattr(blob_store, "delete", flaky_delete)
+
+    summary = await run_migration(db_session, blob_store, dry_run=False)
+
+    assert summary.migrated == 2
+    # Both delete attempts ran (cleanup did not abort on first failure)
+    assert "traces/aaaaaaaaaa.jsonl" in deleted
+    assert "traces/bbbbbbbbbb.jsonl" in deleted

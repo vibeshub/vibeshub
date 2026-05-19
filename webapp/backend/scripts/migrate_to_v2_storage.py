@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -69,14 +70,19 @@ async def migrate_one(
 async def cleanup_legacy_blob(blob_store: BlobStore, short_id: str) -> bool:
     """Delete the legacy ``traces/<sid>.jsonl`` blob after a successful migrate.
 
-    Returns True if a delete was issued (or the blob was already gone — both
-    backends treat missing keys as no-ops on delete), False only if an
-    unexpected error path is hit.
+    Returns True if a blob was deleted, False otherwise. Swallows all errors
+    (blob already gone, transient backend failure) so a single bad row
+    cannot abort cleanup for the rest of the batch — the DB row is already
+    in v2 layout at this point, the legacy blob is just orphaned and can be
+    cleaned up manually later.
     """
     try:
         await blob_store.delete(f"traces/{short_id}.jsonl")
         return True
     except FileNotFoundError:
+        return False
+    except Exception as e:
+        print(f"WARN cleanup failed for {short_id}: {e}", file=sys.stderr)
         return False
 
 
