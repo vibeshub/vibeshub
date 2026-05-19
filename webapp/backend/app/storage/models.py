@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-import sqlalchemy as sa
 from sqlalchemy import (
+    JSON,
     BigInteger,
     DateTime,
     ForeignKey,
@@ -55,7 +55,7 @@ class Trace(Base):
     # AgentSummary dicts (see app/api/schemas.py). NULL for legacy rows
     # pre-migration; empty list [] for rows migrated by
     # scripts/migrate_to_v2_storage.py.
-    agents: Mapped[Optional[list[dict]]] = mapped_column(sa.JSON, nullable=True)
+    agents: Mapped[Optional[list[dict]]] = mapped_column(JSON, nullable=True)
     agent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
