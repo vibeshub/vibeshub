@@ -12,10 +12,13 @@ from app.auth.github import GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_session
 from app.short_id import looks_like_short_id
 from app.storage.blob import BlobStore
-from app.storage.models import Trace
+from app.storage.models import Trace, utcnow
 
 
 router = APIRouter()
+
+
+_AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
 
 
 def _to_summary(t: Trace) -> TraceSummary:
@@ -214,7 +217,7 @@ async def get_agent_raw(
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404, detail="not found")
-    if not re.match(r"^a[0-9a-f]{16}$", agent_id):
+    if not _AGENT_ID_RE.match(agent_id):
         raise HTTPException(status_code=404, detail="not found")
 
     stmt = select(Trace).where(
@@ -264,7 +267,6 @@ async def delete_trace(
     if trace.owner_login != user.login:
         raise HTTPException(status_code=403, detail="not the trace owner")
 
-    from app.storage.models import utcnow
     # Build the full key list before deleting (so a mid-flight crash
     # doesn't leave the DB row pointing at a half-deleted layout).
     keys_to_delete = []
