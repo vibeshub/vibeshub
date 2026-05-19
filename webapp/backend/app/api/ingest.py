@@ -11,7 +11,7 @@ from app.api.pr_url import parse_pr_url
 from app.api.schemas import IngestResponse
 from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
-from app.redact.bundle import BundleError, unpack_and_redact
+from app.redact.bundle import BundleError, BundleSizeError, unpack_and_redact
 from app.short_id import generate
 from app.storage.blob import BlobStore
 from app.storage.models import Trace
@@ -111,10 +111,10 @@ async def ingest(
 
     try:
         unpacked = unpack_and_redact(tar_bytes, max_total_bytes=settings.max_trace_bytes)
+    except BundleSizeError as e:
+        raise HTTPException(status_code=413, detail=str(e))
     except BundleError as e:
-        msg = str(e)
-        status_code = 413 if "size" in msg or "exceeds" in msg else 400
-        raise HTTPException(status_code=status_code, detail=msg)
+        raise HTTPException(status_code=400, detail=str(e))
 
     sid = generate()
     blob_prefix = f"traces/{sid}/"
@@ -135,10 +135,10 @@ async def ingest(
             "tool_use_id": agent.meta.get("toolUseId"),
             "agent_type": agent.meta["agentType"],
             "description": agent.meta["description"],
-            "message_count": agent.jsonl_bytes.count(b"\n"),
+            "message_count": len(agent.jsonl_bytes.splitlines()),
         })
 
-    message_count_main = unpacked.main_bytes.count(b"\n")
+    message_count_main = len(unpacked.main_bytes.splitlines())
 
     trace = Trace(
         short_id=sid,

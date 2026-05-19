@@ -30,6 +30,11 @@ class BundleError(Exception):
     disallowed members. Caller maps to HTTP 400 or 413."""
 
 
+class BundleSizeError(BundleError):
+    """Raised when decompressed bundle exceeds the configured cap. Caller
+    maps this specifically to HTTP 413 (vs 400 for other BundleErrors)."""
+
+
 @dataclass
 class AgentPiece:
     agent_id: str
@@ -93,7 +98,7 @@ def unpack_and_redact(tar_bytes: bytes, *, max_total_bytes: int) -> UnpackedBund
 
             total_bytes += member.size
             if total_bytes > max_total_bytes:
-                raise BundleError(f"bundle size {total_bytes} exceeds limit {max_total_bytes}")
+                raise BundleSizeError(f"bundle size {total_bytes} exceeds limit {max_total_bytes}")
 
             extracted = tar.extractfile(member)
             if extracted is None:
