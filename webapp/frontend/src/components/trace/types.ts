@@ -1,3 +1,7 @@
+import type { AgentSummary } from "../../types";
+
+export type { AgentSummary };
+
 export type ToolCategory =
   | "bash"
   | "read"
@@ -20,14 +24,6 @@ export interface PrLinkMeta {
   url: string;
   repo: string;
   at: string;
-}
-
-export interface AgentSummary {
-  agent_id: string;
-  tool_use_id: string | null;
-  agent_type: string;
-  description: string;
-  message_count: number;
 }
 
 export interface SessionMeta {
