@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
+from vibeshub_client.bundle import build_bundle
 from vibeshub_client.post_comment import build_comment_body, post_pr_comment
-from vibeshub_client.reader import TranscriptReader
 from vibeshub_client.redact import redact_jsonl
-from vibeshub_client.upload import IngestPayload, UploadError, upload_trace
+from vibeshub_client.subagent_link import link_subagents
+from vibeshub_client.upload import UploadError, upload_bundle
 from vibeshub_client.version import PLUGIN_VERSION
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -32,30 +35,30 @@ class RunResult:
 
 async def run_share_pipeline(
     *,
-    reader: TranscriptReader,
+    reader,
     hook_input: dict,
     options: RunOptions,
 ) -> RunResult:
-    transcript_path: Path = reader.find_session(hook_input)
-    raw = transcript_path.read_bytes()
-    redacted, report = redact_jsonl(raw)
+    paths = reader.find_session_paths(hook_input)
+    if not paths.main_jsonl.is_file():
+        return RunResult(uploaded=False, skip_reason="transcript not found")
 
-    payload = IngestPayload(
-        transcript_jsonl=redacted.decode("utf-8", errors="replace"),
-        pr_url=options.pr_url,
-        platform=reader.platform_id(),
-        plugin_version=PLUGIN_VERSION,
-        session_id=options.session_id,
-        redaction_count_client=report.total(),
-    )
-    payload_bytes = len(redacted)
+    agents = link_subagents(paths.main_jsonl, paths.subagents_dir)
+    log.info("found %d subagent(s) for session", len(agents))
+
+    tar_bytes, report = build_bundle(paths.main_jsonl, agents, redact=redact_jsonl)
+    payload_bytes = len(tar_bytes)
 
     started = time.monotonic()
     try:
-        result = await upload_trace(
+        result = await upload_bundle(
             server_url=options.server_url,
             token=options.token,
-            payload=payload,
+            tar_bytes=tar_bytes,
+            pr_url=options.pr_url,
+            plugin_version=PLUGIN_VERSION,
+            session_id=options.session_id,
+            redaction_count_client=report.total(),
         )
     except UploadError as e:
         return RunResult(
@@ -64,7 +67,7 @@ async def run_share_pipeline(
             payload_bytes=payload_bytes,
             upload_elapsed_seconds=time.monotonic() - started,
         )
-    upload_elapsed = time.monotonic() - started
+    elapsed = time.monotonic() - started
 
     try:
         post_pr_comment(
@@ -78,7 +81,7 @@ async def run_share_pipeline(
             trace_url=result.trace_url,
             skip_reason=f"comment failed: {e}",
             payload_bytes=payload_bytes,
-            upload_elapsed_seconds=upload_elapsed,
+            upload_elapsed_seconds=elapsed,
         )
 
     return RunResult(
@@ -86,5 +89,5 @@ async def run_share_pipeline(
         short_id=result.short_id,
         trace_url=result.trace_url,
         payload_bytes=payload_bytes,
-        upload_elapsed_seconds=upload_elapsed,
+        upload_elapsed_seconds=elapsed,
     )

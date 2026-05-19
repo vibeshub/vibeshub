@@ -7,7 +7,7 @@ from threading import Thread
 
 import pytest
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, Request
 
 
 @pytest.fixture
@@ -28,13 +28,27 @@ def fake_gh_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_server():
-    """Spin up a real FastAPI server that emulates /api/ingest."""
+    """Spin up a real FastAPI server that emulates /api/ingest (tar + headers)."""
     app = FastAPI()
     received: list[dict] = []
 
     @app.post("/api/ingest", status_code=201)
-    async def ingest(body: dict):
-        received.append(body)
+    async def ingest(
+        request: Request,
+        x_vibeshub_pr_url: str = Header(...),
+        x_vibeshub_platform: str = Header(...),
+        x_vibeshub_plugin_version: str = Header(...),
+    ):
+        body = await request.body()
+        received.append(
+            {
+                "tar_bytes": body,
+                "pr_url": x_vibeshub_pr_url,
+                "platform": x_vibeshub_platform,
+                "plugin_version": x_vibeshub_plugin_version,
+                "content_type": request.headers.get("content-type", ""),
+            }
+        )
         return {
             "trace_id": "00000000-0000-0000-0000-000000000001",
             "short_id": "abc1234567",
@@ -110,6 +124,9 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     body = fake_server[0]
     assert body["pr_url"] == "https://github.com/alice/repo/pull/3"
     assert body["platform"] == "claude-code"
+    assert body["content_type"] == "application/x-tar"
+    # gzipped tar magic
+    assert body["tar_bytes"][:2] == b"\x1f\x8b"
     assert "[vibeshub] trace uploaded" in proc.stderr
 
     # Diagnostics for the upload attempt are written to the hook log.

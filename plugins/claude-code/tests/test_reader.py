@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from reader import ClaudeCodeTranscriptReader
 
 
@@ -30,11 +28,14 @@ def test_find_session_locates_transcript(tmp_path: Path, monkeypatch):
     assert found == target
 
 
-def test_find_session_raises_when_missing(tmp_path: Path, monkeypatch):
+def test_find_session_returns_nonexistent_when_missing(tmp_path: Path, monkeypatch):
+    # The shim now returns the candidate path even when the file doesn't exist
+    # so the pipeline can decide what to do (skip with a clear reason instead
+    # of crashing). Callers must check is_file() themselves.
     monkeypatch.setenv("HOME", str(tmp_path))
     reader = ClaudeCodeTranscriptReader()
-    with pytest.raises(FileNotFoundError):
-        reader.find_session({"session_id": "nope", "cwd": str(tmp_path)})
+    found = reader.find_session({"session_id": "nope", "cwd": str(tmp_path)})
+    assert not found.is_file()
 
 
 def test_find_session_prefers_payload_transcript_path(tmp_path: Path, monkeypatch):
