@@ -67,6 +67,7 @@ export function buildSession(records: AnyRec[]): Session {
     toolCallCount: 0,
     userPromptCount: 0,
     assistantTextCount: 0,
+    agents: [],
   };
 
   const toolResultsById = new Map<string, ToolResult>();

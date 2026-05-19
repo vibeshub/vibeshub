@@ -22,6 +22,14 @@ export interface PrLinkMeta {
   at: string;
 }
 
+export interface AgentSummary {
+  agent_id: string;
+  tool_use_id: string | null;
+  agent_type: string;
+  description: string;
+  message_count: number;
+}
+
 export interface SessionMeta {
   sessionId: string | null;
   aiTitle: string | null;
@@ -40,6 +48,7 @@ export interface SessionMeta {
   toolCallCount: number;
   userPromptCount: number;
   assistantTextCount: number;
+  agents: AgentSummary[];
 }
 
 export interface ToolResult {

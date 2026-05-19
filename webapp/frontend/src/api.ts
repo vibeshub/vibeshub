@@ -53,6 +53,19 @@ export async function fetchRawJsonl(shortId: string): Promise<string> {
   return r.text();
 }
 
+export async function fetchAgentJsonl(
+  shortId: string,
+  agentId: string,
+): Promise<string> {
+  const r = await fetch(`/api/traces/${shortId}/agents/${agentId}`, {
+    credentials: "same-origin",
+  });
+  if (!r.ok) {
+    throw new ApiError(r.status, await r.text());
+  }
+  return r.text();
+}
+
 export async function fetchUserOverview(login: string): Promise<UserOverview> {
   const r = await fetch(`/api/users/${encodeURIComponent(login)}`, {
     credentials: "same-origin",
