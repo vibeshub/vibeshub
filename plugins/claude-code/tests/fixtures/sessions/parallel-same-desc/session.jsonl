@@ -1,0 +1,4 @@
+{"type":"user","timestamp":"2026-05-19T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"review three things"}]},"uuid":"u1","sessionId":"sess3"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:01.000Z","message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_p1","name":"Agent","input":{"description":"Review","subagent_type":"Explore","prompt":"r1"}}]},"uuid":"u2","sessionId":"sess3"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:01.050Z","message":{"id":"m2","role":"assistant","content":[{"type":"tool_use","id":"toolu_p2","name":"Agent","input":{"description":"Review","subagent_type":"Explore","prompt":"r2"}}]},"uuid":"u3","sessionId":"sess3"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:01.100Z","message":{"id":"m3","role":"assistant","content":[{"type":"tool_use","id":"toolu_p3","name":"Agent","input":{"description":"Review","subagent_type":"Explore","prompt":"r3"}}]},"uuid":"u4","sessionId":"sess3"}

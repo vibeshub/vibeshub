@@ -1,0 +1,1 @@
+{"type":"user","timestamp":"2026-05-19T10:00:01.005Z","agentId":"a1111111111111111","isSidechain":true,"sessionId":"sess1","message":{"role":"user","content":[{"type":"text","text":"go"}]},"uuid":"sub-u1"}

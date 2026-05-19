@@ -1,0 +1,3 @@
+{"type":"user","timestamp":"2026-05-19T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"do A and B"}]},"uuid":"u1","sessionId":"sess4"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:01.000Z","message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_oa1","name":"Agent","input":{"description":"Task A","subagent_type":"Explore","prompt":"a"}}]},"uuid":"u2","sessionId":"sess4"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:02.000Z","message":{"id":"m2","role":"assistant","content":[{"type":"tool_use","id":"toolu_oa2","name":"Agent","input":{"description":"Task B","subagent_type":"Explore","prompt":"b"}}]},"uuid":"u3","sessionId":"sess4"}
