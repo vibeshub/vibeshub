@@ -221,9 +221,10 @@ Reader code checks `blob_prefix` first.
 - **`app/api/traces.py`**:
   1. `_to_summary` includes `agents` (the subset: `agent_id`, `agent_type`,
      `description`, `tool_use_id`, `message_count`).
-  2. Existing `GET /api/traces/{short_id}/raw` switches its read path to
-     `blob_prefix + "main.jsonl"` when `blob_prefix` is set; falls back to
-     `blob_path` for legacy rows.
+  2. Existing `GET /api/traces/{short_id}/raw` reads from
+     `trace.blob_prefix + "main.jsonl"`. No fallback to `blob_path` — the
+     one-time migration script (§9.1) guarantees every row has `blob_prefix`
+     set before this code ships.
   3. New endpoint:
      ```
      GET /api/traces/{short_id}/agents/{agent_id}
@@ -234,9 +235,10 @@ Reader code checks `blob_prefix` first.
 
      Meta.json blobs are not served by a separate endpoint; their content is
      already in `trace.agents`. They're stored for forensics only.
-  4. `DELETE` handler iterates `trace.agents` and explicitly deletes each
-     agent blob plus `main.jsonl`. Keeps `BlobStore.delete` signature
-     unchanged.
+  4. `DELETE` handler deletes `main.jsonl` then iterates `trace.agents`
+     and deletes each `agents/<id>.jsonl` + `agents/<id>.meta.json`. For
+     migrated-legacy rows `trace.agents` is empty, so only `main.jsonl` is
+     deleted — correct.
 
 - **`app/storage/blob.py`**. No signature changes. Both backends (local-fs,
   Azure) already accept `/` in keys.
@@ -439,8 +441,9 @@ interface AgentSummary {
 
 ### 7.4 `GET /api/traces/{short_id}/raw` (unchanged externally)
 
-Returns `main.jsonl` text. Internally reads `traces/<sid>/main.jsonl` for v2
-ingests, falls back to `traces/<sid>.jsonl` (`blob_path`) for legacy rows.
+Returns `main.jsonl` text. Internally reads `traces/<sid>/main.jsonl`
+exclusively — the one-time migration (§9.1) brings all pre-existing rows
+into this layout before this code ships, so no `blob_path` fallback exists.
 
 ### 7.5 `GET /api/traces/{short_id}/agents/{agent_id}` (new)
 
@@ -579,14 +582,76 @@ hard-fail against the new endpoint. Acceptable because:
 - The breaking change avoids carrying two ingest schemas in the backend
   permanently.
 
-Order:
+### 9.1 One-time storage migration
 
-1. Land backend (migration + handler + new endpoint), behind no flag —
-   old `/api/ingest` JSON path is removed in the same commit.
-2. Land plugin in the next PR. Bump `PLUGIN_VERSION`.
-3. Land frontend rendering. Until this lands, traces uploaded by step-2
-   plugins render with collapsed Agent cards (no subagent data shown), same
-   as today's behavior — graceful.
+Pre-existing traces (all uploaded from this developer's machine, ~10–20 rows)
+are migrated from the legacy single-blob layout to the v2 prefix layout via
+a one-time script. This lets the backend read code be single-shape from day
+one — no `blob_prefix ?? blob_path` fallback.
 
-Each PR is independently mergeable in its own slot; cross-PR coordination
-is only "plugin must not ship before backend".
+The script does the minimum: copy blobs into the new layout and update DB
+columns. It does **not** attempt to enrich old traces with subagent data
+from local files; old traces ship with `agents=[]` permanently. Subagent
+content for those traces is lost as data but recoverable as UX (`AgentBody`
+already falls back to dispatch prompt + final summary when `agents=[]` — see
+§6.2).
+
+**Location**: `webapp/backend/scripts/migrate_to_v2_storage.py`. Run via
+`python -m scripts.migrate_to_v2_storage` from the backend package. Uses
+the existing `BlobStore` and `Session` dependencies, so works against both
+local-fs (dev) and Azure Blob (prod) without code changes.
+
+**Algorithm** (idempotent — re-running is a no-op):
+
+```python
+for trace in session.execute(select(Trace).where(Trace.blob_prefix.is_(None))):
+    old_key = trace.blob_path                       # "traces/<sid>.jsonl"
+    new_key = f"traces/{trace.short_id}/main.jsonl"
+
+    data = await blob_store.get(old_key)
+    await blob_store.put(new_key, data)
+    # blob_store.delete(old_key) — deferred to a second pass after DB commits
+
+    trace.blob_prefix = f"traces/{trace.short_id}/"
+    trace.blob_path = None
+    trace.agents = []
+    trace.agent_count = 0
+
+await session.commit()
+
+# Second pass: now-orphaned legacy blobs.
+for trace in session.execute(select(Trace)):  # all rows have blob_prefix now
+    legacy_key = f"traces/{trace.short_id}.jsonl"
+    try:
+        await blob_store.delete(legacy_key)
+    except NotFound:
+        pass
+```
+
+Two passes so a crash between blob-write and DB-commit doesn't lose the
+original blob. The script supports `--dry-run` (prints planned actions
+without writing) and `--limit N` (process N rows then exit, for cautious
+first runs).
+
+After this runs, every row has `blob_prefix` set and `blob_path` is null.
+The `blob_path` column is left in place but unused — drop in a follow-up
+migration whenever convenient.
+
+### 9.2 Order of operations
+
+1. Land migration #1 (DDL adds `agents`, `agent_count`, `blob_prefix`;
+   makes `blob_path` nullable). No code changes yet — backend still reads
+   from `blob_path` because the new columns are all null/empty.
+2. Run `migrate_to_v2_storage.py` against prod. All rows now have
+   `blob_prefix` set; `blob_path` is null on all rows.
+3. Land backend code change (new `/api/ingest`, new `/agents/<id>`
+   endpoint, single-shape read code). Old `/api/ingest` JSON path is
+   removed in the same commit. Smoke-test by hitting `/raw` and a few
+   `/agents/<id>` endpoints — all should work.
+4. Land plugin change in the next PR. Bump `PLUGIN_VERSION`.
+5. Land frontend rendering. Until this lands, new traces uploaded by
+   step-4 plugins render with Agent cards showing today's UI (no expand
+   affordance yet) — graceful.
+
+Cross-PR coordination is only "step 2 must run before step 3 deploys"
+and "plugin must not ship before backend".
