@@ -1,30 +1,1087 @@
-.container {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+/* Landing.module.css — homepage layout.
+   Pairs with .page-shell topbar chrome from pages.css; tokens come from tokens.css. */
+
+.shell {
+  min-height: 100vh;
 }
 
-.h1 {
-  font-size: 2rem;
-  margin: 0 0 var(--space-3) 0;
-}
-
-.lede {
-  font-size: 1.1rem;
-  color: var(--color-fg-muted);
-  margin: 0 0 var(--space-6) 0;
-}
-
-.section {
-  margin-bottom: var(--space-6);
-}
-
-.code {
+.tagline {
+  color: var(--text-faint);
   font-family: var(--font-mono);
-  font-size: 0.9rem;
-  background: var(--color-border);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 6px;
+}
+.navLinks a {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 13.5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+.navLinks a:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  text-decoration: none;
+}
+
+/* Promote the AuthWidget "Sign in" button into a real primary CTA inside the topbar. */
+.shell :global(.topbar-actions .iconbtn.primary) {
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  border-color: var(--text-strong);
+}
+.shell :global(.topbar-actions .iconbtn.primary:hover) {
+  background: oklch(from var(--text-strong) calc(l + 0.08) c h);
+  border-color: oklch(from var(--text-strong) calc(l + 0.08) c h);
+  color: var(--bg-elevated);
+}
+
+/* ---------- container ---------- */
+.container {
+  max-width: var(--header-width);
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* shared eyebrow + section heading */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+.eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+.sectionTitle {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 12px 0 8px;
+}
+.sectionLede {
+  font-size: 16px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 0 36px;
+  text-wrap: pretty;
+}
+.sectionLede code {
+  font-size: 0.92em;
+  color: var(--text-strong);
+}
+
+/* ===================================================================
+   HERO
+   ================================================================ */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 0 96px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    oklch(0.5 0.01 75 / 0.07) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 30%,
+    black 30%,
+    transparent 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 30%,
+    black 30%,
+    transparent 80%
+  );
+}
+:global([data-theme="dark"]) .hero::before {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    oklch(0.9 0.01 75 / 0.06) 1px,
+    transparent 0
+  );
+}
+.heroGrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: center;
+}
+.heroLeft > * {
+  opacity: 0;
+  animation: rise 600ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.heroLeft > *:nth-child(1) {
+  animation-delay: 50ms;
+}
+.heroLeft > *:nth-child(2) {
+  animation-delay: 150ms;
+}
+.heroLeft > *:nth-child(3) {
+  animation-delay: 250ms;
+}
+.heroLeft > *:nth-child(4) {
+  animation-delay: 350ms;
+}
+.heroLeft > *:nth-child(5) {
+  animation-delay: 450ms;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heroLeft > * {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.heroEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 11px 5px 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+}
+.heroEyebrow .tag {
+  font: 600 10.5px var(--font-mono);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.heroH1 {
+  font-size: clamp(40px, 5.4vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 22px 0 22px;
+  text-wrap: balance;
+}
+.heroH1 .hl {
+  color: var(--accent-strong);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.heroSub {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 520px;
+  margin: 0 0 32px;
+  text-wrap: pretty;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease,
+    color 120ms ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:hover {
+  text-decoration: none;
+}
+.btnPrimary {
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  border-color: var(--text-strong);
+}
+.btnPrimary:hover {
+  background: oklch(from var(--text-strong) calc(l + 0.08) c h);
+  border-color: oklch(from var(--text-strong) calc(l + 0.08) c h);
+  color: var(--bg-elevated);
+}
+.btnGhost {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btnGhost:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.heroCmd {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 13px var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 8px 8px 8px 10px;
+  border-radius: 8px;
+  max-width: max-content;
+}
+.heroCmd .prompt {
+  color: var(--text-faint);
+}
+.heroCmd .copyBtn {
+  margin-left: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--bg-subtle);
+  color: var(--text-faint);
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+.heroCmd .copyBtn:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+.heroCmd .copyBtn.copied {
+  color: var(--tool-bash);
+  border-color: color-mix(in oklab, var(--tool-bash) 30%, var(--border-subtle));
+  background: color-mix(in oklab, var(--tool-bash) 8%, var(--bg-subtle));
+}
+
+/* ----- hero visual: GH comment + trace card ----- */
+.heroVisual {
+  position: relative;
+  min-height: 460px;
+  opacity: 0;
+  animation: rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .heroVisual {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.ghComment {
+  position: relative;
+  z-index: 2;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-2);
+  max-width: 460px;
+  margin-left: auto;
+  font-size: 14px;
+}
+.ghHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.ghAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    oklch(0.68 0.13 50),
+    oklch(0.55 0.1 290)
+  );
+  display: grid;
+  place-items: center;
+  color: oklch(0.98 0 0);
+  font: 600 11px var(--font-mono);
+}
+.ghUser {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.ghMeta {
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+.ghBot {
+  margin-left: auto;
+  font: 600 10px var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text-faint);
+  border: 1px solid var(--border-subtle);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ghBody {
+  color: var(--text);
+  line-height: 1.55;
+}
+.ghBody strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.ghLink {
+  color: var(--accent-strong);
+  border-bottom: 1px dotted
+    color-mix(in oklab, var(--accent-strong) 60%, transparent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.heroArrow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 70px 6px 0;
+  color: var(--text-faint);
+}
+.heroArrow svg {
+  width: 18px;
+  height: 36px;
+}
+
+.traceCard {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 0 oklch(0 0 0 / 0.04),
+    0 20px 40px -16px oklch(0.4 0.04 60 / 0.18),
+    0 4px 12px oklch(0.4 0.02 60 / 0.06);
+  overflow: hidden;
+  max-width: 540px;
+  margin-left: auto;
+}
+:global([data-theme="dark"]) .traceCard {
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.03),
+    0 20px 40px -16px oklch(0 0 0 / 0.5),
+    0 4px 12px oklch(0 0 0 / 0.3);
+}
+.traceHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+}
+.urlChip {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 3px 8px;
+  color: var(--text);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dots {
+  display: flex;
+  gap: 5px;
+}
+.dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.traceBody {
+  padding: 18px 20px 4px;
+}
+.traceH1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+  margin: 0 0 8px;
+}
+.traceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font: 500 11.5px var(--font-mono);
+  color: var(--text-muted);
+  font-feature-settings: "tnum";
+}
+.traceMeta .crumb {
+  color: var(--accent-strong);
+}
+.traceMeta .sep {
+  color: var(--text-faint);
+  opacity: 0.5;
+}
+
+.userPromptCard {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 4px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-1);
+}
+.upAvatar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  display: grid;
+  place-items: center;
+  font: 600 10px var(--font-mono);
+}
+.upBody {
+  flex: 1;
+  min-width: 0;
+}
+.upMeta {
+  font: 500 10.5px var(--font-mono);
+  color: var(--text-faint);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.upText {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-strong);
+  text-wrap: pretty;
+}
+
+.toolCard {
+  margin: 14px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.toolHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.toolDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.toolName {
+  font: 600 12px var(--font-mono);
+  color: var(--text-strong);
+}
+.toolArgs {
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toolDur {
+  font: 500 11px var(--font-mono);
+  color: var(--text-faint);
+  font-feature-settings: "tnum";
+}
+.toolBash .toolDot {
+  background: var(--tool-bash);
+}
+.toolRead .toolDot {
+  background: var(--tool-read);
+}
+.toolWrite .toolDot {
+  background: var(--tool-write);
+}
+.toolAgent .toolDot {
+  background: var(--tool-agent);
+}
+.toolBody {
+  font: 500 12px var(--font-mono);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  padding: 10px 12px;
+  border-top: 1px dashed var(--border-subtle);
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.toolBody .dim {
+  color: var(--text-faint);
+}
+.toolBody .ok {
+  color: var(--tool-bash);
+}
+.toolBody .err {
+  color: oklch(0.55 0.18 25);
+}
+
+.timeline {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 10px 0 18px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+}
+.timelineSeg {
+  height: 100%;
+}
+.tlBash {
+  background: var(--tool-bash);
+}
+.tlRead {
+  background: var(--tool-read);
+}
+.tlWrite {
+  background: var(--tool-write);
+}
+.tlAgent {
+  background: var(--tool-agent);
+}
+.tlGap {
+  background: transparent;
+}
+
+.tracePin {
+  position: absolute;
+  z-index: 3;
+  top: -14px;
+  right: -12px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font: 600 11px var(--font-mono);
+  padding: 5px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px oklch(0.66 0.13 50 / 0.35);
+  transform: rotate(3deg);
+}
+
+/* ===================================================================
+   HOW IT WORKS
+   ================================================================ */
+.how {
+  padding: 96px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.howFlow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+.flowStep {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 22px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 280px;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+.flowStep:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.flowNum {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font: 600 11px var(--font-mono);
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+}
+.flowIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+.flowIcon svg {
+  width: 18px;
+  height: 18px;
+}
+.flowTitle {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  margin: 0;
+}
+.flowText {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+  flex: 1;
+}
+.flowText code {
+  color: var(--text-strong);
+}
+.flowTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 11.5px var(--font-mono);
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  align-self: flex-start;
+}
+.flowTag .k {
+  color: var(--text-faint);
+}
+.flowTag .accent {
+  color: var(--accent-strong);
+}
+
+/* ===================================================================
+   PRIVACY
+   ================================================================ */
+.privacy {
+  padding: 96px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+.privacyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 56px;
+  align-items: start;
+}
+.privacyPoints {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.privacyPoints li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.55;
+}
+.ppMark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+}
+.ppMark svg {
+  width: 12px;
+  height: 12px;
+}
+.privacyPoints strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.privacyPoints code {
+  color: var(--text-strong);
+}
+.privacyPoints kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: 600 11px var(--font-mono);
+  background: var(--bg-elevated);
+  color: var(--text-strong);
+  line-height: 1.4;
+}
+
+.redact {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px 18px;
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.redactHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--border-subtle);
+  color: var(--text-muted);
+}
+.redactBadge {
+  font: 600 10.5px var(--font-mono);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.redactPath {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.redact pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--text-muted);
+}
+.redact code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
   display: block;
+  color: var(--text-muted);
+}
+.redact .k {
+  color: var(--text-strong);
+}
+.redact .v {
+  color: var(--text);
+}
+.redact .strike {
+  background: oklch(0.62 0.18 25 / 0.1);
+  color: oklch(0.55 0.18 25);
+  border-radius: 3px;
+  padding: 1px 4px;
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.18 25 / 0.6);
+}
+.redact .okChip {
+  background: color-mix(in oklab, var(--tool-bash) 12%, transparent);
+  color: var(--tool-bash);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.redact .dim {
+  color: var(--text-faint);
+}
+.redact .comment {
+  color: var(--text-faint);
+}
+
+/* ===================================================================
+   INSTALL
+   ================================================================ */
+.install {
+  padding: 96px 0 112px;
+}
+.installCard {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 40px;
+  align-items: center;
+  box-shadow: var(--shadow-2);
+  position: relative;
+  overflow: hidden;
+}
+.installCard::before {
+  content: "";
+  position: absolute;
+  right: -100px;
+  top: -100px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    var(--accent-soft),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+.installCard h2 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 4px 0 8px;
+}
+.installCard p {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+  max-width: 380px;
+}
+.installCard p code {
+  color: var(--text-strong);
+}
+.installMeta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+}
+.installMeta .key {
+  color: var(--text-faint);
+  margin-right: 4px;
+}
+.installMeta .val {
+  color: var(--text-muted);
+}
+
+.codeBlock {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  font: 500 13px var(--font-mono);
+  overflow: hidden;
+}
+.codeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-faint);
+  font: 500 11.5px var(--font-mono);
+}
+.codeHead .label {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+.codeHead .spacer {
+  flex: 1;
+}
+.codeCopy {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: 500 11px var(--font-mono);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+.codeCopy:hover {
+  background: var(--bg-elevated);
+  color: var(--accent-strong);
+}
+.codeCopy.copied {
+  color: var(--tool-bash);
+}
+.codeBlock pre {
+  margin: 0;
+  padding: 16px 18px;
+  color: var(--text);
   overflow-x: auto;
+  line-height: 1.7;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre;
+}
+.codeBlock .prompt {
+  color: var(--text-faint);
+  user-select: none;
+}
+.codeBlock .cmd {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+.codeBlock .arg {
+  color: var(--accent-strong);
+}
+.codeBlock .commentLine {
+  color: var(--text-faint);
+}
+.codeBlock .echo {
+  color: var(--text-muted);
+}
+
+/* ===================================================================
+   FOOTER
+   ================================================================ */
+.footer {
+  padding: 36px 0 60px;
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+}
+.footerInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footerInner .blurb {
+  color: var(--text-muted);
+}
+.footerLinks {
+  display: flex;
+  gap: 18px;
+}
+.footerLinks a {
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+.footerLinks a:hover {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+/* ===================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 980px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .heroVisual {
+    min-height: auto;
+  }
+  .ghComment,
+  .traceCard {
+    margin-left: 0;
+    max-width: 540px;
+  }
+  .howFlow {
+    grid-template-columns: 1fr;
+  }
+  .privacyGrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .installCard {
+    grid-template-columns: 1fr;
+    padding: 28px;
+  }
+  .hideSm {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .container {
+    padding: 0 20px;
+  }
+  .hero {
+    padding: 56px 0 72px;
+  }
+  .sectionTitle {
+    font-size: 24px;
+  }
+  .navLinks {
+    display: none;
+  }
 }
