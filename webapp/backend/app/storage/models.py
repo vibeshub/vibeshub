@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
     DateTime,
@@ -45,7 +46,17 @@ class Trace(Base):
     redaction_count_client: Mapped[int] = mapped_column(Integer, default=0)
     redaction_count_server: Mapped[int] = mapped_column(Integer, default=0)
 
-    blob_path: Mapped[str] = mapped_column(String(512))
+    # Legacy: one of blob_path / blob_prefix is non-null per row.
+    # v1 ingests set blob_path; v2 ingests (post-2026-05-19) set blob_prefix.
+    blob_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    blob_prefix: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+
+    # Subagent summaries surfaced via TraceSummary. Stored as JSON list of
+    # AgentSummary dicts (see app/api/schemas.py). NULL for legacy rows
+    # pre-migration; empty list [] for rows migrated by
+    # scripts/migrate_to_v2_storage.py.
+    agents: Mapped[Optional[list[dict]]] = mapped_column(sa.JSON, nullable=True)
+    agent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
