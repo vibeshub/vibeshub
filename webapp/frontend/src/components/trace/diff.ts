@@ -147,6 +147,8 @@ export function buildWriteRows(
   ) {
     return fallbackDiff(input.old_string, input.new_string);
   }
+  // MultiEdit fallback (no structuredPatch): each edit is diffed independently,
+  // so line numbers restart at 1 per edit rather than being file-absolute.
   if (Array.isArray(input.edits)) {
     const rows: DiffRow[] = [];
     for (const e of input.edits) {
