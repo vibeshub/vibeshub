@@ -1063,7 +1063,7 @@
 }
 .vibeshub-viewer .diff-gutter {
   flex: 0 0 auto;
-  width: 44px;
+  width: 60px;
   padding: 0 8px;
   text-align: right;
   color: var(--text-faint);
@@ -1128,7 +1128,8 @@
 .vibeshub-viewer .diff-code .token.keyword,
 .vibeshub-viewer .diff-code .token.boolean,
 .vibeshub-viewer .diff-code .token.atrule,
-.vibeshub-viewer .diff-code .token.important {
+.vibeshub-viewer .diff-code .token.important,
+.vibeshub-viewer .diff-code .token.builtin {
   color: var(--syn-keyword);
 }
 .vibeshub-viewer .diff-code .token.string,
@@ -1145,7 +1146,8 @@
 .vibeshub-viewer .diff-code .token.function,
 .vibeshub-viewer .diff-code .token.class-name,
 .vibeshub-viewer .diff-code .token.tag,
-.vibeshub-viewer .diff-code .token.selector {
+.vibeshub-viewer .diff-code .token.selector,
+.vibeshub-viewer .diff-code .token.property {
   color: var(--syn-function);
 }
 .vibeshub-viewer .diff-code .token.punctuation,
