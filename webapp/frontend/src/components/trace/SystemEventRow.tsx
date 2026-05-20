@@ -1,6 +1,7 @@
 import type {
   AttachmentEvent,
   FileSnapshotEvent,
+  ProgressEvent,
   StreamEvent,
   SystemEvent,
   SystemTextEvent,
@@ -79,6 +80,19 @@ export function SystemEventRow({ event }: Props) {
           <strong>file snapshot</strong>
         </span>
         <span className="sys-ts">{fmtTimeOfDay(f.ts)}</span>
+      </div>
+    );
+  }
+  if (event.kind === "progress") {
+    const p = event as ProgressEvent;
+    return (
+      <div className="sys-row" data-uuid={p.uuid}>
+        <span className="sys-dot" />
+        <span>
+          <strong>hook</strong> · {p.hookName || p.hookEvent || "progress"}
+          {p.command ? ` · ${p.command}` : ""}
+        </span>
+        <span className="sys-ts">{fmtTimeOfDay(p.ts)}</span>
       </div>
     );
   }

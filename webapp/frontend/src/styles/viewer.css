@@ -625,6 +625,42 @@
   border-radius: 50%;
   background: oklch(0.62 0.18 25);
 }
+.vibeshub-viewer .tool-hook-badge {
+  flex: none;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.vibeshub-viewer .hook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.vibeshub-viewer .hook-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.vibeshub-viewer .hook-row .hook-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.vibeshub-viewer .hook-name {
+  color: var(--text-muted);
+}
+.vibeshub-viewer .hook-cmd {
+  color: var(--text-faint);
+}
 .vibeshub-viewer .tool-body {
   border-top: 1px solid var(--border-subtle);
   padding: 14px 16px 16px;
