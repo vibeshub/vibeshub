@@ -60,6 +60,21 @@ describe("fallbackDiff", () => {
       { kind: "add", oldNo: null, newNo: 1, text: "x" },
     ]);
   });
+  it("handles a pure deletion", () => {
+    expect(fallbackDiff("a\nb", "a")).toEqual([
+      { kind: "ctx", oldNo: 1, newNo: 1, text: "a" },
+      { kind: "del", oldNo: 2, newNo: null, text: "b" },
+    ]);
+  });
+  it("handles a pure addition", () => {
+    expect(fallbackDiff("a", "a\nb")).toEqual([
+      { kind: "ctx", oldNo: 1, newNo: 1, text: "a" },
+      { kind: "add", oldNo: null, newNo: 2, text: "b" },
+    ]);
+  });
+  it("returns no rows when both strings are empty", () => {
+    expect(fallbackDiff("", "")).toEqual([]);
+  });
 });
 
 describe("extractPatch", () => {
@@ -76,6 +91,13 @@ describe("extractPatch", () => {
       ]),
     ).toEqual([
       { oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: [" a"] },
+    ]);
+  });
+  it("defaults missing line counts and coerces line entries to strings", () => {
+    expect(
+      extractPatch([{ oldStart: 1, newStart: 1, lines: [2] }]),
+    ).toEqual([
+      { oldStart: 1, oldLines: 0, newStart: 1, newLines: 0, lines: ["2"] },
     ]);
   });
 });
@@ -119,5 +141,10 @@ describe("buildWriteRows", () => {
   });
   it("returns no rows when there is nothing to show", () => {
     expect(buildWriteRows({}, null)).toEqual([]);
+  });
+  it("falls through an empty patch array to Write content", () => {
+    expect(buildWriteRows({ content: "a" }, [])).toEqual([
+      { kind: "add", oldNo: null, newNo: 1, text: "a" },
+    ]);
   });
 });

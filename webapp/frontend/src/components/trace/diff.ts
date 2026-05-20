@@ -37,6 +37,8 @@ export function rowsFromStructuredPatch(patch: PatchHunk[]): DiffRow[] {
         rows.push({ kind: "del", oldNo, newNo: null, text: line.slice(1) });
         oldNo++;
       } else {
+        // " " prefix is a context line; an empty or unprefixed line (no real
+        // marker) is also treated as context, kept verbatim.
         rows.push({
           kind: "ctx",
           oldNo,
