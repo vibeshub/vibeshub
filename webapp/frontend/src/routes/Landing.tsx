@@ -4,6 +4,8 @@ import { AuthWidget } from "../components/AuthWidget";
 import { IconMoon, IconSun } from "../components/trace/icons";
 import { useTheme } from "../components/trace/theme";
 import styles from "./Landing.module.css";
+import heroTraceLight from "../assets/hero-trace-light.png";
+import heroTraceDark from "../assets/hero-trace-dark.png";
 
 // Keep in sync with plugins/claude-code/.claude-plugin/plugin.json.
 const PLUGIN_VERSION = "0.2.0";
@@ -20,6 +22,14 @@ const INSTALL_STEPS = [
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
+
+// The real Claude Code trace featured in the hero — PR #31's trace.
+// The screenshots in ../assets are hand-captured by scripts/capture-hero-trace.mjs;
+// re-capture them if the trace viewer's design changes.
+const HERO_TRACE_URL =
+  "https://vibeshub.ai/Bhavya6187/vibeshub/pull/31/66jxlxariq";
+const HERO_TRACE_LABEL =
+  "vibeshub.ai/Bhavya6187/vibeshub/pull/31/66jxlxariq";
 
 function useCopy() {
   const [copied, setCopied] = useState<string | null>(null);
@@ -38,6 +48,7 @@ function useCopy() {
 export function Landing() {
   const { resolved, toggle } = useTheme();
   const { copied, copy } = useCopy();
+  const heroShot = resolved === "dark" ? heroTraceDark : heroTraceLight;
 
   return (
     <div className={`page-shell ${styles.shell}`}>
@@ -147,21 +158,25 @@ export function Landing() {
               </div>
             </div>
 
-            {/* right: stylized illustration of a PR bot comment + trace */}
-            <div className={styles.heroVisual} aria-hidden="true">
+            {/* right: a real PR comment + a screenshot of the trace it links to */}
+            <div className={styles.heroVisual}>
               <div className={styles.ghComment}>
                 <div className={styles.ghHead}>
-                  <span className={styles.ghAvatar}>fc</span>
-                  <span className={styles.ghUser}>feross</span>
-                  <span className={styles.ghMeta}>
-                    commented on PR #482 · just now
-                  </span>
+                  <img
+                    className={styles.ghAvatar}
+                    src="https://github.com/Bhavya6187.png?size=64"
+                    alt=""
+                    width={22}
+                    height={22}
+                  />
+                  <span className={styles.ghUser}>Bhavya6187</span>
+                  <span className={styles.ghMeta}>commented on PR #31</span>
                 </div>
                 <div className={styles.ghBody}>
                   Claude Code trace for this PR:{" "}
-                  <span className={styles.ghLink}>
-                    vibeshub.ai/anthropics/anthropic-sdk-python/pull/482/k3p9wq
-                  </span>
+                  <a className={styles.ghLink} href={HERO_TRACE_URL}>
+                    {HERO_TRACE_LABEL}
+                  </a>
                   <br />
                   <span style={{ color: "var(--text-muted)" }}>
                     Uploaded by the PR author.
@@ -169,7 +184,7 @@ export function Landing() {
                 </div>
               </div>
 
-              <div className={styles.heroArrow}>
+              <div className={styles.heroArrow} aria-hidden="true">
                 <svg
                   viewBox="0 0 18 36"
                   fill="none"
@@ -183,138 +198,22 @@ export function Landing() {
                 </svg>
               </div>
 
-              <div className={styles.traceCard}>
+              <a className={styles.traceCard} href={HERO_TRACE_URL}>
                 <span className={styles.tracePin}>live trace</span>
                 <div className={styles.traceHead}>
                   <div className={styles.dots}>
-                    <span /><span /><span />
+                    <span />
+                    <span />
+                    <span />
                   </div>
-                  <div className={styles.urlChip}>
-                    vibeshub.ai/anthropics/anthropic-sdk-python/pull/482/k3p9wq
-                  </div>
+                  <div className={styles.urlChip}>{HERO_TRACE_LABEL}</div>
                 </div>
-                <div className={styles.traceBody}>
-                  <h3 className={styles.traceH1}>
-                    Fix flake in retriever cache TTL test
-                  </h3>
-                  <div className={styles.traceMeta}>
-                    <span className={styles.crumb}>
-                      anthropics/anthropic-sdk-python
-                    </span>
-                    <span className={styles.sep}>·</span>
-                    <span>#482</span>
-                    <span className={styles.sep}>·</span>
-                    <span>claude-code</span>
-                    <span className={styles.sep}>·</span>
-                    <span>38 messages</span>
-                    <span className={styles.sep}>·</span>
-                    <span>14m 02s</span>
-                  </div>
-
-                  <div className={styles.timeline}>
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlRead}`}
-                      style={{ flex: 0.6 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlBash}`}
-                      style={{ flex: 1.4 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlGap}`}
-                      style={{ flex: 0.15 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlWrite}`}
-                      style={{ flex: 0.9 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlBash}`}
-                      style={{ flex: 1.6 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlAgent}`}
-                      style={{ flex: 0.8 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlWrite}`}
-                      style={{ flex: 1.2 }}
-                    />
-                    <div
-                      className={`${styles.timelineSeg} ${styles.tlBash}`}
-                      style={{ flex: 1.0 }}
-                    />
-                  </div>
-
-                  <div className={styles.userPromptCard}>
-                    <div className={styles.upAvatar}>U</div>
-                    <div className={styles.upBody}>
-                      <div className={styles.upMeta}>Prompt 1 / 3</div>
-                      <div className={styles.upText}>
-                        The retriever cache TTL test is flaking on CI — fails
-                        about 1 in 3 runs on{" "}
-                        <code>test_ttl_expiry</code>. Can you reproduce and fix
-                        it?
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`${styles.toolCard} ${styles.toolBash}`}>
-                    <div className={styles.toolHead}>
-                      <span className={styles.toolDot} />
-                      <span className={styles.toolName}>Bash</span>
-                      <span className={styles.toolArgs}>
-                        pytest tests/retriever/test_cache.py -k ttl -x
-                      </span>
-                      <span className={styles.toolDur}>2.41s</span>
-                    </div>
-                    <div className={styles.toolBody}>
-                      <span className={styles.dim}>$ </span>
-                      pytest tests/retriever/test_cache.py -k ttl -x
-                      {"\n"}
-                      <span className={styles.dim}>
-                        collected 3 items · 2 passed ·{" "}
-                      </span>
-                      <span className={styles.err}>1 failed</span>
-                      {"\n"}
-                      <span className={styles.dim}>FAILED</span> test_ttl_expiry
-                      — <span className={styles.err}>AssertionError</span>
-                    </div>
-                  </div>
-
-                  <div className={`${styles.toolCard} ${styles.toolWrite}`}>
-                    <div className={styles.toolHead}>
-                      <span className={styles.toolDot} />
-                      <span className={styles.toolName}>Edit</span>
-                      <span className={styles.toolArgs}>
-                        retriever/cache.py · monotonic → wall-clock
-                      </span>
-                      <span className={styles.toolDur}>0.18s</span>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`${styles.toolCard} ${styles.toolBash}`}
-                    style={{ marginBottom: 18 }}
-                  >
-                    <div className={styles.toolHead}>
-                      <span className={styles.toolDot} />
-                      <span className={styles.toolName}>Bash</span>
-                      <span className={styles.toolArgs}>
-                        pytest tests/retriever/ -x
-                      </span>
-                      <span className={styles.toolDur}>3.04s</span>
-                    </div>
-                    <div className={styles.toolBody}>
-                      <span className={styles.dim}>$ </span>
-                      pytest tests/retriever/ -x{"\n"}
-                      <span className={styles.ok}>
-                        ·· passed · 41 in 3.04s ✓
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <img
+                  className={styles.traceShot}
+                  src={heroShot}
+                  alt="vibeshub trace viewer showing the Claude Code session that built pull request #31"
+                />
+              </a>
             </div>
           </div>
         </section>
