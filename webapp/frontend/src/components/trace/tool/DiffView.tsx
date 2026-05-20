@@ -8,7 +8,7 @@ interface Props {
 
 // Cap very large diffs (e.g. a freshly written 2000-line file) so the DOM
 // stays light. The viewer is a summary, not a full file browser.
-const MAX_ROWS = 800;
+export const MAX_ROWS = 800;
 
 const MARK: Record<DiffRow["kind"], string> = {
   add: "+",

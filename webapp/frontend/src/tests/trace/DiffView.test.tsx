@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import { DiffView } from "../../components/trace/tool/DiffView";
+import { DiffView, MAX_ROWS } from "../../components/trace/tool/DiffView";
 import type { DiffRow } from "../../components/trace/diff";
 
 const rows: DiffRow[] = [
@@ -29,5 +29,18 @@ describe("DiffView", () => {
   it("renders nothing for an empty row list", () => {
     const { container } = render(<DiffView rows={[]} lang={null} />);
     expect(container.firstChild).toBeNull();
+  });
+  it("truncates large diffs and reports the hidden count", () => {
+    const big: DiffRow[] = Array.from({ length: MAX_ROWS + 150 }, (_, i) => ({
+      kind: "add" as const,
+      oldNo: null,
+      newNo: i + 1,
+      text: `line ${i}`,
+    }));
+    const { container } = render(<DiffView rows={big} lang={null} />);
+    const truncated = container.querySelector(".diff-truncated");
+    expect(truncated).not.toBeNull();
+    expect(truncated!.textContent).toContain("150 more lines");
+    expect(container.querySelectorAll(".diff-row")).toHaveLength(MAX_ROWS + 1);
   });
 });
