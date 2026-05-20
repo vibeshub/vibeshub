@@ -129,6 +129,16 @@ export interface PrLinkEvent {
   ts: string;
 }
 
+export interface ProgressEvent {
+  kind: "progress";
+  hookEvent: string;
+  hookName: string;
+  command: string;
+  parentToolUseID: string | null;
+  ts: string;
+  uuid: string;
+}
+
 export interface PrLinkRecord {
   prNumber: number;
   prUrl: string;
@@ -145,7 +155,8 @@ export type StreamEvent =
   | AttachmentEvent
   | SystemEvent
   | FileSnapshotEvent
-  | PrLinkEvent;
+  | PrLinkEvent
+  | ProgressEvent;
 
 export interface Session {
   meta: SessionMeta;

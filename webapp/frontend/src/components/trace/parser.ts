@@ -303,6 +303,22 @@ export function buildSession(records: AnyRec[]): Session {
       });
       continue;
     }
+
+    if (r.type === "progress") {
+      const data = (r.data ?? {}) as Record<string, unknown>;
+      stream.push({
+        kind: "progress",
+        hookEvent: String(data.hookEvent ?? ""),
+        hookName: String(data.hookName ?? ""),
+        command: String(data.command ?? ""),
+        parentToolUseID: r.parentToolUseID
+          ? String(r.parentToolUseID)
+          : null,
+        ts: String(r.timestamp ?? ""),
+        uuid: String(r.uuid ?? ""),
+      });
+      continue;
+    }
   }
 
   // Aggregates from the stream.
