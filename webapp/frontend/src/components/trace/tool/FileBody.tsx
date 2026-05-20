@@ -70,6 +70,8 @@ export function FileBody(props: Props) {
 
   const path = asString(props.input.file_path) || asString(props.input.path);
   const patch = extractPatch(props.result?.toolUseResult?.structuredPatch);
+  // No rows (e.g. an empty-file Write, or a tool shape we can't diff) renders
+  // just the file-card header — intentional, not a missing case.
   const rows = buildWriteRows(props.input, patch);
   const lang = langFromPath(path);
   const added = rows.filter((r) => r.kind === "add").length;
@@ -86,12 +88,12 @@ export function FileBody(props: Props) {
           </span>
         )}
       </div>
-      {rows.length > 0 ? (
+      {rows.length > 0 && (
         <>
           <h4>Changes</h4>
           <DiffView rows={rows} lang={lang} />
         </>
-      ) : null}
+      )}
     </>
   );
 }
