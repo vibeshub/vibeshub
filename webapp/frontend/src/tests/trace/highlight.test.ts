@@ -33,4 +33,7 @@ describe("highlightLine", () => {
     expect(html).not.toContain("<b>");
     expect(html).toContain("&lt;b>");
   });
+  it("falls back to escaped plain text for an unknown language", () => {
+    expect(highlightLine("<x>", "cobol")).toBe("&lt;x&gt;");
+  });
 });
