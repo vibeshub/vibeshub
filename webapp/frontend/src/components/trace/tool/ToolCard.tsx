@@ -47,7 +47,14 @@ function renderBody(
     case "Write":
     case "Edit":
     case "MultiEdit":
-      return <FileBody mode="write" input={event.input} root={root} />;
+      return (
+        <FileBody
+          mode="write"
+          input={event.input}
+          result={event.result}
+          root={root}
+        />
+      );
     case "AskUserQuestion":
       return (
         <AskUserBody
