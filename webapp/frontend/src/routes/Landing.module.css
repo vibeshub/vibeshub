@@ -270,27 +270,54 @@
   height: 14px;
 }
 
-.heroCmd {
-  margin-top: 18px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font: 500 13px var(--font-mono);
-  color: var(--text-muted);
-  background: var(--bg-elevated);
+/* ----- hero install block: real multi-step terminal card ----- */
+.heroInstall {
+  margin-top: 20px;
+  max-width: 520px;
+  background: var(--bg-inset);
   border: 1px solid var(--border-subtle);
-  padding: 8px 8px 8px 10px;
-  border-radius: 8px;
-  max-width: max-content;
+  border-radius: 9px;
+  overflow: hidden;
 }
-.heroCmd .prompt {
+.heroInstallHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 12px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.heroInstallLabel {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-faint);
 }
-.heroCmd .copyBtn {
-  margin-left: 4px;
+.heroInstallSpacer {
+  flex: 1;
+}
+.heroInstallBody {
+  margin: 0;
+  padding: 12px 14px;
+  font: 500 12.5px var(--font-mono);
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.heroInstall .prompt {
+  color: var(--text-faint);
+  user-select: none;
+}
+.heroInstall .cmt {
+  color: var(--text-faint);
+}
+
+/* copy button — shared by the hero install block */
+.copyBtn {
   padding: 2px 7px;
   border-radius: 5px;
-  background: var(--bg-subtle);
+  background: var(--bg-elevated);
   color: var(--text-faint);
   font: 600 10.5px var(--font-mono);
   letter-spacing: 0.04em;
@@ -301,11 +328,11 @@
     color 120ms ease,
     background 120ms ease;
 }
-.heroCmd .copyBtn:hover {
+.copyBtn:hover {
   color: var(--accent-strong);
   background: var(--accent-soft);
 }
-.heroCmd .copyBtn.copied {
+.copyBtn.copied {
   color: var(--tool-bash);
   border-color: color-mix(in oklab, var(--tool-bash) 30%, var(--border-subtle));
   background: color-mix(in oklab, var(--tool-bash) 8%, var(--bg-subtle));
@@ -917,6 +944,24 @@
   max-width: 380px;
 }
 .installCard p code {
+  color: var(--text-strong);
+}
+.installCard .installPrereq {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 380px;
+}
+.installCard .installPrereq strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.installCard .installPrereq code {
   color: var(--text-strong);
 }
 .installMeta {

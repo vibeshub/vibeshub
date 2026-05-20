@@ -19,10 +19,11 @@ The marketplace manifest at [.claude-plugin/marketplace.json](../../.claude-plug
 Claude Code at this directory.
 
 You'll also need:
-- `gh` CLI, authenticated (`gh auth login`)
-- Python 3.12+ with `httpx` available to whatever `python3` resolves to when
-  Claude Code runs the hook (e.g. `pip install httpx`, or
-  `pip install -e <vibeshub-repo>/plugins/claude-code` to pull in deps)
+- `gh` CLI, installed and authenticated (`gh auth login`) — your GitHub login
+  is your vibeshub identity.
+- `python3` 3.9+ on your `PATH` — Claude Code runs the hook with `python3`.
+  The client uses only the Python standard library, so there is nothing extra
+  to `pip install`.
 
 ## Configure
 

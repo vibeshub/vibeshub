@@ -5,17 +5,21 @@ import { IconMoon, IconSun } from "../components/trace/icons";
 import { useTheme } from "../components/trace/theme";
 import styles from "./Landing.module.css";
 
-const INSTALL_HERO = "/plugin install vibeshub@vibeshub";
-const INSTALL_FULL = `# 1. clone & register the marketplace
-$ git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub
+// Keep in sync with plugins/claude-code/.claude-plugin/plugin.json.
+const PLUGIN_VERSION = "0.2.0";
+const VERSION_LABEL = `v${PLUGIN_VERSION.split(".").slice(0, 2).join(".")}`;
 
-# 2. inside Claude Code
-/plugin marketplace add ~/code/vibeshub
-/plugin install vibeshub@vibeshub
+// What a new user needs on their machine before installing.
+const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 3.9+";
 
-# 3. that's it. your next 'gh pr create'…
-$ gh pr create --fill
-  ↳ vibeshub: redacted · uploaded · commented on #482 ✓`;
+// The runnable install commands — single source of truth for the hero block,
+// the #install block, and both copy buttons.
+const INSTALL_STEPS = [
+  "git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub",
+  "/plugin marketplace add ~/code/vibeshub",
+  "/plugin install vibeshub@vibeshub",
+];
+const INSTALL_COPY = INSTALL_STEPS.join("\n");
 
 function useCopy() {
   const [copied, setCopied] = useState<string | null>(null);
@@ -79,7 +83,7 @@ export function Landing() {
           <div className={`${styles.container} ${styles.heroGrid}`}>
             <div className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
-                <span className={styles.tag}>v0.1</span>
+                <span className={styles.tag}>{VERSION_LABEL}</span>
                 <span>Built for Claude Code · others plug in the same way</span>
               </div>
               <h1 className={styles.heroH1}>
@@ -93,26 +97,53 @@ export function Landing() {
                 by retry.
               </p>
               <div className={styles.heroActions}>
-                <a className={`${styles.btn} ${styles.btnPrimary}`} href="#install">
-                  Install the plugin
+                <a className={`${styles.btn} ${styles.btnPrimary}`} href="#how">
+                  See how it works
                   <ArrowRight />
                 </a>
-                <a className={`${styles.btn} ${styles.btnGhost}`} href="#how">
-                  See how it works
+                <a
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  href="#privacy"
+                >
+                  Privacy &amp; redaction
                 </a>
               </div>
-              <div className={styles.heroCmd}>
-                <span className={styles.prompt}>$</span>
-                <span>claude {INSTALL_HERO}</span>
-                <button
-                  type="button"
-                  className={`${styles.copyBtn} ${
-                    copied === "hero" ? styles.copied : ""
-                  }`}
-                  onClick={() => copy("hero", `claude ${INSTALL_HERO}`)}
-                >
-                  {copied === "hero" ? "copied" : "copy"}
-                </button>
+              <div className={styles.heroInstall}>
+                <div className={styles.heroInstallHead}>
+                  <span className={styles.heroInstallLabel}>install</span>
+                  <span className={styles.heroInstallSpacer} />
+                  <button
+                    type="button"
+                    className={`${styles.copyBtn} ${
+                      copied === "hero" ? styles.copied : ""
+                    }`}
+                    onClick={() => copy("hero", INSTALL_COPY)}
+                  >
+                    {copied === "hero" ? "copied" : "copy"}
+                  </button>
+                </div>
+                <pre className={styles.heroInstallBody}>
+                  <span className={styles.cmt}>
+                    # needs: {INSTALL_PREREQS}
+                  </span>
+                  {"\n\n"}
+                  <span className={styles.cmt}># 1 · clone the repo</span>
+                  {"\n"}
+                  <span className={styles.prompt}>$ </span>
+                  {INSTALL_STEPS[0]}
+                  {"\n\n"}
+                  <span className={styles.cmt}>
+                    # 2 · inside Claude Code — register, then install
+                  </span>
+                  {"\n"}
+                  {INSTALL_STEPS[1]}
+                  {"\n"}
+                  {INSTALL_STEPS[2]}
+                  {"\n\n"}
+                  <span className={styles.cmt}>
+                    # your next 'gh pr create' auto-attaches a trace ✓
+                  </span>
+                </pre>
               </div>
             </div>
 
@@ -490,10 +521,17 @@ export function Landing() {
                   <code>/share-pr</code> slash command for manual uploads and
                   deletions. Installing the plugin is consent for upload.
                 </p>
+                <p className={styles.installPrereq}>
+                  <strong>Before you start:</strong> Claude Code, the{" "}
+                  <code>gh</code> CLI authenticated with{" "}
+                  <code>gh auth login</code>, and <code>python3</code> 3.9+ on
+                  your <code>PATH</code>. The hook uses only the Python standard
+                  library — nothing to <code>pip install</code>.
+                </p>
                 <div className={styles.installMeta}>
                   <span>
                     <span className={styles.key}>version</span>
-                    <span className={styles.val}>0.1.1</span>
+                    <span className={styles.val}>{PLUGIN_VERSION}</span>
                   </span>
                   <span>
                     <span className={styles.key}>license</span>
@@ -501,7 +539,7 @@ export function Landing() {
                   </span>
                   <span>
                     <span className={styles.key}>deps</span>
-                    <span className={styles.val}>gh CLI</span>
+                    <span className={styles.val}>gh · python3</span>
                   </span>
                 </div>
               </div>
@@ -515,14 +553,18 @@ export function Landing() {
                     className={`${styles.codeCopy} ${
                       copied === "install" ? styles.copied : ""
                     }`}
-                    onClick={() => copy("install", INSTALL_FULL)}
+                    onClick={() => copy("install", INSTALL_COPY)}
                   >
                     {copied === "install" ? "copied" : "copy"}
                   </button>
                 </div>
                 <pre>
                   <span className={styles.commentLine}>
-                    # 1. clone &amp; register the marketplace
+                    # requires: {INSTALL_PREREQS}
+                  </span>
+                  {"\n\n"}
+                  <span className={styles.commentLine}>
+                    # 1 · clone &amp; register the marketplace
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
@@ -531,19 +573,19 @@ export function Landing() {
                     https://github.com/Bhavya6187/vibeshub.git
                   </span>{" "}
                   <span className={styles.arg}>~/code/vibeshub</span>
-                  {"\n\n"}
-                  <span className={styles.commentLine}>
-                    # 2. inside Claude Code
-                  </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
                   <span className={styles.arg}>~/code/vibeshub</span>
+                  {"\n\n"}
+                  <span className={styles.commentLine}>
+                    # 2 · install the plugin inside Claude Code
+                  </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin install</span>{" "}
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 3. that's it. your next 'gh pr create'…
+                    # 3 · that's it — your next 'gh pr create'…
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
