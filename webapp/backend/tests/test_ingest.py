@@ -71,9 +71,20 @@ async def test_ingest_persists_agents(client, respx_mock):
     _mock_alice_pr1(respx_mock)
 
     aid = "a0123456789abcdef"
+    # Streamed assistant message (one text block, then text + tool_use) plus
+    # a tool_result user line: 3 JSONL lines, but only 2 rendered messages.
+    agent_jsonl = (
+        b'{"type":"assistant","message":{"id":"m1","content":'
+        b'[{"type":"text","text":"hi"}]}}\n'
+        b'{"type":"assistant","message":{"id":"m1","content":'
+        b'[{"type":"text","text":"hi"},'
+        b'{"type":"tool_use","id":"t1","name":"Bash","input":{}}]}}\n'
+        b'{"type":"user","message":{"content":'
+        b'[{"type":"tool_result","tool_use_id":"t1"}]}}\n'
+    )
     body = make_bundle({
         "main.jsonl": b'{"type":"user"}\n',
-        f"agents/{aid}.jsonl": b'{"type":"assistant"}\n{"type":"user"}\n',
+        f"agents/{aid}.jsonl": agent_jsonl,
         f"agents/{aid}.meta.json": (
             b'{"agentType":"Explore","description":"d","toolUseId":"toolu_01x"}'
         ),

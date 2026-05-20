@@ -11,6 +11,7 @@ from app.api.pr_url import parse_pr_url
 from app.api.schemas import IngestResponse
 from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
+from app.message_count import count_messages
 from app.redact.bundle import BundleError, BundleSizeError, unpack_and_redact
 from app.short_id import generate
 from app.storage.blob import BlobStore
@@ -135,10 +136,10 @@ async def ingest(
             "tool_use_id": agent.meta.get("toolUseId"),
             "agent_type": agent.meta["agentType"],
             "description": agent.meta["description"],
-            "message_count": len(agent.jsonl_bytes.splitlines()),
+            "message_count": count_messages(agent.jsonl_bytes),
         })
 
-    message_count_main = len(unpacked.main_bytes.splitlines())
+    message_count_main = count_messages(unpacked.main_bytes)
 
     trace = Trace(
         short_id=sid,
