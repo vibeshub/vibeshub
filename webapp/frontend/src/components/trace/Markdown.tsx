@@ -38,6 +38,13 @@ export function Markdown({ text }: Props) {
             </h3>
           );
         }
+        if (b.type === "code") {
+          return (
+            <pre key={i} className="code-block" data-lang={b.lang}>
+              <code>{b.text}</code>
+            </pre>
+          );
+        }
         if (b.type === "ul") {
           return (
             <ul key={i}>

@@ -1,6 +1,9 @@
 import type { ToolResult } from "../types";
 import { clip, shortenPath } from "../format";
 import { IconFile } from "../icons";
+import { DiffView } from "./DiffView";
+import { buildWriteRows, extractPatch } from "../diff";
+import { langFromPath } from "../highlight";
 
 interface ReadProps {
   mode: "read";
@@ -11,6 +14,7 @@ interface ReadProps {
 interface WriteProps {
   mode: "write";
   input: Record<string, unknown>;
+  result: ToolResult | null;
   root: string | null;
 }
 
@@ -65,22 +69,29 @@ export function FileBody(props: Props) {
   }
 
   const path = asString(props.input.file_path) || asString(props.input.path);
-  const content =
-    asString(props.input.content) || asString(props.input.new_string);
-  const lineCount = content ? content.split("\n").length : null;
+  const patch = extractPatch(props.result?.toolUseResult?.structuredPatch);
+  // No rows (e.g. an empty-file Write, or a tool shape we can't diff) renders
+  // just the file-card header — intentional, not a missing case.
+  const rows = buildWriteRows(props.input, patch);
+  const lang = langFromPath(path);
+  const added = rows.filter((r) => r.kind === "add").length;
+  const removed = rows.filter((r) => r.kind === "del").length;
   return (
     <>
       <div className="file-card">
         <IconFile />
         <span className="file-path">{shortenPath(path, root)}</span>
-        {lineCount != null && (
-          <span className="file-stats">{lineCount} lines</span>
+        {(added > 0 || removed > 0) && (
+          <span className="file-stats">
+            {added > 0 && <span className="diff-stat-add">+{added}</span>}
+            {removed > 0 && <span className="diff-stat-del">−{removed}</span>}
+          </span>
         )}
       </div>
-      {content && (
+      {rows.length > 0 && (
         <>
-          <h4>Content</h4>
-          <div className="bash-out">{clip(content, 10000)}</div>
+          <h4>Changes</h4>
+          <DiffView rows={rows} lang={lang} />
         </>
       )}
     </>

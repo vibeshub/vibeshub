@@ -469,6 +469,25 @@
   font-size: 0.9em;
   border: 1px solid var(--border-subtle);
 }
+.vibeshub-viewer .assistant-text-body pre.code-block {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.vibeshub-viewer .assistant-text-body pre.code-block code {
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: var(--font-mono);
+  white-space: pre;
+}
 .vibeshub-viewer .assistant-text-body h2 {
   font-size: 17px;
   font-weight: 600;
@@ -1021,4 +1040,118 @@
   color: var(--text-muted);
   font-size: 14px;
   font-family: var(--font-mono);
+}
+
+/* Diff view (Edit / Write / MultiEdit tool bodies) */
+.vibeshub-viewer .diff-view {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  overflow-x: auto;
+  max-height: 480px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.vibeshub-viewer .diff-row {
+  display: flex;
+  align-items: flex-start;
+  min-width: 100%;
+  width: max-content;
+  min-height: 1.55em;
+}
+.vibeshub-viewer .diff-gutter {
+  flex: 0 0 auto;
+  width: 60px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--text-faint);
+  user-select: none;
+  white-space: pre;
+}
+.vibeshub-viewer .diff-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: center;
+  user-select: none;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .diff-code {
+  flex: 1 1 auto;
+  padding-right: 12px;
+  white-space: pre;
+  color: var(--text);
+}
+.vibeshub-viewer .diff-add {
+  background: var(--diff-add-bg);
+}
+.vibeshub-viewer .diff-add .diff-gutter,
+.vibeshub-viewer .diff-add .diff-mark {
+  color: var(--diff-add-num);
+}
+.vibeshub-viewer .diff-del {
+  background: var(--diff-del-bg);
+}
+.vibeshub-viewer .diff-del .diff-gutter,
+.vibeshub-viewer .diff-del .diff-mark {
+  color: var(--diff-del-num);
+}
+.vibeshub-viewer .diff-hunk {
+  background: var(--bg-subtle);
+}
+.vibeshub-viewer .diff-hunk .diff-code,
+.vibeshub-viewer .diff-truncated .diff-code {
+  color: var(--diff-hunk-fg);
+}
+.vibeshub-viewer .diff-truncated {
+  background: var(--bg-subtle);
+}
+.vibeshub-viewer .diff-stat-add {
+  color: var(--diff-add-num);
+  font-weight: 600;
+}
+.vibeshub-viewer .diff-stat-del {
+  color: var(--diff-del-num);
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* Prism token theme, scoped to diff code */
+.vibeshub-viewer .diff-code .token.comment,
+.vibeshub-viewer .diff-code .token.prolog,
+.vibeshub-viewer .diff-code .token.doctype,
+.vibeshub-viewer .diff-code .token.cdata {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.vibeshub-viewer .diff-code .token.keyword,
+.vibeshub-viewer .diff-code .token.boolean,
+.vibeshub-viewer .diff-code .token.atrule,
+.vibeshub-viewer .diff-code .token.important,
+.vibeshub-viewer .diff-code .token.builtin {
+  color: var(--syn-keyword);
+}
+.vibeshub-viewer .diff-code .token.string,
+.vibeshub-viewer .diff-code .token.char,
+.vibeshub-viewer .diff-code .token.attr-value,
+.vibeshub-viewer .diff-code .token.regex {
+  color: var(--syn-string);
+}
+.vibeshub-viewer .diff-code .token.number,
+.vibeshub-viewer .diff-code .token.constant,
+.vibeshub-viewer .diff-code .token.symbol {
+  color: var(--syn-number);
+}
+.vibeshub-viewer .diff-code .token.function,
+.vibeshub-viewer .diff-code .token.class-name,
+.vibeshub-viewer .diff-code .token.tag,
+.vibeshub-viewer .diff-code .token.selector,
+.vibeshub-viewer .diff-code .token.property {
+  color: var(--syn-function);
+}
+.vibeshub-viewer .diff-code .token.punctuation,
+.vibeshub-viewer .diff-code .token.operator,
+.vibeshub-viewer .diff-code .token.attr-name {
+  color: var(--syn-punct);
 }

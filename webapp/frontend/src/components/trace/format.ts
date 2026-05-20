@@ -71,20 +71,25 @@ export function clip(text: string | null | undefined, n: number): string {
 
 export type MdBlock =
   | { type: "h2" | "h3" | "p"; text: string }
-  | { type: "ul"; items: string[] };
+  | { type: "ul"; items: string[] }
+  | { type: "code"; text: string; lang?: string };
 
-export function renderMarkdownish(text: string | null | undefined): MdBlock[] {
-  if (!text) return [];
-  const blocks = String(text).trim().split(/\n{2,}/);
-  return blocks.map<MdBlock>((block) => {
+// Classify a run of non-code text by splitting it on blank lines.
+function classifyProse(chunk: string): MdBlock[] {
+  const out: MdBlock[] = [];
+  for (const block of chunk.split(/\n{2,}/)) {
+    if (!block.trim()) continue;
     if (/^###\s/.test(block)) {
-      return { type: "h3", text: block.replace(/^###\s+/, "") };
+      out.push({ type: "h3", text: block.replace(/^###\s+/, "") });
+      continue;
     }
     if (/^##\s/.test(block)) {
-      return { type: "h2", text: block.replace(/^##\s+/, "") };
+      out.push({ type: "h2", text: block.replace(/^##\s+/, "") });
+      continue;
     }
     if (/^#\s/.test(block)) {
-      return { type: "h2", text: block.replace(/^#\s+/, "") };
+      out.push({ type: "h2", text: block.replace(/^#\s+/, "") });
+      continue;
     }
     const lines = block.split("\n");
     if (
@@ -94,10 +99,51 @@ export function renderMarkdownish(text: string | null | undefined): MdBlock[] {
       const items = lines
         .filter((l) => l.trim())
         .map((l) => l.trim().replace(/^[-*]\s+/, ""));
-      return { type: "ul", items };
+      out.push({ type: "ul", items });
+      continue;
     }
-    return { type: "p", text: block };
-  });
+    out.push({ type: "p", text: block });
+  }
+  return out;
+}
+
+export function renderMarkdownish(text: string | null | undefined): MdBlock[] {
+  if (!text) return [];
+  // Fenced code blocks must be carved out line-by-line *before* splitting on
+  // blank lines — a code block can legitimately contain blank lines, and the
+  // fence markers themselves never participate in prose parsing.
+  const lines = String(text).replace(/\r\n/g, "\n").split("\n");
+  const blocks: MdBlock[] = [];
+  let prose: string[] = [];
+  const flushProse = () => {
+    if (prose.length) {
+      blocks.push(...classifyProse(prose.join("\n").trim()));
+      prose = [];
+    }
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const open = lines[i].match(/^\s*```+\s*([^`]*?)\s*$/);
+    if (open) {
+      flushProse();
+      const lang = open[1].trim();
+      i++;
+      const body: string[] = [];
+      while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])) {
+        body.push(lines[i]);
+        i++;
+      }
+      i++; // skip the closing fence (no-op past end for an unterminated fence)
+      const block: MdBlock = { type: "code", text: body.join("\n") };
+      if (lang) block.lang = lang;
+      blocks.push(block);
+    } else {
+      prose.push(lines[i]);
+      i++;
+    }
+  }
+  flushProse();
+  return blocks;
 }
 
 export type InlineSpan = { t: "text" | "strong" | "em" | "code"; text: string };
