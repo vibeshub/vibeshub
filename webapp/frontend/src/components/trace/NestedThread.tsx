@@ -17,14 +17,13 @@ interface Props {
 //   - no PrCard
 //   - same tool/assistant/thinking rendering
 //
-// NOTE: shortId is accepted for forward compatibility with Task 4.3, which
-// will thread it through ToolCard so nested AgentBody instances can issue
-// the right lazy-fetch requests. For now, ToolCard does not accept these
-// props yet; once 4.3 lands, this component will forward shortId (and the
-// session's agents list) into ToolCard.
-export function NestedThread({ session, shortId: _shortId, showReasoning }: Props) {
+// shortId and the subagent session's own agents list are forwarded into
+// ToolCard so any nested Agent tool use can lazy-fetch its own subagent
+// trace recursively.
+export function NestedThread({ session, shortId, showReasoning }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
+  const agents = session.meta.agents ?? [];
 
   const out: React.ReactNode[] = [];
   for (let i = 0; i < stream.length; i++) {
@@ -35,13 +34,13 @@ export function NestedThread({ session, shortId: _shortId, showReasoning }: Prop
     } else if (e.kind === "thinking") {
       if (showReasoning) out.push(<ThinkingBlock event={e} key={key} />);
     } else if (e.kind === "tool_use") {
-      // TODO Task 4.3: pass shortId + agents once ToolCard accepts them so
-      // nested AgentBody can fetch its own subagent traces.
       out.push(
         <ToolCard
           event={e}
           root={root}
           followingPrompt={null}
+          shortId={shortId}
+          agents={agents}
           key={key}
         />,
       );

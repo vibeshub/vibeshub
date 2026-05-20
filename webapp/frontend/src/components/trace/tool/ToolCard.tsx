@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import type { ToolUseEvent } from "../types";
+import type { AgentSummary, ToolUseEvent } from "../types";
 import { fmtTimeOfDay, toolSummary } from "../format";
 import { toolCat, toolLabel } from "../tools";
 import { Chev } from "../icons";
@@ -15,13 +15,21 @@ interface Props {
   event: ToolUseEvent;
   root: string | null;
   followingPrompt: string | null;
+  shortId: string;
+  agents: AgentSummary[];
 }
 
 function dotStyle(cat: string): CSSProperties {
   return { ["--dot" as string]: `var(--tool-${cat})` } as CSSProperties;
 }
 
-function renderBody(event: ToolUseEvent, root: string | null, followingPrompt: string | null) {
+function renderBody(
+  event: ToolUseEvent,
+  root: string | null,
+  followingPrompt: string | null,
+  shortId: string,
+  agents: AgentSummary[],
+) {
   switch (event.name) {
     case "Bash":
       return <BashBody input={event.input} result={event.result} />;
@@ -53,7 +61,14 @@ function renderBody(event: ToolUseEvent, root: string | null, followingPrompt: s
     case "TaskUpdate":
       return <TaskBody mode="update" input={event.input} />;
     case "Agent":
-      return <AgentBody input={event.input} />;
+      return (
+        <AgentBody
+          input={event.input}
+          toolUseId={event.id}
+          shortId={shortId}
+          agents={agents}
+        />
+      );
     case "Skill":
       return <SkillBody input={event.input} result={event.result} />;
     default:
@@ -61,7 +76,7 @@ function renderBody(event: ToolUseEvent, root: string | null, followingPrompt: s
   }
 }
 
-export function ToolCard({ event, root, followingPrompt }: Props) {
+export function ToolCard({ event, root, followingPrompt, shortId, agents }: Props) {
   const [open, setOpen] = useState(false);
   const cat = toolCat(event.name);
   const label = toolLabel(event.name);
@@ -94,7 +109,7 @@ export function ToolCard({ event, root, followingPrompt }: Props) {
         </button>
         {open && (
           <div className="tool-body">
-            {renderBody(event, root, followingPrompt)}
+            {renderBody(event, root, followingPrompt, shortId, agents)}
           </div>
         )}
       </div>

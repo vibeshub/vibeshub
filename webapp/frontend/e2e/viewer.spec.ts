@@ -83,3 +83,84 @@ test("toggling Show system events surfaces system rows", async ({ page }) => {
   await page.getByRole("button", { name: /show system events/i }).click();
   await expect(page.locator(".sys-row").first()).toBeVisible();
 });
+
+test("AgentBody expands inline and renders subagent trace", async ({
+  page,
+}) => {
+  const aid = "a0123456789abcdef";
+  const subTrace = {
+    trace_id: "00000000-0000-0000-0000-000000000099",
+    short_id: "sub1234567",
+    owner_login: "alice",
+    repo_full_name: "alice/repo",
+    pr_number: 1,
+    pr_url: "https://github.com/alice/repo/pull/1",
+    pr_title: "subagent demo",
+    platform: "claude-code",
+    byte_size: 0,
+    message_count: 1,
+    created_at: "2026-05-19T10:00:00Z",
+    agent_count: 1,
+    agents: [
+      {
+        agent_id: aid,
+        tool_use_id: "toolu_01x",
+        agent_type: "Explore",
+        description: "d",
+        message_count: 3,
+      },
+    ],
+  };
+
+  await page.route("**/api/traces/alice/repo/pull/1", (route) =>
+    route.fulfill({ json: { traces: [subTrace] } }),
+  );
+  await page.route("**/api/traces/sub1234567", (route) =>
+    route.fulfill({ json: subTrace }),
+  );
+
+  await page.route("**/api/traces/sub1234567/raw", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body:
+        [
+          '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"hi"}]},"uuid":"u1","timestamp":"2026-05-19T10:00:00Z"}',
+          '{"type":"assistant","timestamp":"2026-05-19T10:00:01Z","message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_01x","name":"Agent","input":{"description":"d","subagent_type":"Explore","prompt":"go"}}]},"uuid":"u2"}',
+        ].join("\n") + "\n",
+    }),
+  );
+
+  let agentFetchCount = 0;
+  await page.route(
+    `**/api/traces/sub1234567/agents/${aid}`,
+    (route) => {
+      agentFetchCount++;
+      route.fulfill({
+        status: 200,
+        contentType: "application/x-ndjson",
+        body:
+          '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"go"}]},"timestamp":"2026-05-19T10:00:01Z","uuid":"s1"}\n' +
+          '{"type":"assistant","timestamp":"2026-05-19T10:00:02Z","message":{"id":"m2","role":"assistant","content":[{"type":"text","text":"subagent done"}]},"uuid":"s2"}\n',
+      });
+    },
+  );
+
+  await page.goto("/alice/repo/pull/1/sub1234567");
+
+  // Click the Agent tool card head to expand its body
+  const agentToolHead = page.locator(".tool-head").first();
+  await agentToolHead.waitFor();
+  await agentToolHead.click();
+
+  // The expand button only appears once the body is visible
+  await page.getByRole("button", { name: /Open subagent trace/ }).click();
+  await expect(page.getByText("subagent done")).toBeVisible();
+  expect(agentFetchCount).toBe(1);
+
+  // Collapse and re-expand — no second fetch (cached in component state)
+  await page.getByRole("button", { name: /Hide subagent trace/ }).click();
+  await page.getByRole("button", { name: /Open subagent trace/ }).click();
+  await expect(page.getByText("subagent done")).toBeVisible();
+  expect(agentFetchCount).toBe(1);
+});

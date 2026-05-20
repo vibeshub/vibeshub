@@ -8,6 +8,7 @@ import { ToolCard } from "./tool/ToolCard";
 
 interface Props {
   session: Session;
+  shortId: string;
   showReasoning: boolean;
   showSystemEvents: boolean;
 }
@@ -35,12 +36,14 @@ function buildNextPromptIndex(stream: StreamEvent[]): Array<string | null> {
 
 export function Thread({
   session,
+  shortId,
   showReasoning,
   showSystemEvents,
 }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
   const totalPrompts = session.meta.userPromptCount;
+  const agents = session.meta.agents ?? [];
   const nextPrompt = buildNextPromptIndex(stream);
   const promptUuids: string[] = [];
   for (const ev of stream) {
@@ -84,6 +87,8 @@ export function Thread({
           event={e}
           root={root}
           followingPrompt={nextPrompt[i]}
+          shortId={shortId}
+          agents={agents}
           key={key}
         />,
       );

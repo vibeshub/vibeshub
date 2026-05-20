@@ -40,8 +40,12 @@ export function TraceView() {
 
   const session: Session | null = useMemo(() => {
     if (body.kind !== "ready") return null;
-    return buildSession(parseJsonl(body.jsonl));
-  }, [body]);
+    const built = buildSession(parseJsonl(body.jsonl));
+    if (trace?.agents) {
+      built.meta.agents = trace.agents;
+    }
+    return built;
+  }, [body, trace]);
 
   if (traceErr) return <ErrorState message={traceErr} />;
   if (!trace) return <LoadingState label="Loading trace…" />;
@@ -54,6 +58,7 @@ export function TraceView() {
       {body.kind === "ready" && session && (
         <TraceViewer
           session={session}
+          shortId={trace.short_id}
           rawHref={`/api/traces/${trace.short_id}/raw`}
           repoOwner={trace.repo_full_name.split("/")[0]}
           repoName={trace.repo_full_name.split("/")[1]}

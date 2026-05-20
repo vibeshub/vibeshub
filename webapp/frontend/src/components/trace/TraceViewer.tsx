@@ -7,6 +7,7 @@ import { Thread } from "./Thread";
 
 interface Props {
   session: Session;
+  shortId: string;
   rawHref: string;
   repoOwner?: string;
   repoName?: string;
@@ -14,6 +15,7 @@ interface Props {
 
 export function TraceViewer({
   session,
+  shortId,
   rawHref,
   repoOwner,
   repoName,
@@ -46,6 +48,7 @@ export function TraceViewer({
           />
           <Thread
             session={session}
+            shortId={shortId}
             showReasoning={showReasoning}
             showSystemEvents={showSystemEvents}
           />
