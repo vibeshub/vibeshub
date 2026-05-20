@@ -90,6 +90,35 @@ describe("renderMarkdownish", () => {
     const blocks = renderMarkdownish("- one\n- two\n- three");
     expect(blocks).toEqual([{ type: "ul", items: ["one", "two", "three"] }]);
   });
+  it("recognizes a fenced code block with a language", () => {
+    const blocks = renderMarkdownish("```python\ndef foo():\n    return 1\n```");
+    expect(blocks).toEqual([
+      { type: "code", text: "def foo():\n    return 1", lang: "python" },
+    ]);
+  });
+  it("recognizes a fenced code block without a language", () => {
+    const blocks = renderMarkdownish("```\nplain text\n```");
+    expect(blocks).toEqual([{ type: "code", text: "plain text" }]);
+  });
+  it("keeps blank lines inside a fenced code block intact", () => {
+    const src = "```js\nconst a = 1;\n\nconst b = 2;\n```";
+    expect(renderMarkdownish(src)).toEqual([
+      { type: "code", text: "const a = 1;\n\nconst b = 2;", lang: "js" },
+    ]);
+  });
+  it("renders prose around a fenced code block", () => {
+    const src = "Here:\n\n```\nx\n```\n\nDone.";
+    expect(renderMarkdownish(src)).toEqual([
+      { type: "p", text: "Here:" },
+      { type: "code", text: "x" },
+      { type: "p", text: "Done." },
+    ]);
+  });
+  it("handles an unterminated fence by consuming to end of text", () => {
+    expect(renderMarkdownish("```\na\nb")).toEqual([
+      { type: "code", text: "a\nb" },
+    ]);
+  });
 });
 
 describe("inlineFormat", () => {
