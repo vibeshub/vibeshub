@@ -3,13 +3,16 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class IngestRequest(BaseModel):
-    transcript_jsonl: str = Field(min_length=1)
-    pr_url: str
-    platform: str = Field(default="claude-code")
-    plugin_version: str | None = None
-    session_id: str | None = None
-    redaction_count_client: int = 0
+# Note: IngestRequest is gone — /api/ingest now takes raw tar bytes via the
+# request body, with PR metadata in X-Vibeshub-* headers.
+
+
+class AgentSummary(BaseModel):
+    agent_id: str
+    tool_use_id: str | None
+    agent_type: str
+    description: str
+    message_count: int
 
 
 class TraceSummary(BaseModel):
@@ -24,6 +27,9 @@ class TraceSummary(BaseModel):
     byte_size: int
     message_count: int
     created_at: str
+
+    agent_count: int = 0
+    agents: list[AgentSummary] = Field(default_factory=list)
 
 
 class IngestResponse(BaseModel):

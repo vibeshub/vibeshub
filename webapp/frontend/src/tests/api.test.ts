@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fetchPrTraces, fetchTrace, fetchRawJsonl } from "../api";
+import {
+  fetchPrTraces,
+  fetchTrace,
+  fetchRawJsonl,
+  fetchAgentJsonl,
+} from "../api";
 
 describe("api", () => {
   beforeEach(() => {
@@ -55,6 +60,27 @@ describe("api", () => {
       new Response("not found", { status: 404 }),
     );
     await expect(fetchRawJsonl("zzz")).rejects.toThrow(/404/);
+  });
+
+  it("fetchAgentJsonl hits /api/traces/<sid>/agents/<id> and returns body text", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response('{"type":"user"}\n', { status: 200 }),
+    );
+    const text = await fetchAgentJsonl("abcdefghij", "a0123456789abcdef");
+    expect(text).toBe('{"type":"user"}\n');
+    expect(spy).toHaveBeenCalledWith(
+      "/api/traces/abcdefghij/agents/a0123456789abcdef",
+      { credentials: "same-origin" },
+    );
+  });
+
+  it("fetchAgentJsonl on non-ok throws ApiError", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response("not found", { status: 404 }),
+    );
+    await expect(
+      fetchAgentJsonl("abcdefghij", "a0123456789abcdef"),
+    ).rejects.toThrow(/404/);
   });
 });
 

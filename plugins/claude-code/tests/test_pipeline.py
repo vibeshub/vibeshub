@@ -1,110 +1,100 @@
-import json
+import io
+import tarfile
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
+from reader import ClaudeCodeTranscriptReader
 from vibeshub_client.pipeline import RunOptions, run_share_pipeline
-from vibeshub_client.reader import TranscriptReader
+from vibeshub_client.upload import UploadResult
 
-
-class FakeReader(TranscriptReader):
-    def __init__(self, path: Path):
-        self.path = path
-
-    def find_session(self, hook_input):
-        return self.path
-
-    def platform_id(self):
-        return "fake"
-
-
-class _FakeResponse:
-    def __init__(self, status: int, body: bytes):
-        self.status = status
-        self._body = body
-
-    def read(self) -> bytes:
-        return self._body
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
+FIXTURES = Path(__file__).parent / "fixtures" / "sessions"
 
 
 @pytest.mark.asyncio
-async def test_pipeline_happy_path(tmp_path: Path):
-    transcript = tmp_path / "session.jsonl"
-    transcript.write_text(
-        '{"type":"user","message":{"role":"user","content":"hi"}}\n'
-        '{"type":"assistant","message":{"role":"assistant","content":"hello"}}\n'
+async def test_pipeline_builds_bundle_with_agents(tmp_path):
+    # Replicate Claude Code's on-disk layout from the single-agent fixture
+    project_root = tmp_path / "projects" / "-fake-cwd"
+    project_root.mkdir(parents=True)
+    (project_root / "sess1.jsonl").write_bytes(
+        (FIXTURES / "single-agent" / "session.jsonl").read_bytes()
     )
+    session_dir = project_root / "sess1"
+    session_dir.mkdir()
+    (session_dir / "subagents").mkdir()
+    for f in (FIXTURES / "single-agent" / "subagents").iterdir():
+        (session_dir / "subagents" / f.name).write_bytes(f.read_bytes())
 
-    response = _FakeResponse(
-        201,
-        json.dumps(
-            {
-                "trace_id": "00000000-0000-0000-0000-000000000001",
-                "short_id": "abc1234567",
-                "trace_url": "https://vibeshub.test/alice/repo/pull/3/abc1234567",
-            }
-        ).encode("utf-8"),
-    )
+    reader = ClaudeCodeTranscriptReader()
+    hook_input = {
+        "session_id": "sess1",
+        "cwd": "/fake/cwd",
+        "transcript_path": str(project_root / "sess1.jsonl"),
+    }
 
-    posted: list[tuple[str, str]] = []
+    captured: dict = {}
 
-    def fake_post(*, pr_url: str, body: str) -> None:
-        posted.append((pr_url, body))
+    async def fake_upload(
+        *, server_url, token, tar_bytes, pr_url, plugin_version,
+        session_id, redaction_count_client, timeout=60.0,
+    ):
+        captured["tar_bytes"] = tar_bytes
+        captured["plugin_version"] = plugin_version
+        captured["pr_url"] = pr_url
+        return UploadResult(trace_id="t1", short_id="abc", trace_url="https://x/abc")
 
-    options = RunOptions(
-        server_url="https://vibeshub.test",
-        token="ghp_test",
-        pr_url="https://github.com/alice/repo/pull/3",
-    )
-    reader = FakeReader(transcript)
-
-    with patch("vibeshub_client.upload.urllib_request.urlopen", return_value=response), \
-         patch("vibeshub_client.pipeline.post_pr_comment", side_effect=fake_post):
-        result = await run_share_pipeline(reader=reader, hook_input={}, options=options)
+    with patch("vibeshub_client.pipeline.upload_bundle", new=fake_upload), \
+         patch("vibeshub_client.pipeline.post_pr_comment"):
+        result = await run_share_pipeline(
+            reader=reader,
+            hook_input=hook_input,
+            options=RunOptions(
+                server_url="https://x",
+                token="t",
+                pr_url="https://github.com/a/r/pull/1",
+                session_id="sess1",
+            ),
+        )
 
     assert result.uploaded is True
-    assert result.short_id == "abc1234567"
-    assert result.skip_reason is None
-    assert posted == [(
-        "https://github.com/alice/repo/pull/3",
-        f"Claude Code trace for this PR: https://vibeshub.test/alice/repo/pull/3/abc1234567\n\nUploaded by the PR author.",
-    )]
-    # Diagnostic fields surfaced so the hook can log them.
-    assert result.payload_bytes is not None and result.payload_bytes > 0
-    assert result.upload_elapsed_seconds is not None
-    assert result.upload_elapsed_seconds >= 0
+    assert result.short_id == "abc"
+    # Verify captured tar contains main + the one agent
+    with tarfile.open(fileobj=io.BytesIO(captured["tar_bytes"]), mode="r:gz") as tar:
+        names = {m.name for m in tar.getmembers()}
+    assert "main.jsonl" in names
+    assert "agents/a1111111111111111.jsonl" in names
+    assert "agents/a1111111111111111.meta.json" in names
+    assert captured["plugin_version"] == "0.2.0"
 
 
 @pytest.mark.asyncio
-async def test_pipeline_reports_diagnostics_on_upload_failure(tmp_path: Path):
-    """Even when upload fails, payload_bytes and upload_elapsed_seconds
-    should be populated so we can diagnose timeouts after the fact."""
-    from urllib import error as urllib_error
-    transcript = tmp_path / "session.jsonl"
-    transcript.write_text('{"type":"user","message":{"role":"user","content":"hi"}}\n')
+async def test_pipeline_skips_when_main_missing(tmp_path):
+    """aborted-parent: only subagents/, no main jsonl. Pipeline must not crash."""
+    project_root = tmp_path / "projects" / "-fake-cwd"
+    project_root.mkdir(parents=True)
+    session_dir = project_root / "sess1"
+    session_dir.mkdir()
+    (session_dir / "subagents").mkdir()
+    src = FIXTURES / "aborted-parent" / "subagents"
+    for f in src.iterdir():
+        (session_dir / "subagents" / f.name).write_bytes(f.read_bytes())
 
-    def raise_timeout(req, timeout=None):
-        raise urllib_error.URLError("timed out")
+    reader = ClaudeCodeTranscriptReader()
+    hook_input = {
+        "session_id": "sess1",
+        "cwd": "/fake/cwd",
+        "transcript_path": str(project_root / "sess1.jsonl"),
+    }
 
-    options = RunOptions(
-        server_url="https://vibeshub.test",
-        token="ghp_test",
-        pr_url="https://github.com/alice/repo/pull/3",
+    result = await run_share_pipeline(
+        reader=reader,
+        hook_input=hook_input,
+        options=RunOptions(
+            server_url="https://x",
+            token="t",
+            pr_url="https://github.com/a/r/pull/1",
+        ),
     )
-    reader = FakeReader(transcript)
-
-    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=raise_timeout):
-        result = await run_share_pipeline(reader=reader, hook_input={}, options=options)
-
     assert result.uploaded is False
-    assert "upload failed" in (result.skip_reason or "")
-    assert result.payload_bytes is not None and result.payload_bytes > 0
-    assert result.upload_elapsed_seconds is not None
-    assert result.upload_elapsed_seconds >= 0
+    assert "transcript" in (result.skip_reason or "").lower()

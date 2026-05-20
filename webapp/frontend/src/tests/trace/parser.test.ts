@@ -333,3 +333,34 @@ describe("buildSession with skill-injected meta records", () => {
     );
   });
 });
+
+describe("parser - progress records", () => {
+  it("emits a progress stream event for sidechain hook_progress records", () => {
+    const jsonl = [
+      JSON.stringify({
+        type: "progress",
+        data: {
+          type: "hook_progress",
+          hookEvent: "PostToolUse",
+          hookName: "PostToolUse:Glob",
+          command: "callback",
+        },
+        parentToolUseID: "toolu_01abc",
+        toolUseID: "toolu_01abc",
+        timestamp: "2026-05-19T10:00:00Z",
+        uuid: "p1",
+        isSidechain: true,
+        sessionId: "s",
+      }),
+    ].join("\n");
+
+    const session = buildSession(parseJsonl(jsonl));
+    const progress = session.stream.find((e) => e.kind === "progress");
+    expect(progress).toBeDefined();
+    if (progress?.kind === "progress") {
+      expect(progress.hookEvent).toBe("PostToolUse");
+      expect(progress.hookName).toBe("PostToolUse:Glob");
+      expect(progress.parentToolUseID).toBe("toolu_01abc");
+    }
+  });
+});

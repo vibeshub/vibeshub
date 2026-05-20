@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pr_url import parse_pr_url
-from app.api.schemas import IngestRequest, IngestResponse
+from app.api.schemas import IngestResponse
 from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
-from app.redact import redact_jsonl
+from app.redact.bundle import BundleError, BundleSizeError, unpack_and_redact
 from app.short_id import generate
 from app.storage.blob import BlobStore
 from app.storage.models import Trace
@@ -31,20 +32,37 @@ def _trace_url(settings: Settings, owner: str, repo: str, n: int, sid: str) -> s
     return f"{base}/{owner}/{repo}/pull/{n}/{sid}"
 
 
+def _require_header(value: str | None, name: str) -> str:
+    if not value:
+        raise HTTPException(status_code=400, detail=f"missing required header: {name}")
+    return value
+
+
 @router.post("/api/ingest", status_code=status.HTTP_201_CREATED, response_model=IngestResponse)
 async def ingest(
-    body: IngestRequest,
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
+    x_vibeshub_pr_url: Annotated[str | None, Header()] = None,
+    x_vibeshub_platform: Annotated[str | None, Header()] = None,
+    x_vibeshub_plugin_version: Annotated[str | None, Header()] = None,
+    x_vibeshub_session_id: Annotated[str | None, Header()] = None,
+    x_vibeshub_client_redactions: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_session),
     blob_store: BlobStore = Depends(get_blob_store),
     github: GitHubClient = Depends(get_github),
     settings: Settings = Depends(get_app_settings),
 ) -> IngestResponse:
     token = _bearer_token(authorization)
+    pr_url = _require_header(x_vibeshub_pr_url, "X-Vibeshub-Pr-Url")
+    platform = _require_header(x_vibeshub_platform, "X-Vibeshub-Platform")
+    plugin_version = _require_header(x_vibeshub_plugin_version, "X-Vibeshub-Plugin-Version")
+    try:
+        redaction_count_client = int(x_vibeshub_client_redactions or "0")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid X-Vibeshub-Client-Redactions")
 
     try:
-        parsed = parse_pr_url(body.pr_url)
+        parsed = parse_pr_url(pr_url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -61,7 +79,7 @@ async def ingest(
     if isinstance(pull_result, GitHubAPIError):
         msg = str(pull_result)
         if "not found" in msg.lower():
-            raise HTTPException(status_code=404, detail=f"PR not found: {body.pr_url}")
+            raise HTTPException(status_code=404, detail=f"PR not found: {pr_url}")
         raise HTTPException(status_code=502, detail=f"github upstream error: {msg}")
     if isinstance(user_result, BaseException):
         raise user_result
@@ -82,19 +100,45 @@ async def ingest(
             detail=f"PR author ({pr.author_login}) does not match uploader ({user.login})",
         )
 
-    raw_bytes = body.transcript_jsonl.encode("utf-8")
-    if len(raw_bytes) > settings.max_trace_bytes:
+    tar_bytes = await request.body()
+    if len(tar_bytes) > settings.max_trace_bytes:
+        # Cheap pre-check on compressed size. Final cap on decompressed bytes
+        # is enforced inside unpack_and_redact.
         raise HTTPException(
             status_code=413,
-            detail=f"trace exceeds {settings.max_trace_bytes} bytes",
+            detail=f"upload exceeds {settings.max_trace_bytes} compressed bytes",
         )
 
-    redacted, report = redact_jsonl(raw_bytes)
-    message_count = redacted.count(b"\n")
+    try:
+        unpacked = unpack_and_redact(tar_bytes, max_total_bytes=settings.max_trace_bytes)
+    except BundleSizeError as e:
+        raise HTTPException(status_code=413, detail=str(e))
+    except BundleError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     sid = generate()
-    blob_path = f"traces/{sid}.jsonl"
-    await blob_store.put(blob_path, redacted)
+    blob_prefix = f"traces/{sid}/"
+    await blob_store.put(f"{blob_prefix}main.jsonl", unpacked.main_bytes)
+
+    agent_summaries: list[dict] = []
+    for agent in unpacked.agents:
+        await blob_store.put(
+            f"{blob_prefix}agents/{agent.agent_id}.jsonl",
+            agent.jsonl_bytes,
+        )
+        await blob_store.put(
+            f"{blob_prefix}agents/{agent.agent_id}.meta.json",
+            json.dumps(agent.meta, ensure_ascii=False).encode("utf-8"),
+        )
+        agent_summaries.append({
+            "agent_id": agent.agent_id,
+            "tool_use_id": agent.meta.get("toolUseId"),
+            "agent_type": agent.meta["agentType"],
+            "description": agent.meta["description"],
+            "message_count": len(agent.jsonl_bytes.splitlines()),
+        })
+
+    message_count_main = len(unpacked.main_bytes.splitlines())
 
     trace = Trace(
         short_id=sid,
@@ -103,14 +147,17 @@ async def ingest(
         pr_number=pr.number,
         pr_url=pr.html_url,
         pr_title=pr.title,
-        platform=body.platform,
-        plugin_version=body.plugin_version,
-        session_id=body.session_id,
-        byte_size=len(redacted),
-        message_count=message_count,
-        redaction_count_client=body.redaction_count_client,
-        redaction_count_server=report.total(),
-        blob_path=blob_path,
+        platform=platform,
+        plugin_version=plugin_version,
+        session_id=x_vibeshub_session_id,
+        byte_size=len(unpacked.main_bytes) + sum(len(a.jsonl_bytes) for a in unpacked.agents),
+        message_count=message_count_main,
+        redaction_count_client=redaction_count_client,
+        redaction_count_server=unpacked.total_redactions,
+        blob_path=None,
+        blob_prefix=blob_prefix,
+        agents=agent_summaries,
+        agent_count=len(agent_summaries),
     )
     session.add(trace)
     await session.commit()

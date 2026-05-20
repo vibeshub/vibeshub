@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-05-19T10:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"hi"}]},"uuid":"u1","sessionId":"sess1"}
+{"type":"assistant","timestamp":"2026-05-19T10:00:01.000Z","message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"toolu_01alpha","name":"Agent","input":{"description":"Probe X","subagent_type":"Explore","prompt":"go"}}]},"uuid":"u2","sessionId":"sess1"}

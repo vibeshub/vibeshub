@@ -1006,6 +1006,13 @@
   color: var(--accent-strong);
 }
 
+/* Nested thread (subagent traces rendered inline) */
+.vibeshub-viewer .nested-thread {
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 16px;
+  margin-top: 8px;
+}
+
 /* Loading */
 .vibeshub-viewer .viewer-loading {
   display: grid;

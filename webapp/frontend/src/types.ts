@@ -1,3 +1,11 @@
+export interface AgentSummary {
+  agent_id: string;
+  tool_use_id: string | null;
+  agent_type: string;
+  description: string;
+  message_count: number;
+}
+
 export interface TraceSummary {
   trace_id: string;
   short_id: string;
@@ -10,6 +18,8 @@ export interface TraceSummary {
   byte_size: number;
   message_count: number;
   created_at: string;
+  agent_count: number;
+  agents: AgentSummary[];
 }
 
 export interface TraceListResponse {

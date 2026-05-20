@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
@@ -12,23 +12,15 @@ class UploadError(Exception):
 
 
 @dataclass
-class IngestPayload:
-    transcript_jsonl: str
-    pr_url: str
-    platform: str = "claude-code"
-    plugin_version: str | None = None
-    session_id: str | None = None
-    redaction_count_client: int = 0
-
-
-@dataclass
 class UploadResult:
     trace_id: str
     short_id: str
     trace_url: str
 
 
-def _post_json(url: str, *, headers: dict, body: bytes, timeout: float) -> tuple[int, bytes]:
+def _post_bytes(
+    url: str, *, headers: dict, body: bytes, timeout: float,
+) -> tuple[int, bytes]:
     req = urllib_request.Request(url, data=body, headers=headers, method="POST")
     try:
         with urllib_request.urlopen(req, timeout=timeout) as resp:
@@ -40,22 +32,31 @@ def _post_json(url: str, *, headers: dict, body: bytes, timeout: float) -> tuple
         raise UploadError(f"network error: {e}") from e
 
 
-async def upload_trace(
+async def upload_bundle(
     *,
     server_url: str,
     token: str,
-    payload: IngestPayload,
+    tar_bytes: bytes,
+    pr_url: str,
+    plugin_version: str,
+    session_id: str | None,
+    redaction_count_client: int,
     timeout: float = 60.0,
 ) -> UploadResult:
     url = f"{server_url.rstrip('/')}/api/ingest"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-tar",
+        "X-Vibeshub-Pr-Url": pr_url,
+        "X-Vibeshub-Platform": "claude-code",
+        "X-Vibeshub-Plugin-Version": plugin_version,
+        "X-Vibeshub-Client-Redactions": str(redaction_count_client),
     }
-    body = json.dumps(asdict(payload)).encode("utf-8")
+    if session_id:
+        headers["X-Vibeshub-Session-Id"] = session_id
 
     status, raw = await asyncio.to_thread(
-        _post_json, url, headers=headers, body=body, timeout=timeout
+        _post_bytes, url, headers=headers, body=tar_bytes, timeout=timeout,
     )
 
     if status != 201:

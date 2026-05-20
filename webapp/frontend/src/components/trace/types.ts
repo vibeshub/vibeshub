@@ -1,3 +1,7 @@
+import type { AgentSummary } from "../../types";
+
+export type { AgentSummary };
+
 export type ToolCategory =
   | "bash"
   | "read"
@@ -40,6 +44,7 @@ export interface SessionMeta {
   toolCallCount: number;
   userPromptCount: number;
   assistantTextCount: number;
+  agents: AgentSummary[];
 }
 
 export interface ToolResult {
@@ -124,6 +129,16 @@ export interface PrLinkEvent {
   ts: string;
 }
 
+export interface ProgressEvent {
+  kind: "progress";
+  hookEvent: string;
+  hookName: string;
+  command: string;
+  parentToolUseID: string | null;
+  ts: string;
+  uuid: string;
+}
+
 export interface PrLinkRecord {
   prNumber: number;
   prUrl: string;
@@ -140,7 +155,8 @@ export type StreamEvent =
   | AttachmentEvent
   | SystemEvent
   | FileSnapshotEvent
-  | PrLinkEvent;
+  | PrLinkEvent
+  | ProgressEvent;
 
 export interface Session {
   meta: SessionMeta;

@@ -67,6 +67,7 @@ export function buildSession(records: AnyRec[]): Session {
     toolCallCount: 0,
     userPromptCount: 0,
     assistantTextCount: 0,
+    agents: [],
   };
 
   const toolResultsById = new Map<string, ToolResult>();
@@ -299,6 +300,22 @@ export function buildSession(records: AnyRec[]): Session {
         kind: "pr_link",
         payload: r as unknown as PrLinkRecord,
         ts: String(r.timestamp ?? ""),
+      });
+      continue;
+    }
+
+    if (r.type === "progress") {
+      const data = (r.data ?? {}) as Record<string, unknown>;
+      stream.push({
+        kind: "progress",
+        hookEvent: String(data.hookEvent ?? ""),
+        hookName: String(data.hookName ?? ""),
+        command: String(data.command ?? ""),
+        parentToolUseID: r.parentToolUseID
+          ? String(r.parentToolUseID)
+          : null,
+        ts: String(r.timestamp ?? ""),
+        uuid: String(r.uuid ?? ""),
       });
       continue;
     }
