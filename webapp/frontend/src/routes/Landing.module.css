@@ -384,6 +384,7 @@
   place-items: center;
   color: oklch(0.98 0 0);
   font: 600 11px var(--font-mono);
+  object-fit: cover;
 }
 .ghUser {
   color: var(--text-strong);
@@ -418,6 +419,7 @@
     color-mix(in oklab, var(--accent-strong) 60%, transparent);
   font-family: var(--font-mono);
   font-size: 13px;
+  text-decoration: none;
 }
 
 .heroArrow {
@@ -434,6 +436,8 @@
 }
 
 .traceCard {
+  display: block;
+  text-decoration: none;
   position: relative;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -445,6 +449,10 @@
   overflow: hidden;
   max-width: 540px;
   margin-left: auto;
+  transition: transform 140ms ease;
+}
+.traceCard:hover {
+  transform: translateY(-2px);
 }
 :global([data-theme="dark"]) .traceCard {
   box-shadow:
@@ -485,167 +493,10 @@
   background: var(--border-strong);
 }
 
-.traceBody {
-  padding: 18px 20px 4px;
-}
-.traceH1 {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  color: var(--text-strong);
-  margin: 0 0 8px;
-}
-.traceMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  font: 500 11.5px var(--font-mono);
-  color: var(--text-muted);
-  font-feature-settings: "tnum";
-}
-.traceMeta .crumb {
-  color: var(--accent-strong);
-}
-.traceMeta .sep {
-  color: var(--text-faint);
-  opacity: 0.5;
-}
-
-.userPromptCard {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  margin: 0 0 4px;
-  padding: 12px 14px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  box-shadow: var(--shadow-1);
-}
-.upAvatar {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  display: grid;
-  place-items: center;
-  font: 600 10px var(--font-mono);
-}
-.upBody {
-  flex: 1;
-  min-width: 0;
-}
-.upMeta {
-  font: 500 10.5px var(--font-mono);
-  color: var(--text-faint);
-  margin-bottom: 4px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.upText {
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--text-strong);
-  text-wrap: pretty;
-}
-
-.toolCard {
-  margin: 14px 0;
-  border: 1px solid var(--border-subtle);
-  border-radius: 9px;
-  background: var(--bg-elevated);
-  overflow: hidden;
-}
-.toolHead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 13px;
-}
-.toolDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: none;
-}
-.toolName {
-  font: 600 12px var(--font-mono);
-  color: var(--text-strong);
-}
-.toolArgs {
-  font: 500 12px var(--font-mono);
-  color: var(--text-muted);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.toolDur {
-  font: 500 11px var(--font-mono);
-  color: var(--text-faint);
-  font-feature-settings: "tnum";
-}
-.toolBash .toolDot {
-  background: var(--tool-bash);
-}
-.toolRead .toolDot {
-  background: var(--tool-read);
-}
-.toolWrite .toolDot {
-  background: var(--tool-write);
-}
-.toolAgent .toolDot {
-  background: var(--tool-agent);
-}
-.toolBody {
-  font: 500 12px var(--font-mono);
-  background: var(--bg-inset);
-  color: var(--text-muted);
-  padding: 10px 12px;
-  border-top: 1px dashed var(--border-subtle);
-  white-space: pre-wrap;
-  line-height: 1.55;
-}
-.toolBody .dim {
-  color: var(--text-faint);
-}
-.toolBody .ok {
-  color: var(--tool-bash);
-}
-.toolBody .err {
-  color: oklch(0.55 0.18 25);
-}
-
-.timeline {
-  display: flex;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 10px 0 18px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border-subtle);
-}
-.timelineSeg {
-  height: 100%;
-}
-.tlBash {
-  background: var(--tool-bash);
-}
-.tlRead {
-  background: var(--tool-read);
-}
-.tlWrite {
-  background: var(--tool-write);
-}
-.tlAgent {
-  background: var(--tool-agent);
-}
-.tlGap {
-  background: transparent;
+.traceShot {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .tracePin {
