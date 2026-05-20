@@ -115,7 +115,10 @@ async def run_migration(
                 migrated_short_ids.append(trace.short_id)
         except Exception as e:
             summary.failed += 1
-            print(f"FAILED {trace.short_id}: {e}")
+            print(
+                f"FAILED {trace.short_id}: {type(e).__name__}: {e} "
+                f"(blob_path={trace.blob_path!r}, blob_prefix={trace.blob_prefix!r})"
+            )
 
     if dry_run:
         await session.rollback()
@@ -159,8 +162,18 @@ def main() -> None:
         session_factory = session_maker_for(engine)
         if settings.azure_blob_container:
             blob_store: BlobStore = make_azure_blob_store(settings)
+            print(
+                f"DEBUG blob backend: AzureBlobStore "
+                f"(container={settings.azure_blob_container!r})"
+            )
         else:
             blob_store = LocalDirBlobStore(settings.blob_dir)
+            print(
+                f"DEBUG blob backend: LocalDirBlobStore (dir={settings.blob_dir}) "
+                f"-- VIBESHUB_AZURE_BLOB_CONTAINER is unset; reading blobs from "
+                f"local disk, not Azure"
+            )
+        print(f"DEBUG database_url host: {settings.database_url.rsplit('@', 1)[-1]}")
 
         try:
             async with session_factory() as session:
