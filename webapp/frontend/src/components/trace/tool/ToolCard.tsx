@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import type { AgentSummary, ToolUseEvent } from "../types";
+import type { AgentSummary, ProgressEvent, ToolUseEvent } from "../types";
 import { fmtTimeOfDay, toolSummary } from "../format";
 import { toolCat, toolLabel } from "../tools";
 import { Chev } from "../icons";
@@ -17,10 +17,31 @@ interface Props {
   followingPrompt: string | null;
   shortId: string;
   agents: AgentSummary[];
+  progress: ProgressEvent[];
 }
 
 function dotStyle(cat: string): CSSProperties {
   return { ["--dot" as string]: `var(--tool-${cat})` } as CSSProperties;
+}
+
+// Hooks that fired during this tool call (PreToolUse / PostToolUse / ...).
+function HookList({ progress }: { progress: ProgressEvent[] }) {
+  return (
+    <>
+      <h4>Hooks</h4>
+      <div className="hook-list">
+        {progress.map((p, i) => (
+          <div className="hook-row" key={i}>
+            <span className="hook-dot" />
+            <span className="hook-name">
+              {p.hookName || p.hookEvent || "hook"}
+            </span>
+            {p.command && <span className="hook-cmd">{p.command}</span>}
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 function renderBody(
@@ -83,7 +104,14 @@ function renderBody(
   }
 }
 
-export function ToolCard({ event, root, followingPrompt, shortId, agents }: Props) {
+export function ToolCard({
+  event,
+  root,
+  followingPrompt,
+  shortId,
+  agents,
+  progress,
+}: Props) {
   const [open, setOpen] = useState(false);
   const cat = toolCat(event.name);
   const label = toolLabel(event.name);
@@ -112,11 +140,17 @@ export function ToolCard({ event, root, followingPrompt, shortId, agents }: Prop
             {summary || <span className="muted">—</span>}
           </span>
           {isErr && <span className="tool-error-dot" title="error" />}
+          {progress.length > 0 && (
+            <span className="tool-hook-badge" title="hooks ran during this tool call">
+              {progress.length} hook{progress.length === 1 ? "" : "s"}
+            </span>
+          )}
           <span className="tool-meta-r">{fmtTimeOfDay(event.ts)}</span>
         </button>
         {open && (
           <div className="tool-body">
             {renderBody(event, root, followingPrompt, shortId, agents)}
+            {progress.length > 0 && <HookList progress={progress} />}
           </div>
         )}
       </div>

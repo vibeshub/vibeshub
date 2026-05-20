@@ -5,6 +5,7 @@ import { ThinkingBlock } from "./ThinkingBlock";
 import { SystemEventRow } from "./SystemEventRow";
 import { PrCard } from "./PrCard";
 import { ToolCard } from "./tool/ToolCard";
+import { progressByTool } from "./parser";
 
 interface Props {
   session: Session;
@@ -46,9 +47,12 @@ export function Thread({
   const agents = session.meta.agents ?? [];
   const nextPrompt = buildNextPromptIndex(stream);
   const promptUuids: string[] = [];
+  const toolIds = new Set<string>();
   for (const ev of stream) {
     if (ev.kind === "user_prompt" && ev.uuid) promptUuids.push(ev.uuid);
+    if (ev.kind === "tool_use") toolIds.add(ev.id);
   }
+  const hooksByTool = progressByTool(stream);
 
   const out: React.ReactNode[] = [];
   let promptCounter = -1;
@@ -89,6 +93,7 @@ export function Thread({
           followingPrompt={nextPrompt[i]}
           shortId={shortId}
           agents={agents}
+          progress={hooksByTool.get(e.id) ?? []}
           key={key}
         />,
       );
@@ -96,6 +101,15 @@ export function Thread({
     }
     if (e.kind === "pr_link") {
       out.push(<PrCard event={e} key={key} />);
+      continue;
+    }
+    if (e.kind === "progress") {
+      // Progress events for a tool in this stream are shown inside that
+      // tool's card; only orphans (no parent tool here) render standalone.
+      const orphan = !e.parentToolUseID || !toolIds.has(e.parentToolUseID);
+      if (orphan && showSystemEvents) {
+        out.push(<SystemEventRow event={e} key={key} />);
+      }
       continue;
     }
     if (showSystemEvents && isSystemish(e)) {

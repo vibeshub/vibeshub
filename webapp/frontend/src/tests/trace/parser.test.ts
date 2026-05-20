@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { buildSession, parseJsonl } from "../../components/trace/parser";
+import {
+  buildSession,
+  parseJsonl,
+  progressByTool,
+} from "../../components/trace/parser";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = readFileSync(
@@ -362,5 +366,25 @@ describe("parser - progress records", () => {
       expect(progress.hookName).toBe("PostToolUse:Glob");
       expect(progress.parentToolUseID).toBe("toolu_01abc");
     }
+  });
+});
+
+describe("progressByTool", () => {
+  it("groups progress events by their parent tool_use id", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          { type: "progress", data: { hookName: "h1" }, parentToolUseID: "t1", uuid: "p1", timestamp: "2026-05-19T10:00:00Z" },
+          { type: "progress", data: { hookName: "h2" }, parentToolUseID: "t1", uuid: "p2", timestamp: "2026-05-19T10:00:01Z" },
+          { type: "progress", data: { hookName: "h3" }, parentToolUseID: "t2", uuid: "p3", timestamp: "2026-05-19T10:00:02Z" },
+          { type: "progress", data: { hookName: "orphan" }, uuid: "p4", timestamp: "2026-05-19T10:00:03Z" },
+        ].map((r) => JSON.stringify(r)).join("\n"),
+      ),
+    );
+    const grouped = progressByTool(session.stream);
+    expect(grouped.get("t1")?.length).toBe(2);
+    expect(grouped.get("t2")?.length).toBe(1);
+    // a progress event with no parentToolUseID is not in the map
+    expect([...grouped.keys()].sort()).toEqual(["t1", "t2"]);
   });
 });

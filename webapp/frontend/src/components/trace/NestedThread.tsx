@@ -2,6 +2,7 @@ import type { Session } from "./types";
 import { AssistantText } from "./AssistantText";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCard } from "./tool/ToolCard";
+import { progressByTool } from "./parser";
 
 interface Props {
   session: Session;
@@ -24,6 +25,7 @@ export function NestedThread({ session, shortId, showReasoning }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
   const agents = session.meta.agents ?? [];
+  const hooksByTool = progressByTool(stream);
 
   const out: React.ReactNode[] = [];
   for (let i = 0; i < stream.length; i++) {
@@ -41,6 +43,7 @@ export function NestedThread({ session, shortId, showReasoning }: Props) {
           followingPrompt={null}
           shortId={shortId}
           agents={agents}
+          progress={hooksByTool.get(e.id) ?? []}
           key={key}
         />,
       );

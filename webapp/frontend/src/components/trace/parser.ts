@@ -1,5 +1,6 @@
 import type {
   PrLinkRecord,
+  ProgressEvent,
   Session,
   SessionMeta,
   StreamEvent,
@@ -367,4 +368,22 @@ export function buildSession(records: AnyRec[]): Session {
   }
 
   return { meta, stream };
+}
+
+// Group progress (hook) events under the `tool_use` they ran for, keyed by
+// `parentToolUseID`. The viewer shows each tool's hooks inside that tool's
+// card; progress events with no parent (or whose parent isn't in this stream)
+// are left out of the map and handled as standalone rows by the caller.
+export function progressByTool(
+  stream: StreamEvent[],
+): Map<string, ProgressEvent[]> {
+  const m = new Map<string, ProgressEvent[]>();
+  for (const e of stream) {
+    if (e.kind === "progress" && e.parentToolUseID) {
+      const arr = m.get(e.parentToolUseID);
+      if (arr) arr.push(e);
+      else m.set(e.parentToolUseID, [e]);
+    }
+  }
+  return m;
 }
