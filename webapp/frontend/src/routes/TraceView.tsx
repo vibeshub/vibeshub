@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetchRawJsonl, fetchTrace } from "../api";
+import { ApiError, fetchRawJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
+import { PrivateTraceGate } from "../components/PrivateTraceGate";
 import { TraceHeader } from "../components/TraceHeader";
 import { TraceViewer } from "../components/trace/TraceViewer";
 import { buildSession, parseJsonl } from "../components/trace/parser";
 import type { Session } from "../components/trace/types";
 import styles from "./TraceView.module.css";
+
+type HeadState =
+  | { kind: "loading" }
+  | { kind: "ready"; trace: TraceSummary }
+  | { kind: "gate"; gate: "signin" | "enable" }
+  | { kind: "error"; message: string };
 
 type BodyState =
   | { kind: "loading" }
@@ -17,17 +24,23 @@ type BodyState =
 
 export function TraceView() {
   const { shortId } = useParams<{ shortId: string }>();
-  const [trace, setTrace] = useState<TraceSummary | null>(null);
-  const [traceErr, setTraceErr] = useState<string | null>(null);
+  const [head, setHead] = useState<HeadState>({ kind: "loading" });
   const [body, setBody] = useState<BodyState>({ kind: "loading" });
 
   useEffect(() => {
     if (!shortId) return;
-    setTrace(null);
-    setTraceErr(null);
+    setHead({ kind: "loading" });
     fetchTrace(shortId)
-      .then(setTrace)
-      .catch((e) => setTraceErr(String(e)));
+      .then((trace) => setHead({ kind: "ready", trace }))
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          setHead({ kind: "gate", gate: "signin" });
+        } else if (e instanceof ApiError && e.status === 403) {
+          setHead({ kind: "gate", gate: "enable" });
+        } else {
+          setHead({ kind: "error", message: String(e) });
+        }
+      });
   }, [shortId]);
 
   useEffect(() => {
@@ -38,6 +51,8 @@ export function TraceView() {
       .catch((e) => setBody({ kind: "error", message: String(e) }));
   }, [shortId]);
 
+  const trace = head.kind === "ready" ? head.trace : null;
+
   const session: Session | null = useMemo(() => {
     if (body.kind !== "ready") return null;
     const built = buildSession(parseJsonl(body.jsonl));
@@ -47,21 +62,22 @@ export function TraceView() {
     return built;
   }, [body, trace]);
 
-  if (traceErr) return <ErrorState message={traceErr} />;
-  if (!trace) return <LoadingState label="Loading trace…" />;
+  if (head.kind === "gate") return <PrivateTraceGate kind={head.gate} />;
+  if (head.kind === "error") return <ErrorState message={head.message} />;
+  if (head.kind === "loading") return <LoadingState label="Loading trace…" />;
 
   return (
     <div className={styles.container}>
-      <TraceHeader trace={trace} />
+      <TraceHeader trace={head.trace} />
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (
         <TraceViewer
           session={session}
-          shortId={trace.short_id}
-          rawHref={`/api/traces/${trace.short_id}/raw`}
-          repoOwner={trace.repo_full_name.split("/")[0]}
-          repoName={trace.repo_full_name.split("/")[1]}
+          shortId={head.trace.short_id}
+          rawHref={`/api/traces/${head.trace.short_id}/raw`}
+          repoOwner={head.trace.repo_full_name.split("/")[0]}
+          repoName={head.trace.repo_full_name.split("/")[1]}
         />
       )}
     </div>

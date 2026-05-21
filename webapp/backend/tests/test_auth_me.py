@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from app.auth.sessions import SESSION_COOKIE_NAME
 from tests._auth_helpers import authed_cookies
 
@@ -30,3 +32,29 @@ def test_me_unknown_session_returns_204_and_clears_cookie(client):
     set_cookie = r.headers.get("set-cookie", "")
     assert SESSION_COOKIE_NAME in set_cookie
     assert "Max-Age=0" in set_cookie or 'max-age=0' in set_cookie.lower()
+
+
+@pytest.mark.asyncio
+async def test_me_reports_has_private_access_false_without_repo_scope(
+    client,
+):
+    from tests._auth_helpers import authed_cookies
+
+    cookies, _ = await authed_cookies(
+        client, token_scopes="read:user,user:email"
+    )
+    resp = client.get("/api/auth/me", cookies=cookies)
+    assert resp.status_code == 200
+    assert resp.json()["has_private_access"] is False
+
+
+@pytest.mark.asyncio
+async def test_me_reports_has_private_access_true_with_repo_scope(client):
+    from tests._auth_helpers import authed_cookies
+
+    cookies, _ = await authed_cookies(
+        client, token_scopes="repo,read:user,user:email"
+    )
+    resp = client.get("/api/auth/me", cookies=cookies)
+    assert resp.status_code == 200
+    assert resp.json()["has_private_access"] is True

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.crypto import TokenCipher
+from app.auth.scopes import has_repo_scope
 from app.auth.sessions import (
     DEFAULT_SESSION_TTL_DAYS,
     SESSION_COOKIE_NAME,
@@ -27,6 +28,13 @@ from app.storage.models import User
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+# The minimal scope is fixed in app/auth/oauth.py's client registration.
+# A `?scope=private` login additionally requests classic `repo` — the only
+# scope a classic OAuth App can use to read private repos (it also grants
+# write; vibeshub never calls a write endpoint).
+PRIVATE_SCOPE = "read:user user:email repo"
 
 
 # --- helpers ----------------------------------------------------------------
@@ -88,6 +96,7 @@ async def me(
         "login": user.github_login,
         "name": user.name,
         "avatar_url": user.avatar_url,
+        "has_private_access": has_repo_scope(user),
     }
 
 
@@ -95,13 +104,18 @@ async def me(
 async def github_login(
     request: Request,
     next: str | None = None,
+    scope: str | None = None,
     settings: Settings = Depends(get_app_settings),
 ):
     _require_oauth_configured(settings)
     request.session["next_path"] = _validated_next(next)
     oauth = request.app.state.oauth
     redirect_uri = settings.public_base_url.rstrip("/") + "/api/auth/github/callback"
-    log.info("auth.login.start")
+    log.info("auth.login.start scope=%s", "private" if scope == "private" else "default")
+    if scope == "private":
+        return await oauth.github.authorize_redirect(
+            request, redirect_uri, scope=PRIVATE_SCOPE
+        )
     return await oauth.github.authorize_redirect(request, redirect_uri)
 
 

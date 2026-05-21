@@ -10,6 +10,7 @@ Host Claude Code conversation traces and link them to the pull requests they pro
 4. The backend stores the transcript blob, runs a second redaction pass, and returns a public URL.
 5. The plugin posts that URL as a comment on the PR.
 6. Visiting the URL loads the SPA, which fetches the raw JSONL from the backend and renders it as a single-page trace viewer (hero + collapsible tool cards + activity timeline + light/dark theme).
+7. Private-repository traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace, mirroring GitHub's own permissions. Viewers grant private access with an opt-in "Enable private repositories" login.
 
 Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-code/](plugins/claude-code/) — see [plugins/README.md](plugins/README.md).
 

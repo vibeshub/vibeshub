@@ -16,6 +16,11 @@ export function TraceHeader({ trace }: Props) {
       <div className={styles.row}>
         <h1 className={styles.title}>
           {trace.pr_title ?? `PR #${trace.pr_number}`}
+          {trace.is_private && (
+            <span className={styles.privateBadge}>
+              <span aria-hidden="true">🔒</span> Private
+            </span>
+          )}
         </h1>
         <div className={styles.actions}>
           <a href={trace.pr_url} target="_blank" rel="noreferrer">

@@ -19,9 +19,10 @@ def build_oauth(settings: Settings) -> OAuth:
         access_token_url="https://github.com/login/oauth/access_token",
         authorize_url="https://github.com/login/oauth/authorize",
         api_base_url="https://api.github.com/",
-        # Public-read-only scopes. Do NOT add `repo` (private repos) or
-        # `public_repo` (write to public repos) here — broader scopes will
-        # be added in a follow-up PR when private-repo fidelity is needed.
+        # Default (minimal) scopes for an ordinary login. A `?scope=private`
+        # login overrides this per-request with `repo` added — see
+        # PRIVATE_SCOPE in app/api/auth.py — so private-repo traces can be
+        # access-checked against the viewer's own GitHub permissions.
         client_kwargs={"scope": "read:user user:email"},
     )
     return oauth

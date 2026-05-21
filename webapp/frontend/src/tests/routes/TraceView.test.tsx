@@ -68,6 +68,7 @@ describe("TraceView", () => {
       byte_size: FIXTURE.length,
       message_count: 100,
       created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
@@ -111,5 +112,71 @@ describe("TraceView", () => {
     await waitFor(() => {
       expect(screen.getByText(/500/)).toBeInTheDocument();
     });
+  });
+
+  it("shows a sign-in gate when the trace summary returns 401", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith(`/api/traces/${SHORT_ID}`)) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "auth_required" }), {
+            status: 401,
+          }),
+        );
+      }
+      return Promise.resolve(new Response("", { status: 200 }));
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const link = await screen.findByRole("link", {
+      name: /sign in with github/i,
+    });
+    expect(link.getAttribute("href")).toContain("/api/auth/github/login");
+  });
+
+  it("shows an enable-private gate when the summary returns 403", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith(`/api/traces/${SHORT_ID}`)) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ detail: "private_scope_required" }),
+            { status: 403 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response("", { status: 200 }));
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const link = await screen.findByRole("link", {
+      name: /enable private repositories/i,
+    });
+    expect(link.getAttribute("href")).toContain("scope=private");
+  });
+
+  it("renders a Private badge for a private trace", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: true,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const badge = await screen.findByText(/Private/);
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain("🔒");
   });
 });

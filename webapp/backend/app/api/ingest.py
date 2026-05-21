@@ -90,11 +90,6 @@ async def ingest(
     user = user_result
     pr = pull_result
 
-    if pr.repo_is_private:
-        raise HTTPException(
-            status_code=403,
-            detail="private repos are not supported in v1; traces are public",
-        )
     if pr.author_login != user.login:
         raise HTTPException(
             status_code=403,
@@ -155,6 +150,7 @@ async def ingest(
         message_count=message_count_main,
         redaction_count_client=redaction_count_client,
         redaction_count_server=unpacked.total_redactions,
+        is_private=pr.repo_is_private,
         blob_path=None,
         blob_prefix=blob_prefix,
         agents=agent_summaries,

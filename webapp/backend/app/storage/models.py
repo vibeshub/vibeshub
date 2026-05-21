@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -45,6 +46,12 @@ class Trace(Base):
     message_count: Mapped[int] = mapped_column(Integer)
     redaction_count_client: Mapped[int] = mapped_column(Integer, default=0)
     redaction_count_server: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Snapshotted at ingest from the PR's repo visibility. Private traces are
+    # gated behind a viewer's GitHub repo-read access; see app/api/traces.py.
+    is_private: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
 
     # Legacy: one of blob_path / blob_prefix is non-null per row.
     # v1 ingests set blob_path; v2 ingests (post-2026-05-19) set blob_prefix.
