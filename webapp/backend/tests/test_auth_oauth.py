@@ -183,3 +183,23 @@ async def test_repeat_login_upserts_same_github_id(
         assert users[0].github_login == "alice_new"
         cipher = TokenCipher(get_settings().token_encryption_key)
         assert cipher.decrypt(users[0].encrypted_access_token) == "t2"
+
+
+def test_login_with_scope_private_requests_repo_scope(client):
+    resp = client.get(
+        "/api/auth/github/login?scope=private", follow_redirects=False
+    )
+    assert resp.status_code in (302, 307)
+    location = resp.headers["location"]
+    # GitHub's authorize URL carries the scope as a query param; `repo`
+    # must be present when the private upgrade was requested.
+    assert "repo" in location
+
+
+def test_login_default_does_not_request_repo_scope(client):
+    resp = client.get(
+        "/api/auth/github/login", follow_redirects=False
+    )
+    assert resp.status_code in (302, 307)
+    location = resp.headers["location"]
+    assert "repo" not in location
