@@ -2,6 +2,7 @@ import io
 import json
 import ssl
 import subprocess
+import sys
 from unittest.mock import patch
 from urllib import error as urllib_error
 
@@ -288,13 +289,43 @@ def test_keychain_ca_pem_runs_security_on_macos():
     assert argv[1] == "find-certificate"
 
 
-def test_os_trust_context_is_none_without_keychain_pem():
+def test_os_trust_context_is_none_when_no_trust_source_available():
     from vibeshub_client import upload
 
-    with patch.object(upload, "_keychain_ca_pem", return_value=None), patch.object(
-        upload, "_windows_ca_der", return_value=None
-    ):
+    with patch.object(
+        upload, "_truststore_context", return_value=None
+    ), patch.object(
+        upload, "_keychain_ca_pem", return_value=None
+    ), patch.object(upload, "_windows_ca_der", return_value=None):
         assert upload._os_trust_context() is None
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 10), reason="truststore requires Python 3.10+"
+)
+def test_truststore_context_builds_on_modern_python():
+    from vibeshub_client import upload
+
+    ctx = upload._truststore_context()
+    assert ctx is not None
+
+
+def test_truststore_context_is_none_on_python_39():
+    from vibeshub_client import upload
+
+    with patch.object(upload.sys, "version_info", (3, 9, 18)):
+        assert upload._truststore_context() is None
+
+
+def test_os_trust_context_prefers_truststore_over_scraping():
+    from vibeshub_client import upload
+
+    marker = ssl.create_default_context()
+    with patch.object(
+        upload, "_truststore_context", return_value=marker
+    ), patch.object(upload, "_keychain_ca_pem") as keychain:
+        assert upload._os_trust_context() is marker
+    keychain.assert_not_called()
 
 
 def test_windows_ca_der_returns_none_off_windows():

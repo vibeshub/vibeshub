@@ -16,6 +16,15 @@ import sys
 from pathlib import Path
 
 
+def _session_id() -> str | None:
+    """The current Claude Code session id. Claude Code exports
+    CLAUDE_CODE_SESSION_ID; CLAUDE_SESSION_ID is accepted as a legacy/manual
+    fallback."""
+    return os.environ.get("CLAUDE_CODE_SESSION_ID") or os.environ.get(
+        "CLAUDE_SESSION_ID"
+    )
+
+
 def _gh(*args: str) -> str:
     return subprocess.run(
         ["gh", *args], check=True, capture_output=True, text=True
@@ -113,7 +122,7 @@ async def _delete(pr_url: str, server_url: str) -> None:
 def main() -> None:
     args = sys.argv[1:]
     server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.ai")
-    session_id = os.environ.get("CLAUDE_SESSION_ID")
+    session_id = _session_id()
 
     if args and args[0] == "delete":
         if len(args) < 2:
