@@ -34,6 +34,7 @@ def _to_summary(t: Trace) -> TraceSummary:
         byte_size=t.byte_size,
         message_count=t.message_count,
         created_at=t.created_at.isoformat(),
+        is_private=t.is_private,
         agent_count=t.agent_count or 0,
         agents=[AgentSummary(**a) for a in (t.agents or [])],
     )

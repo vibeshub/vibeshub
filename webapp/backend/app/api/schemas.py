@@ -27,6 +27,7 @@ class TraceSummary(BaseModel):
     byte_size: int
     message_count: int
     created_at: str
+    is_private: bool = False
 
     agent_count: int = 0
     agents: list[AgentSummary] = Field(default_factory=list)

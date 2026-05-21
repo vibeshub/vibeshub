@@ -65,3 +65,13 @@ async def test_ingest_public_repo_is_not_private(client, respx_mock):
             select(Trace).where(Trace.short_id == short_id)
         )).scalar_one()
         assert trace.is_private is False
+
+
+@pytest.mark.asyncio
+async def test_get_trace_summary_includes_is_private_false_for_public(
+    client, respx_mock
+):
+    short_id = _ingest(client, respx_mock, private=False)
+    resp = client.get(f"/api/traces/{short_id}")
+    assert resp.status_code == 200
+    assert resp.json()["is_private"] is False
