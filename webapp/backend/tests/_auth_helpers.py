@@ -9,7 +9,8 @@ from app.storage.models import User
 
 
 async def _seed_user(SessionLocal, *, github_id: int, login: str,
-                    access_token: str = "gho_test") -> User:
+                    access_token: str = "gho_test",
+                    token_scopes: str = "read:user,user:email") -> User:
     cipher = TokenCipher(get_settings().token_encryption_key)
     async with SessionLocal() as session:
         user = User(
@@ -19,7 +20,7 @@ async def _seed_user(SessionLocal, *, github_id: int, login: str,
             avatar_url=f"https://avatars/{login}.png",
             email=None,
             encrypted_access_token=cipher.encrypt(access_token),
-            token_scopes="read:user,user:email",
+            token_scopes=token_scopes,
         )
         session.add(user)
         await session.commit()
@@ -35,12 +36,13 @@ async def _create_session(SessionLocal, user_id) -> str:
 
 
 async def authed_cookies(client: TestClient, *, github_id: int = 100,
-                         login: str = "alice", access_token: str = "gho_user"):
+                         login: str = "alice", access_token: str = "gho_user",
+                         token_scopes: str = "read:user,user:email"):
     """Seed a User + UserSession and return a cookies dict for TestClient."""
     SessionLocal = client.app.state.session_maker
     user = await _seed_user(
         SessionLocal, github_id=github_id, login=login,
-        access_token=access_token,
+        access_token=access_token, token_scopes=token_scopes,
     )
     sid = await _create_session(SessionLocal, user.id)
     return {SESSION_COOKIE_NAME: sid}, user

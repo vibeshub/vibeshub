@@ -8,17 +8,115 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, TraceSummary
+from app.auth.crypto import TokenCipher
 from app.auth.github import GitHubAuthError, GitHubClient
-from app.deps import get_blob_store, get_github, get_session
+from app.auth.sessions import get_current_user
+from app.deps import (
+    get_app_settings,
+    get_blob_store,
+    get_github,
+    get_repo_access,
+    get_session,
+)
+from app.github.repo_access import RepoAccessChecker, RepoAccessError
+from app.settings import Settings
 from app.short_id import looks_like_short_id
 from app.storage.blob import BlobStore
-from app.storage.models import Trace, utcnow
+from app.storage.models import Trace, User, utcnow
 
 
 router = APIRouter()
 
 
 _AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
+
+
+def _has_repo_scope(user: User) -> bool:
+    return "repo" in (user.token_scopes or "").split(",")
+
+
+def _viewer_token(user: User, settings: Settings) -> str | None:
+    try:
+        return TokenCipher(settings.token_encryption_key).decrypt(
+            user.encrypted_access_token
+        )
+    except Exception:
+        return None
+
+
+async def _can_view_repo(
+    repo_full_name: str,
+    user: User | None,
+    settings: Settings,
+    access: RepoAccessChecker,
+) -> bool:
+    """True if `user` may read `repo_full_name` per GitHub. Never raises."""
+    if user is None or not _has_repo_scope(user):
+        return False
+    token = _viewer_token(user, settings)
+    if token is None:
+        return False
+    try:
+        return await access.can_read(user.id, token, repo_full_name)
+    except RepoAccessError:
+        return False
+
+
+async def _require_trace_access(
+    trace: Trace,
+    user: User | None,
+    settings: Settings,
+    access: RepoAccessChecker,
+) -> None:
+    """Raise the appropriate HTTPException if a viewer may not see `trace`.
+
+    Public traces pass unconditionally. Private traces produce: 401 when the
+    viewer is anonymous, 403 when logged in without `repo` scope, 404 when
+    GitHub says the viewer cannot read the repo.
+    """
+    if not trace.is_private:
+        return
+    if user is None:
+        raise HTTPException(status_code=401, detail="auth_required")
+    if not _has_repo_scope(user):
+        raise HTTPException(status_code=403, detail="private_scope_required")
+    token = _viewer_token(user, settings)
+    if token is None:
+        raise HTTPException(status_code=403, detail="private_scope_required")
+    try:
+        allowed = await access.can_read(
+            user.id, token, trace.repo_full_name
+        )
+    except RepoAccessError:
+        raise HTTPException(
+            status_code=502, detail="github_upstream_error"
+        )
+    if not allowed:
+        raise HTTPException(status_code=404, detail="not_found")
+
+
+async def _filter_visible(
+    rows: list[Trace],
+    user: User | None,
+    settings: Settings,
+    access: RepoAccessChecker,
+) -> list[Trace]:
+    """Drop private traces whose repo `user` cannot read. Public rows pass.
+
+    Checks once per distinct private repo — privacy is a property of the
+    repo, so all of a repo's traces share one access decision.
+    """
+    private_repos = {t.repo_full_name for t in rows if t.is_private}
+    if not private_repos:
+        return list(rows)
+    visible: set[str] = set()
+    for repo in private_repos:
+        if await _can_view_repo(repo, user, settings, access):
+            visible.add(repo)
+    return [
+        t for t in rows
+        if not t.is_private or t.repo_full_name in visible
+    ]
 
 
 def _to_summary(t: Trace) -> TraceSummary:
@@ -173,7 +271,11 @@ async def get_repo_overview(
 @router.get("/api/traces/{short_id}", response_model=TraceSummary)
 async def get_trace(
     short_id: str,
+    response: Response,
     session: AsyncSession = Depends(get_session),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404, detail="not found")
@@ -184,6 +286,9 @@ async def get_trace(
     trace = (await session.execute(stmt)).scalar_one_or_none()
     if trace is None:
         raise HTTPException(status_code=404, detail="not found")
+    await _require_trace_access(trace, user, settings, access)
+    if trace.is_private:
+        response.headers["Cache-Control"] = "private, no-store"
     return _to_summary(trace)
 
 
@@ -192,6 +297,9 @@ async def get_trace_raw(
     short_id: str,
     session: AsyncSession = Depends(get_session),
     blob_store: BlobStore = Depends(get_blob_store),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404, detail="not found")
@@ -202,11 +310,17 @@ async def get_trace_raw(
     trace = (await session.execute(stmt)).scalar_one_or_none()
     if trace is None:
         raise HTTPException(status_code=404, detail="not found")
+    await _require_trace_access(trace, user, settings, access)
     if trace.blob_prefix is None:
         # Should not happen post-migration. 500 so we notice.
         raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
     data = await blob_store.get(f"{trace.blob_prefix}main.jsonl")
-    return Response(content=data, media_type="application/x-ndjson")
+    headers = (
+        {"Cache-Control": "private, no-store"} if trace.is_private else None
+    )
+    return Response(
+        content=data, media_type="application/x-ndjson", headers=headers
+    )
 
 
 @router.get("/api/traces/{short_id}/agents/{agent_id}")
@@ -215,6 +329,9 @@ async def get_agent_raw(
     agent_id: str,
     session: AsyncSession = Depends(get_session),
     blob_store: BlobStore = Depends(get_blob_store),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404, detail="not found")
@@ -228,6 +345,7 @@ async def get_agent_raw(
     trace = (await session.execute(stmt)).scalar_one_or_none()
     if trace is None:
         raise HTTPException(status_code=404, detail="not found")
+    await _require_trace_access(trace, user, settings, access)
     if trace.blob_prefix is None:
         raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
 
@@ -236,7 +354,12 @@ async def get_agent_raw(
         raise HTTPException(status_code=404, detail="agent not found")
 
     data = await blob_store.get(f"{trace.blob_prefix}agents/{agent_id}.jsonl")
-    return Response(content=data, media_type="application/x-ndjson")
+    headers = (
+        {"Cache-Control": "private, no-store"} if trace.is_private else None
+    )
+    return Response(
+        content=data, media_type="application/x-ndjson", headers=headers
+    )
 
 
 @router.delete("/api/traces/{short_id}", status_code=204)
