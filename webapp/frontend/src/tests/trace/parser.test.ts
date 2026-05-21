@@ -338,6 +338,104 @@ describe("buildSession with skill-injected meta records", () => {
   });
 });
 
+describe("buildSession with slash-command user messages", () => {
+  const userRec = (content: unknown, uuid: string, ts: string) =>
+    JSON.stringify({
+      type: "user",
+      message: { role: "user", content },
+      uuid,
+      timestamp: ts,
+      sessionId: "s1",
+    });
+  const assistantRec = (id: string, uuid: string, ts: string) =>
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id,
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [{ type: "text", text: "ok" }],
+      },
+      uuid,
+      timestamp: ts,
+      sessionId: "s1",
+    });
+
+  it("parses a string-content slash command into a structured command", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(
+            "<command-message>vibeshub:share-pr</command-message>\n<command-name>/vibeshub:share-pr</command-name>",
+            "u1",
+            "2026-05-21T10:00:00.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const prompts = session.stream.filter((e) => e.kind === "user_prompt");
+    expect(prompts).toHaveLength(1);
+    const p = prompts[0] as { text: string; command?: { name: string; args: string } };
+    expect(p.command).toEqual({ name: "/vibeshub:share-pr", args: "" });
+    expect(p.text).toBe("");
+  });
+
+  it("extracts command args regardless of tag order and indentation", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(
+            "<command-name>/plugin</command-name>\n            <command-message>plugin</command-message>\n            <command-args>install vibeshub@vibeshub</command-args>",
+            "u1",
+            "2026-05-21T10:00:00.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const p = session.stream.find((e) => e.kind === "user_prompt") as {
+      command?: { name: string; args: string };
+    };
+    expect(p.command).toEqual({ name: "/plugin", args: "install vibeshub@vibeshub" });
+  });
+
+  it("uses the formatted slash command as firstPrompt", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(
+            "<command-name>/plugin</command-name>\n<command-args>marketplace update vibeshub</command-args>",
+            "u1",
+            "2026-05-21T10:00:00.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    expect(session.meta.firstPrompt).toBe("/plugin marketplace update vibeshub");
+  });
+
+  it("treats prose that merely mentions command tags as a normal prompt", () => {
+    const text =
+      "Why does <command-name>/foo</command-name> render as raw XML?";
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(text, "u1", "2026-05-21T10:00:00.000Z"),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const p = session.stream.find((e) => e.kind === "user_prompt") as {
+      text: string;
+      command?: unknown;
+    };
+    expect(p.command).toBeUndefined();
+    expect(p.text).toBe(text);
+  });
+});
+
 describe("parser - progress records", () => {
   it("emits a progress stream event for sidechain hook_progress records", () => {
     const jsonl = [

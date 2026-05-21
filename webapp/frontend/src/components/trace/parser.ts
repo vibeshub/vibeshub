@@ -3,6 +3,7 @@ import type {
   ProgressEvent,
   Session,
   SessionMeta,
+  SlashCommand,
   StreamEvent,
   ToolResult,
 } from "./types";
@@ -40,6 +41,32 @@ function isSystemWrapperText(text: string): boolean {
     /^<([a-zA-Z][a-zA-Z0-9_-]*)>[\s\S]*<\/([a-zA-Z][a-zA-Z0-9_-]*)>$/,
   );
   return m !== null && m[1] === m[2];
+}
+
+// A slash-command invocation is injected by Claude Code as a user message
+// assembled from <command-name>, <command-message> and <command-args> tags
+// (any order, sometimes indented). Returns the structured command when the
+// message is *nothing but* those tags, or null for ordinary user prose.
+function parseSlashCommand(text: string): SlashCommand | null {
+  const nameM = text.match(/<command-name>([\s\S]*?)<\/command-name>/);
+  if (!nameM) return null;
+  const name = nameM[1].trim();
+  if (!name) return null;
+  // Reject text that merely mentions the tags amid real user prose.
+  const stripped = text
+    .replace(/<command-(name|message|args)>[\s\S]*?<\/command-\1>/g, "")
+    .trim();
+  if (stripped) return null;
+  const argsM = text.match(/<command-args>([\s\S]*?)<\/command-args>/);
+  return {
+    name: name.startsWith("/") ? name : `/${name}`,
+    args: argsM ? argsM[1].trim() : "",
+  };
+}
+
+// One-line preview of a slash command, used for `meta.firstPrompt`.
+function formatSlashCommand(cmd: SlashCommand): string {
+  return cmd.args ? `${cmd.name} ${cmd.args}` : cmd.name;
 }
 
 // Synthetic user records injected by Claude Code itself (e.g. the Skill tool
@@ -132,15 +159,19 @@ export function buildSession(records: AnyRec[]): Session {
 
     if (r.type === "user" && msg && !meta.firstPrompt && !isMetaUserRecord(r)) {
       if (typeof msg.content === "string") {
-        meta.firstPrompt = msg.content;
+        const cmd = parseSlashCommand(msg.content);
+        meta.firstPrompt = cmd ? formatSlashCommand(cmd) : msg.content;
       } else if (Array.isArray(msg.content)) {
         for (const c of msg.content as AnyRec[]) {
-          if (
-            c.type === "text" &&
-            typeof c.text === "string" &&
-            c.text.length > 0 &&
-            !isSystemWrapperText(c.text)
-          ) {
+          if (c.type !== "text" || typeof c.text !== "string" || !c.text) {
+            continue;
+          }
+          const cmd = parseSlashCommand(c.text);
+          if (cmd) {
+            meta.firstPrompt = formatSlashCommand(cmd);
+            break;
+          }
+          if (!isSystemWrapperText(c.text)) {
             meta.firstPrompt = c.text;
             break;
           }
@@ -236,7 +267,12 @@ export function buildSession(records: AnyRec[]): Session {
       const ts = String(r.timestamp ?? "");
       const uuid = String(r.uuid ?? "");
       if (typeof msg.content === "string") {
-        stream.push({ kind: "user_prompt", text: msg.content, ts, uuid });
+        const cmd = parseSlashCommand(msg.content);
+        stream.push(
+          cmd
+            ? { kind: "user_prompt", text: "", command: cmd, ts, uuid }
+            : { kind: "user_prompt", text: msg.content, ts, uuid },
+        );
       } else if (Array.isArray(msg.content)) {
         for (const c of msg.content as AnyRec[]) {
           if (
@@ -244,7 +280,16 @@ export function buildSession(records: AnyRec[]): Session {
             typeof c.text === "string" &&
             c.text.length > 0
           ) {
-            if (isSystemWrapperText(c.text)) {
+            const cmd = parseSlashCommand(c.text);
+            if (cmd) {
+              stream.push({
+                kind: "user_prompt",
+                text: "",
+                command: cmd,
+                ts,
+                uuid,
+              });
+            } else if (isSystemWrapperText(c.text)) {
               stream.push({
                 kind: "system_text",
                 text: c.text,
