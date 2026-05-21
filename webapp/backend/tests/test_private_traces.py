@@ -39,6 +39,37 @@ def _ingest(client, respx_mock, *, private: bool) -> str:
     return resp.json()["short_id"]
 
 
+def _ingest_repo(
+    client, respx_mock, *, repo: str, pr: int, private: bool
+) -> str:
+    """Ingest a trace for an arbitrary alice-owned repo / PR number."""
+    _user_resp(respx_mock)
+    full_name = f"alice/{repo}"
+    respx_mock.get(
+        f"https://api.github.test/repos/{full_name}/pulls/{pr}"
+    ).respond(
+        200,
+        json={
+            "number": pr,
+            "title": "Hello",
+            "user": {"login": "alice"},
+            "html_url": f"https://github.com/{full_name}/pull/{pr}",
+            "head": {"repo": {"private": private, "full_name": full_name}},
+            "base": {"repo": {"private": private, "full_name": full_name}},
+        },
+    )
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
+    resp = client.post(
+        "/api/ingest",
+        content=body,
+        headers=_ingest_headers(
+            f"https://github.com/{full_name}/pull/{pr}"
+        ),
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["short_id"]
+
+
 @pytest.mark.asyncio
 async def test_ingest_private_repo_succeeds_and_flags_trace(client, respx_mock):
     from app.storage.models import Trace
@@ -189,3 +220,31 @@ async def test_user_overview_hides_private_from_anonymous(
     assert resp.status_code == 200
     assert resp.json()["traces"] == []
     assert resp.json()["repos"] == []
+
+
+@pytest.mark.asyncio
+async def test_user_overview_mixed_public_private_for_anonymous(
+    client, respx_mock
+):
+    public_id = _ingest_repo(
+        client, respx_mock, repo="public-repo", pr=1, private=False
+    )
+    _ingest_repo(
+        client, respx_mock, repo="private-repo", pr=2, private=True
+    )
+
+    resp = client.get("/api/users/alice")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    # Only the public trace is visible to an anonymous viewer.
+    trace_ids = {t["short_id"] for t in body["traces"]}
+    assert trace_ids == {public_id}
+
+    # The private repo is absent from the repo breakdown.
+    repo_names = {r["repo_full_name"] for r in body["repos"]}
+    assert repo_names == {"alice/public-repo"}
+
+    # Stats reflect only the visible public subset.
+    assert body["stats"]["trace_count"] == 1
+    assert body["stats"]["repo_count"] == 1
