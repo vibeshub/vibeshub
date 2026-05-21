@@ -1,5 +1,7 @@
 import io
 import json
+import ssl
+import subprocess
 from unittest.mock import patch
 from urllib import error as urllib_error
 
@@ -168,3 +170,159 @@ async def test_upload_5xx_raises_server_error():
                 session_id=None,
                 redaction_count_client=0,
             )
+
+
+async def _upload(**overrides):
+    kwargs = dict(
+        server_url="https://vibeshub.test",
+        token="ghp_test",
+        tar_bytes=b"tar",
+        pr_url="https://github.com/alice/repo/pull/3",
+        plugin_version="0.2.0",
+        session_id=None,
+        redaction_count_client=0,
+    )
+    kwargs.update(overrides)
+    return await upload_bundle(**kwargs)
+
+
+_CERT_ERR = urllib_error.URLError(
+    "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+    "self signed certificate in certificate chain (_ssl.c:997)"
+)
+
+
+@pytest.mark.asyncio
+async def test_upload_retries_with_os_trust_when_default_verify_fails():
+    """A corporate proxy's root CA isn't in Python's bundled store, so the
+    first attempt fails TLS verification. The retry trusts the OS keychain."""
+    calls: list[dict] = []
+
+    def fake_urlopen(req, **kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            raise _CERT_ERR
+        return _ok_response()
+
+    with patch(
+        "vibeshub_client.upload._os_trust_context",
+        return_value=ssl.create_default_context(),
+    ), patch(
+        "vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen
+    ):
+        result = await _upload()
+
+    assert result.short_id == "abc1234567"
+    assert len(calls) == 2
+    # First attempt uses the default context; the retry passes an explicit one.
+    assert "context" not in calls[0]
+    assert "context" in calls[1]
+
+
+@pytest.mark.asyncio
+async def test_upload_cert_failure_without_os_trust_raises_actionable_error():
+    with patch(
+        "vibeshub_client.upload._os_trust_context", return_value=None
+    ), patch(
+        "vibeshub_client.upload.urllib_request.urlopen", side_effect=_CERT_ERR
+    ):
+        with pytest.raises(UploadError) as exc:
+            await _upload()
+
+    msg = str(exc.value).lower()
+    assert "intercept" in msg or "proxy" in msg
+
+
+@pytest.mark.asyncio
+async def test_upload_cert_failure_persisting_after_retry_raises_actionable_error():
+    with patch(
+        "vibeshub_client.upload._os_trust_context",
+        return_value=ssl.create_default_context(),
+    ), patch(
+        "vibeshub_client.upload.urllib_request.urlopen", side_effect=_CERT_ERR
+    ):
+        with pytest.raises(UploadError) as exc:
+            await _upload()
+
+    msg = str(exc.value).lower()
+    assert "intercept" in msg or "proxy" in msg
+
+
+@pytest.mark.asyncio
+async def test_upload_non_cert_network_error_raises_plain_error():
+    with patch(
+        "vibeshub_client.upload.urllib_request.urlopen",
+        side_effect=urllib_error.URLError("connection refused"),
+    ):
+        with pytest.raises(UploadError) as exc:
+            await _upload()
+
+    assert "network error" in str(exc.value)
+    assert "connection refused" in str(exc.value)
+
+
+def test_keychain_ca_pem_returns_none_off_macos():
+    from vibeshub_client import upload
+
+    with patch.object(upload.sys, "platform", "linux"):
+        assert upload._keychain_ca_pem() is None
+
+
+def test_keychain_ca_pem_runs_security_on_macos():
+    from vibeshub_client import upload
+
+    fake = subprocess.CompletedProcess(
+        args=[],
+        returncode=0,
+        stdout="-----BEGIN CERTIFICATE-----\nXXX\n-----END CERTIFICATE-----\n",
+        stderr="",
+    )
+    with patch.object(upload.sys, "platform", "darwin"), patch.object(
+        upload.subprocess, "run", return_value=fake
+    ) as run:
+        pem = upload._keychain_ca_pem()
+
+    assert pem is not None and "BEGIN CERTIFICATE" in pem
+    argv = run.call_args[0][0]
+    assert argv[0] == "/usr/bin/security"
+    assert argv[1] == "find-certificate"
+
+
+def test_os_trust_context_is_none_without_keychain_pem():
+    from vibeshub_client import upload
+
+    with patch.object(upload, "_keychain_ca_pem", return_value=None), patch.object(
+        upload, "_windows_ca_der", return_value=None
+    ):
+        assert upload._os_trust_context() is None
+
+
+def test_windows_ca_der_returns_none_off_windows():
+    from vibeshub_client import upload
+
+    with patch.object(upload.sys, "platform", "darwin"):
+        assert upload._windows_ca_der() is None
+
+
+def test_windows_ca_der_collects_trusted_der_from_cert_stores():
+    from vibeshub_client import upload
+
+    store_entries = {
+        "ROOT": [
+            (b"DER-ROOT-1", "x509_asn", True),
+            (b"DER-ROOT-2", "x509_asn", {"1.3.6.1.5.5.7.3.1"}),
+            (b"PKCS7-BLOB", "pkcs_7_asn", True),  # wrong encoding -> skipped
+            (b"DER-DISTRUSTED", "x509_asn", False),  # distrusted -> skipped
+        ],
+        "CA": [(b"DER-INTERMEDIATE", "x509_asn", True)],
+    }
+
+    def fake_enum(store):
+        return store_entries[store]
+
+    with patch.object(upload.sys, "platform", "win32"), patch.object(
+        upload.ssl, "enum_certificates", fake_enum, create=True
+    ):
+        der = upload._windows_ca_der()
+
+    assert der == b"DER-ROOT-1" + b"DER-ROOT-2" + b"DER-INTERMEDIATE"
