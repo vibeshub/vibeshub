@@ -89,11 +89,15 @@ traces are unchanged. For a private trace the response depends on the viewer:
 | Not logged in | `401` | `auth_required` |
 | Logged in, token lacks `repo` | `403` | `private_scope_required` |
 | Logged in, has `repo`, GitHub denies | `404` | `not_found` |
+| Logged in, has `repo`, GitHub upstream error | `502` | `github_upstream_error` |
 | Logged in, has `repo`, GitHub allows | `200` + trace | — |
 
-Private responses set `Cache-Control: private, no-store`. Public responses stay
-cacheable as today. Returning `404` (not `403`) for a genuine denial avoids
-confirming the trace exists to someone GitHub says cannot see the repo.
+Successful private responses set `Cache-Control: private, no-store`; the gated
+error responses (401/403/404/502) set `Cache-Control: no-store`. Public
+responses stay cacheable as today. Returning `404` (not `403`) for a genuine
+denial avoids confirming the trace exists to someone GitHub says cannot see the
+repo. The `502` path fails closed — a transient GitHub outage denies access
+rather than serving the trace.
 
 ### 4. List filtering
 
@@ -161,3 +165,9 @@ Frontend:
   low-frequency re-check via the fallback token on the public-trace view path.)
 - **No read-only private scope.** Imposed by GitHub's classic OAuth App scope
   model. The `repo` grant is read+write; we only ever read.
+- **Revocation lag.** `RepoAccessChecker` caches an allow/deny decision per
+  `(user_id, repo)` for ~60s, so a viewer whose GitHub repo access is revoked
+  may still load a private trace for up to that window.
+- **No global recent feed.** The backend has no homepage/recent-feed endpoint,
+  so there is nothing to filter today. If one is ever added it must exclude
+  `is_private` traces.
