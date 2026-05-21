@@ -8,6 +8,7 @@ import pytest
 from reader import ClaudeCodeTranscriptReader
 from vibeshub_client.pipeline import RunOptions, run_share_pipeline
 from vibeshub_client.upload import UploadResult
+from vibeshub_client.version import PLUGIN_VERSION
 
 FIXTURES = Path(__file__).parent / "fixtures" / "sessions"
 
@@ -65,7 +66,7 @@ async def test_pipeline_builds_bundle_with_agents(tmp_path):
     assert "main.jsonl" in names
     assert "agents/a1111111111111111.jsonl" in names
     assert "agents/a1111111111111111.meta.json" in names
-    assert captured["plugin_version"] == "0.2.1"
+    assert captured["plugin_version"] == PLUGIN_VERSION
 
 
 @pytest.mark.asyncio

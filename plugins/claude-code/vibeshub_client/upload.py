@@ -72,10 +72,32 @@ def _windows_ca_der() -> bytes | None:
     return b"".join(der_blobs) if der_blobs else None
 
 
-def _os_trust_context() -> ssl.SSLContext | None:
-    """An SSL context that also trusts the OS-managed CA store, or None if it
-    cannot be loaded. `load_verify_locations` accepts the macOS keychain PEM
-    (str) or the Windows store DER (bytes)."""
+def _truststore_context() -> ssl.SSLContext | None:
+    """An SSL context that verifies against the native OS trust store via the
+    vendored `truststore` package.
+
+    This is the same trust evaluation the system browser uses, so it sees CAs
+    installed by MDM configuration profiles or a proxy/VPN client — which a
+    raw keychain scrape can miss. Returns None on Python < 3.10 (truststore's
+    floor) or if truststore cannot be loaded for any reason; the caller falls
+    back to `_scraped_ca_context`.
+    """
+    if sys.version_info < (3, 10):
+        return None
+    try:
+        from vibeshub_client._vendor import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:
+        # Best-effort fallback path — must never propagate.
+        return None
+
+
+def _scraped_ca_context() -> ssl.SSLContext | None:
+    """Fallback for Python < 3.10 (no truststore): the default SSL context
+    augmented with CAs scraped from the macOS keychain or Windows cert stores.
+    `load_verify_locations` accepts the keychain PEM (str) or store DER
+    (bytes). None if no extra CAs can be loaded."""
     ca_data = _keychain_ca_pem() or _windows_ca_der()
     if not ca_data:
         return None
@@ -85,6 +107,12 @@ def _os_trust_context() -> ssl.SSLContext | None:
     except ssl.SSLError:
         return None
     return ctx
+
+
+def _os_trust_context() -> ssl.SSLContext | None:
+    """An SSL context that trusts the OS-managed trust store, or None if one
+    cannot be built. Prefers `truststore`; falls back to a keychain scrape."""
+    return _truststore_context() or _scraped_ca_context()
 
 
 def _request(
@@ -117,8 +145,8 @@ def _post_bytes(
         if not _is_cert_verify_error(e):
             raise UploadError(f"network error: {e}") from e
         # Default TLS verification failed — most likely a corporate proxy or
-        # VPN intercepting HTTPS. Retry once trusting the OS keychain, which
-        # is where the interception root CA lives (the browser uses it too).
+        # VPN intercepting HTTPS. Retry once trusting the OS trust store,
+        # where the interception root CA lives (the browser uses it too).
         ctx = _os_trust_context()
         if ctx is None:
             raise UploadError(f"network error: {_CERT_HELP}") from e
