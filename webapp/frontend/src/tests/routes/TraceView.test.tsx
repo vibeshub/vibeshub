@@ -68,6 +68,7 @@ describe("TraceView", () => {
       byte_size: FIXTURE.length,
       message_count: 100,
       created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
@@ -111,5 +112,48 @@ describe("TraceView", () => {
     await waitFor(() => {
       expect(screen.getByText(/500/)).toBeInTheDocument();
     });
+  });
+
+  it("shows a sign-in gate when the trace summary returns 401", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith(`/api/traces/${SHORT_ID}`)) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "auth_required" }), {
+            status: 401,
+          }),
+        );
+      }
+      return Promise.resolve(new Response("", { status: 200 }));
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const link = await screen.findByRole("link", {
+      name: /sign in with github/i,
+    });
+    expect(link.getAttribute("href")).toContain("/api/auth/github/login");
+  });
+
+  it("shows an enable-private gate when the summary returns 403", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith(`/api/traces/${SHORT_ID}`)) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ detail: "private_scope_required" }),
+            { status: 403 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response("", { status: 200 }));
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const link = await screen.findByRole("link", {
+      name: /enable private repositories/i,
+    });
+    expect(link.getAttribute("href")).toContain("scope=private");
   });
 });
