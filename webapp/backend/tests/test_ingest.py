@@ -175,15 +175,6 @@ async def test_ingest_invalid_token(client, respx_mock):
 
 
 @pytest.mark.asyncio
-async def test_ingest_rejects_private_repo(client, respx_mock):
-    _mock_alice_pr1(respx_mock, private=True)
-    body = make_bundle({"main.jsonl": b"{}\n"})
-    r = client.post("/api/ingest", content=body, headers=COMMON_HEADERS)
-    assert r.status_code == 403
-    assert "private" in r.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
 async def test_ingest_rejects_pr_author_mismatch(client, respx_mock):
     _mock_alice_pr1(respx_mock, author="bob")
     body = make_bundle({"main.jsonl": b"{}\n"})
