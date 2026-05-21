@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, TraceSummary
 from app.auth.crypto import TokenCipher
+from app.auth.scopes import has_repo_scope
 from app.auth.github import GitHubAuthError, GitHubClient
 from app.auth.sessions import get_current_user
 from app.deps import (
@@ -31,10 +32,6 @@ router = APIRouter()
 _AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
 
 
-def _has_repo_scope(user: User) -> bool:
-    return "repo" in (user.token_scopes or "").split(",")
-
-
 def _viewer_token(user: User, settings: Settings) -> str | None:
     try:
         return TokenCipher(settings.token_encryption_key).decrypt(
@@ -51,7 +48,7 @@ async def _can_view_repo(
     access: RepoAccessChecker,
 ) -> bool:
     """True if `user` may read `repo_full_name` per GitHub. Never raises."""
-    if user is None or not _has_repo_scope(user):
+    if user is None or not has_repo_scope(user):
         return False
     token = _viewer_token(user, settings)
     if token is None:
@@ -86,7 +83,7 @@ async def _require_trace_access(
         raise HTTPException(
             status_code=401, detail="auth_required", headers=no_store
         )
-    if not _has_repo_scope(user):
+    if not has_repo_scope(user):
         raise HTTPException(
             status_code=403, detail="private_scope_required", headers=no_store
         )

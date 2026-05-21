@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.crypto import TokenCipher
+from app.auth.scopes import has_repo_scope
 from app.auth.sessions import (
     DEFAULT_SESSION_TTL_DAYS,
     SESSION_COOKIE_NAME,
@@ -95,7 +96,7 @@ async def me(
         "login": user.github_login,
         "name": user.name,
         "avatar_url": user.avatar_url,
-        "has_private_access": "repo" in (user.token_scopes or "").split(","),
+        "has_private_access": has_repo_scope(user),
     }
 
 
