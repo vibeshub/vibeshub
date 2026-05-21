@@ -156,4 +156,25 @@ describe("TraceView", () => {
     });
     expect(link.getAttribute("href")).toContain("scope=private");
   });
+
+  it("renders a Private badge for a private trace", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: true,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    expect(await screen.findByText(/🔒 Private/)).toBeInTheDocument();
+  });
 });
