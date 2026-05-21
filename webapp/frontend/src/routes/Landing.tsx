@@ -64,7 +64,7 @@ export function Landing() {
           <div className="topbar-spacer" />
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
-            <a href="#how">How it works</a>
+            <a href="#trace">Live trace</a>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -107,8 +107,11 @@ export function Landing() {
                 actually built, tool by tool, edit by edit, retry by retry.
               </p>
               <div className={styles.heroActions}>
-                <a className={`${styles.btn} ${styles.btnPrimary}`} href="#how">
-                  See how it works
+                <a
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  href="#trace"
+                >
+                  See a live trace
                   <ArrowRight />
                 </a>
                 <a
@@ -157,8 +160,69 @@ export function Landing() {
               </div>
             </div>
 
-            {/* right: a real PR comment + a screenshot of the trace it links to */}
+            {/* right: how it works, as a compact vertical timeline */}
             <div className={styles.heroVisual}>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> How it works
+              </div>
+              <ol className={styles.heroFlow}>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconTerminal />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>01 · Capture</span>
+                    <p className={styles.heroFlowText}>
+                      Claude Code opens a PR — vibeshub grabs the session
+                      behind it, straight from your machine.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconShield />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>02 · Redact</span>
+                    <p className={styles.heroFlowText}>
+                      API keys, tokens, and passwords are scrubbed twice —
+                      before upload and again before storage.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconGlobe />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>03 · Share</span>
+                    <p className={styles.heroFlowText}>
+                      A link to the full trace lands on the PR as one comment —
+                      as public or private as the repo.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================== see a live trace ====================== */}
+        <section className={styles.how} id="trace">
+          <div className={styles.container}>
+            <div className={styles.eyebrow}>
+              <span className={styles.dot} /> See it
+            </div>
+            <h2 className={styles.sectionTitle}>
+              A real PR, and the trace behind it.
+            </h2>
+            <p className={styles.sectionLede}>
+              Click the trace below and walk through a real Claude Code
+              session, exactly as a teammate would see it.
+            </p>
+
+            {/* a real PR comment + a screenshot of the trace it links to */}
+            <div className={styles.traceShowcase}>
               <div className={styles.ghComment}>
                 <div className={styles.ghHead}>
                   <img
@@ -213,77 +277,6 @@ export function Landing() {
                   alt="vibeshub trace viewer showing the Claude Code session that built pull request #31"
                 />
               </a>
-            </div>
-          </div>
-        </section>
-
-        {/* ====================== how it works ====================== */}
-        <section className={styles.how} id="how">
-          <div className={styles.container}>
-            <div className={styles.eyebrow}>
-              <span className={styles.dot} /> How it works
-            </div>
-            <h2 className={styles.sectionTitle}>
-              You open a PR. The trace shares itself.
-            </h2>
-            <p className={styles.sectionLede}>
-              Nothing new to learn. Open a pull request from Claude Code the way
-              you always do — vibeshub captures the session, removes anything
-              sensitive, and links it from the PR. Your GitHub login is the only
-              account you need.
-            </p>
-
-            <div className={styles.howFlow}>
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>01 · CAPTURE</span>
-                <div className={styles.flowIcon}>
-                  <IconTerminal />
-                </div>
-                <h3 className={styles.flowTitle}>It captures itself</h3>
-                <p className={styles.flowText}>
-                  Whenever Claude Code opens a pull request for you, vibeshub
-                  grabs the session behind it — straight from your machine, the
-                  moment the PR goes up, with no extra step from you.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>auto·</span> on every PR
-                </span>
-              </article>
-
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>02 · REDACT</span>
-                <div className={styles.flowIcon}>
-                  <IconShield />
-                </div>
-                <h3 className={styles.flowTitle}>Secrets stay yours</h3>
-                <p className={styles.flowText}>
-                  Before anything is uploaded, vibeshub strips out API keys,
-                  tokens, and passwords — then checks again on the server.
-                  Teammates see your work, never your credentials.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>safe·</span> redacted twice
-                </span>
-              </article>
-
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>03 · SHARE</span>
-                <div className={styles.flowIcon}>
-                  <IconGlobe />
-                </div>
-                <h3 className={styles.flowTitle}>A link on the PR</h3>
-                <p className={styles.flowText}>
-                  vibeshub adds one comment to the pull request with a link.
-                  Click it and the whole session opens on a single page — every
-                  prompt, edit, and decision, ready to share.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>url·</span> vibeshub.ai/
-                  <span className={styles.accent}>
-                    {"{owner}/{repo}/pull/{n}/{id}"}
-                  </span>
-                </span>
-              </article>
             </div>
           </div>
         </section>
@@ -516,7 +509,7 @@ export function Landing() {
             </div>
             <div className={styles.footerLinks}>
               <a href="https://github.com/Bhavya6187/vibeshub">GitHub</a>
-              <a href="#how">How it works</a>
+              <a href="#trace">Live trace</a>
               <a href="#privacy">Privacy</a>
               <a href="#install">Install</a>
             </div>
