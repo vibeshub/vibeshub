@@ -95,7 +95,7 @@ export function Landing() {
             <div className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
                 <span className={styles.tag}>{VERSION_LABEL}</span>
-                <span>Built for Claude Code · others plug in the same way</span>
+                <span>The vibe behind every diff</span>
               </div>
               <h1 className={styles.heroH1}>
                 Every PR has<br />
