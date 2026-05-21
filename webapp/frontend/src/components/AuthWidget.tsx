@@ -57,6 +57,17 @@ export function AuthWidget() {
             zIndex: 10,
           }}
         >
+          {!user.has_private_access && (
+            <a
+              className="iconbtn"
+              href={`/api/auth/github/login?scope=private&next=${encodeURIComponent(
+                location.pathname + location.search,
+              )}`}
+              style={{ width: "100%", textAlign: "left", display: "block" }}
+            >
+              Enable private repositories
+            </a>
+          )}
           <button
             type="button"
             className="iconbtn"

@@ -9,7 +9,10 @@ const mockUser = {
   login: "alice",
   name: "Alice",
   avatar_url: "https://avatars/alice.png",
+  has_private_access: false,
 };
+
+const mockUserWithPrivate = { ...mockUser, has_private_access: true };
 
 vi.mock("../auth/AuthContext", () => ({
   useAuth: vi.fn(),
@@ -71,5 +74,41 @@ describe("AuthWidget", () => {
       </MemoryRouter>,
     );
     expect(container.textContent).toBe("");
+  });
+
+  it("shows Enable private repositories when the user lacks the scope", () => {
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      loading: false, user: mockUser, refresh: vi.fn(), signOut: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/alice/repo"]}>
+        <AuthWidget />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /@alice/i }));
+    const link = screen.getByRole("link", {
+      name: /enable private repositories/i,
+    });
+    expect(link.getAttribute("href")).toContain("scope=private");
+  });
+
+  it("hides Enable private repositories once the user has the scope", () => {
+    (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      loading: false, user: mockUserWithPrivate, refresh: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <AuthWidget />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /@alice/i }));
+    expect(
+      screen.queryByRole("link", { name: /enable private repositories/i }),
+    ).toBeNull();
   });
 });
