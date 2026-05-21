@@ -64,6 +64,9 @@ export interface ToolResult {
 export interface SlashCommand {
   name: string; // includes the leading slash, e.g. "/vibeshub:share-pr"
   args: string; // arguments passed to the command, "" when none
+  // Text the command printed (<local-command-stdout>). Set when the command
+  // produced output; "" / undefined when it printed nothing.
+  output?: string;
 }
 
 export interface UserPromptEvent {

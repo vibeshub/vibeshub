@@ -69,6 +69,56 @@ function formatSlashCommand(cmd: SlashCommand): string {
   return cmd.args ? `${cmd.name} ${cmd.args}` : cmd.name;
 }
 
+// The output a slash command printed is injected as a separate user message
+// wrapped in <local-command-stdout> / <local-command-stderr> tags. Returns the
+// combined output ("" for the literal "(no content)" placeholder) when the
+// message is *nothing but* those tags, or null for ordinary user text.
+function parseLocalCommandOutput(text: string): string | null {
+  const trimmed = text.trim();
+  if (!/^<local-command-std(?:out|err)>/.test(trimmed)) return null;
+  const re =
+    /<local-command-std(?:out|err)>([\s\S]*?)<\/local-command-std(?:out|err)>/g;
+  let m: RegExpExecArray | null;
+  let consumed = "";
+  let out = "";
+  while ((m = re.exec(trimmed)) !== null) {
+    consumed += m[0];
+    // Strip ANSI SGR escapes Claude Code leaves in command output.
+    // eslint-disable-next-line no-control-regex
+    const inner = m[1].replace(/\[[0-9;]*m/g, "").trim();
+    if (inner && inner !== "(no content)") {
+      out = out ? `${out}\n${inner}` : inner;
+    }
+  }
+  // Bail if the message held more than just the output tags.
+  if (consumed.replace(/\s+/g, "") !== trimmed.replace(/\s+/g, "")) return null;
+  return out;
+}
+
+// Attach command output to the slash command it belongs to (always the most
+// recent stream event). With no command to attach to, keep it as a subdued
+// system row rather than dropping it.
+function attachCommandOutput(
+  stream: StreamEvent[],
+  rawText: string,
+  output: string,
+  ts: string,
+  uuid: string,
+): void {
+  const last = stream[stream.length - 1];
+  if (last && last.kind === "user_prompt" && last.command) {
+    last.command.output = output;
+    return;
+  }
+  stream.push({
+    kind: "system_text",
+    text: rawText,
+    ts,
+    uuid,
+    source: "user_text",
+  });
+}
+
 // Synthetic user records injected by Claude Code itself (e.g. the Skill tool
 // body, replayed verbatim back to the model with `isMeta: true` and a
 // `sourceToolUseID`). They share `role: "user"` but are not user-authored.
@@ -160,7 +210,11 @@ export function buildSession(records: AnyRec[]): Session {
     if (r.type === "user" && msg && !meta.firstPrompt && !isMetaUserRecord(r)) {
       if (typeof msg.content === "string") {
         const cmd = parseSlashCommand(msg.content);
-        meta.firstPrompt = cmd ? formatSlashCommand(cmd) : msg.content;
+        if (cmd) {
+          meta.firstPrompt = formatSlashCommand(cmd);
+        } else if (parseLocalCommandOutput(msg.content) === null) {
+          meta.firstPrompt = msg.content;
+        }
       } else if (Array.isArray(msg.content)) {
         for (const c of msg.content as AnyRec[]) {
           if (c.type !== "text" || typeof c.text !== "string" || !c.text) {
@@ -268,11 +322,16 @@ export function buildSession(records: AnyRec[]): Session {
       const uuid = String(r.uuid ?? "");
       if (typeof msg.content === "string") {
         const cmd = parseSlashCommand(msg.content);
-        stream.push(
-          cmd
-            ? { kind: "user_prompt", text: "", command: cmd, ts, uuid }
-            : { kind: "user_prompt", text: msg.content, ts, uuid },
-        );
+        if (cmd) {
+          stream.push({ kind: "user_prompt", text: "", command: cmd, ts, uuid });
+        } else {
+          const cmdOut = parseLocalCommandOutput(msg.content);
+          if (cmdOut !== null) {
+            attachCommandOutput(stream, msg.content, cmdOut, ts, uuid);
+          } else {
+            stream.push({ kind: "user_prompt", text: msg.content, ts, uuid });
+          }
+        }
       } else if (Array.isArray(msg.content)) {
         for (const c of msg.content as AnyRec[]) {
           if (
@@ -281,6 +340,7 @@ export function buildSession(records: AnyRec[]): Session {
             c.text.length > 0
           ) {
             const cmd = parseSlashCommand(c.text);
+            const cmdOut = cmd ? null : parseLocalCommandOutput(c.text);
             if (cmd) {
               stream.push({
                 kind: "user_prompt",
@@ -289,6 +349,8 @@ export function buildSession(records: AnyRec[]): Session {
                 ts,
                 uuid,
               });
+            } else if (cmdOut !== null) {
+              attachCommandOutput(stream, c.text, cmdOut, ts, uuid);
             } else if (isSystemWrapperText(c.text)) {
               stream.push({
                 kind: "system_text",

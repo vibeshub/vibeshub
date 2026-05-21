@@ -449,6 +449,28 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.vibeshub-viewer .slash-command-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.vibeshub-viewer .slash-command-output {
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 240px;
+  overflow: auto;
+}
 
 .vibeshub-viewer .assistant-text {
   display: flex;
