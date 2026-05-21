@@ -43,3 +43,9 @@ async def test_init_state_only_warns_in_dev(monkeypatch, tmp_path, caplog):
     with caplog.at_level(logging.WARNING):
         await init_state(app)
     assert any("auth secrets unset" in r.message for r in caplog.records)
+
+
+def test_app_state_has_repo_access(client):
+    from app.github.repo_access import RepoAccessChecker
+
+    assert isinstance(client.app.state.repo_access, RepoAccessChecker)

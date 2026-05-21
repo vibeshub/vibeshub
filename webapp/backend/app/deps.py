@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.auth.github import GitHubClient
 from app.auth.oauth import build_oauth
 from app.github.public_client import PublicGitHubClient
+from app.github.repo_access import RepoAccessChecker
 from app.settings import Settings, get_settings
 from app.smoke_check import smoke_check
 from app.storage.blob import BlobStore, LocalDirBlobStore, make_azure_blob_store
@@ -34,6 +35,10 @@ async def init_state(app: FastAPI, settings: Settings | None = None) -> None:
     app.state.public_github = PublicGitHubClient(
         settings.github_api_base,
         fallback_token=settings.github_fallback_token,
+        ttl_seconds=60,
+    )
+    app.state.repo_access = RepoAccessChecker(
+        settings.github_api_base,
         ttl_seconds=60,
     )
     _validate_auth_config(settings)
@@ -88,3 +93,7 @@ def get_github(request: Request) -> GitHubClient:
 
 def get_public_github(request: Request) -> PublicGitHubClient:
     return request.app.state.public_github
+
+
+def get_repo_access(request: Request) -> RepoAccessChecker:
+    return request.app.state.repo_access
