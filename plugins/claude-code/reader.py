@@ -22,6 +22,25 @@ def _encode_cwd(cwd: str) -> str:
     return cwd.replace("/", "-")
 
 
+def _find_subagents_dir(home: Path, transcript_dir: Path, session_id: str) -> Path | None:
+    """Locate the `<session_id>/subagents` directory for a session.
+
+    The fast path is a sibling of the main transcript. But when a session runs
+    in a git worktree, Claude Code writes the main transcript under the repo's
+    project dir while writing subagent transcripts under a project dir derived
+    from the worktree cwd — so the two no longer share a parent. session_id is
+    globally unique, so fall back to scanning every project dir for it.
+    """
+    sibling = transcript_dir / session_id / "subagents"
+    if sibling.is_dir():
+        return sibling
+    projects = home / ".claude" / "projects"
+    for match in sorted(projects.glob(f"*/{session_id}/subagents")):
+        if match.is_dir():
+            return match
+    return None
+
+
 class ClaudeCodeTranscriptReader(TranscriptReader):
     def platform_id(self) -> str:
         return "claude-code"
@@ -48,18 +67,17 @@ class ClaudeCodeTranscriptReader(TranscriptReader):
         for _ in range(2):
             for c in candidates:
                 if c.is_file():
-                    subagents_dir = c.parent / session_id / "subagents"
                     return SessionPaths(
                         main_jsonl=c,
-                        subagents_dir=subagents_dir if subagents_dir.is_dir() else None,
+                        subagents_dir=_find_subagents_dir(home, c.parent, session_id),
                     )
             time.sleep(0.2)
 
         # Final probe: even when main isn't found, surface subagents/ if it
         # exists (aborted-parent edge case).
         for c in candidates:
-            subagents_dir = c.parent / session_id / "subagents"
-            if subagents_dir.is_dir():
+            subagents_dir = _find_subagents_dir(home, c.parent, session_id)
+            if subagents_dir is not None:
                 return SessionPaths(main_jsonl=c, subagents_dir=subagents_dir)
 
         return SessionPaths(main_jsonl=candidates[-1], subagents_dir=None)

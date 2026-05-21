@@ -65,7 +65,7 @@ async def test_pipeline_builds_bundle_with_agents(tmp_path):
     assert "main.jsonl" in names
     assert "agents/a1111111111111111.jsonl" in names
     assert "agents/a1111111111111111.meta.json" in names
-    assert captured["plugin_version"] == "0.2.0"
+    assert captured["plugin_version"] == "0.2.1"
 
 
 @pytest.mark.asyncio
