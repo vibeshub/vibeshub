@@ -18,6 +18,7 @@ export interface TraceSummary {
   byte_size: number;
   message_count: number;
   created_at: string;
+  is_private: boolean;
   agent_count: number;
   agents: AgentSummary[];
 }
@@ -75,6 +76,7 @@ export interface MeResponse {
   login: string;
   name: string | null;
   avatar_url: string | null;
+  has_private_access: boolean;
 }
 
 export interface GithubUser {
