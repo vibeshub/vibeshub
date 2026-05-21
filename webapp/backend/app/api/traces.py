@@ -72,27 +72,41 @@ async def _require_trace_access(
 
     Public traces pass unconditionally. Private traces produce: 401 when the
     viewer is anonymous, 403 when logged in without `repo` scope, 404 when
-    GitHub says the viewer cannot read the repo.
+    GitHub says the viewer cannot read the repo, and 502 when the GitHub
+    upstream errors out while checking repo access (RepoAccessError).
+
+    Every gated error response carries `Cache-Control: no-store` so a shared
+    proxy cannot cache a stale 401/403/404/502 for a viewer whose repo access
+    later changes.
     """
     if not trace.is_private:
         return
+    no_store = {"Cache-Control": "no-store"}
     if user is None:
-        raise HTTPException(status_code=401, detail="auth_required")
+        raise HTTPException(
+            status_code=401, detail="auth_required", headers=no_store
+        )
     if not _has_repo_scope(user):
-        raise HTTPException(status_code=403, detail="private_scope_required")
+        raise HTTPException(
+            status_code=403, detail="private_scope_required", headers=no_store
+        )
     token = _viewer_token(user, settings)
     if token is None:
-        raise HTTPException(status_code=403, detail="private_scope_required")
+        raise HTTPException(
+            status_code=403, detail="private_scope_required", headers=no_store
+        )
     try:
         allowed = await access.can_read(
             user.id, token, trace.repo_full_name
         )
     except RepoAccessError:
         raise HTTPException(
-            status_code=502, detail="github_upstream_error"
+            status_code=502, detail="github_upstream_error", headers=no_store
         )
     if not allowed:
-        raise HTTPException(status_code=404, detail="not_found")
+        raise HTTPException(
+            status_code=404, detail="not_found", headers=no_store
+        )
 
 
 async def _filter_visible(

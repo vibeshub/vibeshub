@@ -88,6 +88,7 @@ async def test_private_trace_401_for_anonymous(client, respx_mock):
     resp = client.get(f"/api/traces/{short_id}")
     assert resp.status_code == 401
     assert resp.json()["detail"] == "auth_required"
+    assert resp.headers["Cache-Control"] == "no-store"
 
 
 @pytest.mark.asyncio
