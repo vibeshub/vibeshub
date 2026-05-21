@@ -37,3 +37,29 @@ async def test_trace_has_new_subagent_columns():
         assert row.agents is None
         assert row.agent_count == 0
         assert row.blob_prefix is None
+
+
+@pytest.mark.asyncio
+async def test_trace_is_private_defaults_false(client):
+    from app.storage.models import Trace
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = Trace(
+            short_id="privdefault",
+            owner_login="alice",
+            repo_full_name="alice/repo",
+            pr_number=1,
+            pr_url="https://github.com/alice/repo/pull/1",
+            pr_title="t",
+            platform="claude-code",
+            byte_size=10,
+            message_count=1,
+            blob_prefix="traces/privdefault/",
+            agents=[],
+            agent_count=0,
+        )
+        session.add(trace)
+        await session.commit()
+        await session.refresh(trace)
+        assert trace.is_private is False
