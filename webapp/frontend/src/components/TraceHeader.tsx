@@ -17,18 +17,8 @@ export function TraceHeader({ trace }: Props) {
         <h1 className={styles.title}>
           {trace.pr_title ?? `PR #${trace.pr_number}`}
           {trace.is_private && (
-            <span
-              style={{
-                marginLeft: 8,
-                fontSize: "0.7em",
-                fontWeight: 600,
-                padding: "2px 8px",
-                borderRadius: 999,
-                border: "1px solid var(--border, #ccc)",
-                verticalAlign: "middle",
-              }}
-            >
-              🔒 Private
+            <span className={styles.privateBadge}>
+              <span aria-hidden="true">🔒</span> Private
             </span>
           )}
         </h1>

@@ -175,6 +175,8 @@ describe("TraceView", () => {
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
 
-    expect(await screen.findByText(/🔒 Private/)).toBeInTheDocument();
+    const badge = await screen.findByText(/Private/);
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain("🔒");
   });
 });
