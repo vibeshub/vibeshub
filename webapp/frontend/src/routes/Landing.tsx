@@ -17,8 +17,8 @@ const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 
 // The runnable install commands — single source of truth for the hero block,
 // the #install block, and both copy buttons.
 const INSTALL_STEPS = [
-  "git clone https://github.com/Bhavya6187/vibeshub.git ~/vibeshub",
-  "/plugin marketplace add ~/vibeshub",
+  "git clone https://github.com/Bhavya6187/vibeshub.git",
+  "/plugin marketplace add ./vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
@@ -479,11 +479,10 @@ export function Landing() {
                   <span className={styles.cmd}>git clone</span>{" "}
                   <span className={styles.arg}>
                     https://github.com/Bhavya6187/vibeshub.git
-                  </span>{" "}
-                  <span className={styles.arg}>~/vibeshub</span>
+                  </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>~/vibeshub</span>
+                  <span className={styles.arg}>./vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
                     # 2 · install the plugin inside Claude Code
