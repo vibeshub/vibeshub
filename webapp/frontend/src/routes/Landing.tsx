@@ -242,9 +242,9 @@ export function Landing() {
                 </div>
                 <h3 className={styles.flowTitle}>It captures itself</h3>
                 <p className={styles.flowText}>
-                  Open a pull request like you normally would. The moment it
-                  goes up, vibeshub grabs the Claude Code session behind it —
-                  straight from your machine, with no extra step from you.
+                  Whenever Claude Code opens a pull request for you, vibeshub
+                  grabs the session behind it — straight from your machine, the
+                  moment the PR goes up, with no extra step from you.
                 </p>
                 <span className={styles.flowTag}>
                   <span className={styles.k}>auto·</span> on every PR
@@ -418,8 +418,8 @@ export function Landing() {
             <h2 className={styles.sectionTitle}>Two minutes, one marketplace.</h2>
             <p className={styles.sectionLede}>
               Drop the plugin into Claude Code, keep using your existing{" "}
-              <code>gh</code> auth, and the next <code>gh pr create</code> you
-              run inside a Claude Code session auto-attaches a trace.
+              <code>gh</code> auth, and the next time Claude Code opens a PR
+              with <code>gh pr create</code> it auto-attaches a trace.
             </p>
 
             <div className={styles.installCard}>
@@ -494,7 +494,7 @@ export function Landing() {
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 3 · that's it — run 'gh pr create' inside Claude Code
+                    # 3 · that's it — next time Claude Code runs 'gh pr create'
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
