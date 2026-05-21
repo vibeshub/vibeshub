@@ -145,3 +145,47 @@ async def test_private_trace_raw_served_when_allowed(client, respx_mock):
     resp = client.get(f"/api/traces/{short_id}/raw", cookies=cookies)
     assert resp.status_code == 200
     assert resp.headers["Cache-Control"] == "private, no-store"
+
+
+@pytest.mark.asyncio
+async def test_pr_list_hides_private_from_anonymous(client, respx_mock):
+    _ingest(client, respx_mock, private=True)
+    resp = client.get("/api/traces/alice/repo/pull/3")
+    assert resp.status_code == 200
+    assert resp.json()["traces"] == []
+
+
+@pytest.mark.asyncio
+async def test_pr_list_shows_private_to_authorized_viewer(
+    client, respx_mock
+):
+    _ingest(client, respx_mock, private=True)
+    cookies, _ = await authed_cookies(
+        client, token_scopes="repo,read:user,user:email"
+    )
+    respx_mock.get(REPO_URL).respond(200, json={"id": 1})
+    resp = client.get("/api/traces/alice/repo/pull/3", cookies=cookies)
+    assert resp.status_code == 200
+    assert len(resp.json()["traces"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_repo_overview_hides_private_from_anonymous(
+    client, respx_mock
+):
+    _ingest(client, respx_mock, private=True)
+    resp = client.get("/api/repos/alice/repo")
+    assert resp.status_code == 200
+    assert resp.json()["traces"] == []
+    assert resp.json()["stats"]["trace_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_user_overview_hides_private_from_anonymous(
+    client, respx_mock
+):
+    _ingest(client, respx_mock, private=True)
+    resp = client.get("/api/users/alice")
+    assert resp.status_code == 200
+    assert resp.json()["traces"] == []
+    assert resp.json()["repos"] == []

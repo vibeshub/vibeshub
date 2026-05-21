@@ -4,7 +4,7 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, TraceSummary
@@ -158,6 +158,9 @@ async def list_pr_traces(
     repo: str,
     number: int,
     session: AsyncSession = Depends(get_session),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
     full_name = f"{owner}/{repo}"
     stmt = select(Trace).where(
@@ -166,6 +169,7 @@ async def list_pr_traces(
         Trace.deleted_at.is_(None),
     ).order_by(Trace.created_at.desc())
     rows = (await session.execute(stmt)).scalars().all()
+    rows = await _filter_visible(list(rows), user, settings, access)
     return {"traces": [_to_summary(t).model_dump() for t in rows]}
 
 
@@ -173,8 +177,12 @@ async def list_pr_traces(
 async def get_user_overview(
     login: str,
     session: AsyncSession = Depends(get_session),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
-    # All traces hosted under repos owned by this user (repo_full_name like "{login}/...")
+    # All traces hosted under repos owned by this user
+    # (repo_full_name like "{login}/...").
     prefix = f"{login}/"
     list_stmt = (
         select(Trace)
@@ -185,29 +193,22 @@ async def get_user_overview(
         .order_by(Trace.created_at.desc())
     )
     rows = (await session.execute(list_stmt)).scalars().all()
+    rows = await _filter_visible(list(rows), user, settings, access)
 
-    repo_stmt = (
-        select(
-            Trace.repo_full_name,
-            func.count(Trace.id).label("trace_count"),
-        )
-        .where(
-            Trace.repo_full_name.startswith(prefix),
-            Trace.deleted_at.is_(None),
-        )
-        .group_by(Trace.repo_full_name)
-        .order_by(func.count(Trace.id).desc())
-    )
-    repo_rows = (await session.execute(repo_stmt)).all()
+    # Aggregate repos from the visible rows so private repos the viewer
+    # cannot see never appear in the repo breakdown.
+    repo_counts: dict[str, int] = {}
+    for t in rows:
+        repo_counts[t.repo_full_name] = repo_counts.get(t.repo_full_name, 0) + 1
     repos = [
         {
-            "repo_full_name": r.repo_full_name,
-            "repo_name": r.repo_full_name.split("/", 1)[1]
-            if "/" in r.repo_full_name
-            else r.repo_full_name,
-            "trace_count": int(r.trace_count),
+            "repo_full_name": rn,
+            "repo_name": rn.split("/", 1)[1] if "/" in rn else rn,
+            "trace_count": count,
         }
-        for r in repo_rows
+        for rn, count in sorted(
+            repo_counts.items(), key=lambda kv: (-kv[1], kv[0])
+        )
     ]
 
     total_messages = sum(t.message_count for t in rows)
@@ -233,6 +234,9 @@ async def get_repo_overview(
     owner: str,
     repo: str,
     session: AsyncSession = Depends(get_session),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
 ):
     full_name = f"{owner}/{repo}"
     list_stmt = (
@@ -244,20 +248,17 @@ async def get_repo_overview(
         .order_by(Trace.created_at.desc())
     )
     rows = (await session.execute(list_stmt)).scalars().all()
+    rows = await _filter_visible(list(rows), user, settings, access)
 
-    contrib_stmt = (
-        select(Trace.owner_login, func.count(Trace.id).label("trace_count"))
-        .where(
-            Trace.repo_full_name == full_name,
-            Trace.deleted_at.is_(None),
-        )
-        .group_by(Trace.owner_login)
-        .order_by(func.count(Trace.id).desc())
-    )
-    contrib_rows = (await session.execute(contrib_stmt)).all()
+    # Aggregate contributors from the visible rows.
+    contrib_counts: dict[str, int] = {}
+    for t in rows:
+        contrib_counts[t.owner_login] = contrib_counts.get(t.owner_login, 0) + 1
     contributors = [
-        {"login": c.owner_login, "trace_count": int(c.trace_count)}
-        for c in contrib_rows
+        {"login": loginname, "trace_count": count}
+        for loginname, count in sorted(
+            contrib_counts.items(), key=lambda kv: (-kv[1], kv[0])
+        )
     ]
 
     pr_count = len({t.pr_number for t in rows})
