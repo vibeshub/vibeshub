@@ -17,8 +17,8 @@ const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 
 // The runnable install commands — single source of truth for the hero block,
 // the #install block, and both copy buttons.
 const INSTALL_STEPS = [
-  "git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub",
-  "/plugin marketplace add ~/code/vibeshub",
+  "git clone https://github.com/Bhavya6187/vibeshub.git",
+  "/plugin marketplace add ./vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
@@ -64,7 +64,7 @@ export function Landing() {
           <div className="topbar-spacer" />
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
-            <a href="#how">How it works</a>
+            <a href="#trace">Live trace</a>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -95,21 +95,23 @@ export function Landing() {
             <div className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
                 <span className={styles.tag}>{VERSION_LABEL}</span>
-                <span>Built for Claude Code · others plug in the same way</span>
+                <span>The vibe behind every diff</span>
               </div>
               <h1 className={styles.heroH1}>
                 Every PR has<br />
                 a story. <span className={styles.hl}>Read it.</span>
               </h1>
               <p className={styles.heroSub}>
-                vibeshub is a viewer for Claude Code conversation traces,
-                attached to the pull requests they produced. Replay how a
-                feature actually got built — tool by tool, edit by edit, retry
-                by retry.
+                A pull request shows you the diff. vibeshub shows you the Claude
+                Code session that produced it — replay how the feature was
+                actually built, tool by tool, edit by edit, retry by retry.
               </p>
               <div className={styles.heroActions}>
-                <a className={`${styles.btn} ${styles.btnPrimary}`} href="#how">
-                  See how it works
+                <a
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  href="#trace"
+                >
+                  See a live trace
                   <ArrowRight />
                 </a>
                 <a
@@ -152,14 +154,75 @@ export function Landing() {
                   {INSTALL_STEPS[2]}
                   {"\n\n"}
                   <span className={styles.cmt}>
-                    # your next 'gh pr create' auto-attaches a trace ✓
+                    # from now on, Claude Code's PRs auto-attach a trace ✓
                   </span>
                 </pre>
               </div>
             </div>
 
-            {/* right: a real PR comment + a screenshot of the trace it links to */}
+            {/* right: how it works, as a compact vertical timeline */}
             <div className={styles.heroVisual}>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> How it works
+              </div>
+              <ol className={styles.heroFlow}>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconTerminal />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>01 · Capture</span>
+                    <p className={styles.heroFlowText}>
+                      Claude Code opens a PR — vibeshub grabs the session
+                      behind it, straight from your machine.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconShield />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>02 · Redact</span>
+                    <p className={styles.heroFlowText}>
+                      API keys, tokens, and passwords are scrubbed twice —
+                      before upload and again before storage.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconGlobe />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>03 · Share</span>
+                    <p className={styles.heroFlowText}>
+                      A link to the full trace lands on the PR as one comment —
+                      as public or private as the repo.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================== see a live trace ====================== */}
+        <section className={styles.how} id="trace">
+          <div className={styles.container}>
+            <div className={styles.eyebrow}>
+              <span className={styles.dot} /> See it
+            </div>
+            <h2 className={styles.sectionTitle}>
+              A real PR, and the trace behind it.
+            </h2>
+            <p className={styles.sectionLede}>
+              Click the trace below and walk through a real Claude Code
+              session, exactly as a teammate would see it.
+            </p>
+
+            {/* a real PR comment + a screenshot of the trace it links to */}
+            <div className={styles.traceShowcase}>
               <div className={styles.ghComment}>
                 <div className={styles.ghHead}>
                   <img
@@ -218,80 +281,6 @@ export function Landing() {
           </div>
         </section>
 
-        {/* ====================== how it works ====================== */}
-        <section className={styles.how} id="how">
-          <div className={styles.container}>
-            <div className={styles.eyebrow}>
-              <span className={styles.dot} /> How it works
-            </div>
-            <h2 className={styles.sectionTitle}>
-              PR comment in, public trace out.
-            </h2>
-            <p className={styles.sectionLede}>
-              No new workflow. No new identity. Run <code>gh pr create</code>{" "}
-              inside a Claude Code session and the plugin does the rest — your
-              GitHub auth is your vibeshub identity.
-            </p>
-
-            <div className={styles.howFlow}>
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>01 · HOOK</span>
-                <div className={styles.flowIcon}>
-                  <IconTerminal />
-                </div>
-                <h3 className={styles.flowTitle}>Hook captures the session</h3>
-                <p className={styles.flowText}>
-                  A <code>PostToolUse</code> hook fires the moment{" "}
-                  <code>gh pr create</code> finishes in your shell. It locates
-                  the matching <code>.jsonl</code> transcript on disk and reads
-                  it without leaving your machine.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>file·</span>{" "}
-                  ~/.claude/projects/…/&lt;session-id&gt;.jsonl
-                </span>
-              </article>
-
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>02 · REDACT</span>
-                <div className={styles.flowIcon}>
-                  <IconShield />
-                </div>
-                <h3 className={styles.flowTitle}>Redact, twice.</h3>
-                <p className={styles.flowText}>
-                  Client pass strips known secret shapes — AWS, GitHub, OpenAI,
-                  and Anthropic keys, JWTs, <code>KEY=value</code> env
-                  assignments, high-entropy tokens. The server runs the same
-                  pass again before storage.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>client +</span> server
-                </span>
-              </article>
-
-              <article className={styles.flowStep}>
-                <span className={styles.flowNum}>03 · PUBLISH</span>
-                <div className={styles.flowIcon}>
-                  <IconGlobe />
-                </div>
-                <h3 className={styles.flowTitle}>Linked from the PR</h3>
-                <p className={styles.flowText}>
-                  vibeshub stores the transcript, mints a short URL, and the
-                  plugin lands a single <code>gh pr comment</code> on the pull
-                  request. Anyone with the link sees the same single-page
-                  viewer.
-                </p>
-                <span className={styles.flowTag}>
-                  <span className={styles.k}>url·</span> vibeshub.ai/
-                  <span className={styles.accent}>
-                    {"{owner}/{repo}/pull/{n}/{id}"}
-                  </span>
-                </span>
-              </article>
-            </div>
-          </div>
-        </section>
-
         {/* ====================== privacy ====================== */}
         <section className={styles.privacy} id="privacy">
           <div className={`${styles.container} ${styles.privacyGrid}`}>
@@ -300,12 +289,14 @@ export function Landing() {
                 <span className={styles.dot} /> Privacy &amp; redaction
               </div>
               <h2 className={styles.sectionTitle}>
-                Public by default, but never naked.
+                Only as public as your repo. Your secrets, never.
               </h2>
               <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
-                vibeshub is a public viewer. That only works if it never
-                publishes a secret. Two redaction passes, plus a one-command
-                kill switch on anything that slips through.
+                A trace inherits its repo's visibility — public repos make
+                public traces, private repos make traces only people with repo
+                access can open. Either way, secrets are scrubbed before upload
+                and again before storage, and you can delete any trace you've
+                posted at any time.
               </p>
 
               <ul className={styles.privacyPoints}>
@@ -314,9 +305,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Pattern-based stripping</strong> for AWS, GitHub,
-                    OpenAI, and Anthropic keys, JWTs, plus high-entropy tokens
-                    and <code>KEY=value</code> shapes.
+                    <strong>Visibility follows your repo.</strong> A trace from
+                    a public repo is public; a trace from a private repo opens
+                    only for people with access to that repo.
                   </span>
                 </li>
                 <li>
@@ -324,9 +315,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Double pass.</strong> Once on your machine before
-                    upload, once on the server before storage — neither pass is
-                    a guarantee, so both run.
+                    <strong>Secrets get stripped out.</strong> API keys, access
+                    tokens, and passwords — from GitHub, AWS, OpenAI, Anthropic
+                    and more — are caught and removed before anything is shared.
                   </span>
                 </li>
                 <li>
@@ -334,9 +325,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>You bring the identity.</strong> The plugin
-                    authenticates with your existing <code>gh auth token</code>{" "}
-                    — no separate account, no second password to manage.
+                    <strong>Checked twice.</strong> Once on your machine before
+                    upload, once on our server before storage. If one pass
+                    misses something, the other catches it.
                   </span>
                 </li>
                 <li>
@@ -344,9 +335,20 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>One-command revoke.</strong> Delete any trace you
-                    uploaded with <code>/share-pr delete &lt;pr-url&gt;</code> —
-                    owner is auth'd by the same <code>gh</code> token.
+                    <strong>No new account.</strong> vibeshub signs you in with
+                    your existing GitHub login — nothing extra to create, no
+                    second password to manage.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.ppMark}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Undo anytime.</strong> Change your mind about a
+                    trace? Take it down with{" "}
+                    <code>/share-pr delete &lt;pr-url&gt;</code> — and only the
+                    person who posted it can.
                   </span>
                 </li>
               </ul>
@@ -408,8 +410,8 @@ export function Landing() {
             <h2 className={styles.sectionTitle}>Two minutes, one marketplace.</h2>
             <p className={styles.sectionLede}>
               Drop the plugin into Claude Code, keep using your existing{" "}
-              <code>gh</code> auth, and your next <code>gh pr create</code>{" "}
-              auto-attaches a trace.
+              <code>gh</code> auth, and the next time Claude Code opens a PR
+              with <code>gh pr create</code> it auto-attaches a trace.
             </p>
 
             <div className={styles.installCard}>
@@ -470,11 +472,10 @@ export function Landing() {
                   <span className={styles.cmd}>git clone</span>{" "}
                   <span className={styles.arg}>
                     https://github.com/Bhavya6187/vibeshub.git
-                  </span>{" "}
-                  <span className={styles.arg}>~/code/vibeshub</span>
+                  </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>~/code/vibeshub</span>
+                  <span className={styles.arg}>./vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
                     # 2 · install the plugin inside Claude Code
@@ -484,7 +485,7 @@ export function Landing() {
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 3 · that's it — your next 'gh pr create'…
+                    # 3 · that's it — next time Claude Code runs 'gh pr create'
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
@@ -508,7 +509,7 @@ export function Landing() {
             </div>
             <div className={styles.footerLinks}>
               <a href="https://github.com/Bhavya6187/vibeshub">GitHub</a>
-              <a href="#how">How it works</a>
+              <a href="#trace">Live trace</a>
               <a href="#privacy">Privacy</a>
               <a href="#install">Install</a>
             </div>
