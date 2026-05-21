@@ -95,9 +95,14 @@ Before creating a `Trace`, look up an existing row matching
 A trace the user has deleted (`deleted_at` set) is *not* resurrected — a later
 push creates a fresh row.
 
-Stale agent blobs from a prior upload of the same session may linger in blob
-storage, but they are unreferenced by the refreshed `agents` JSON. Left as-is
-for simplicity.
+Re-uploading the same session does not normally orphan any agent blob.
+`agent_id` is parsed from the subagent sidecar *filename*, which Claude Code
+never renames, and subagents within a session are append-only — a later upload
+re-discovers every earlier subagent plus any new ones, so the refreshed
+`agents` JSON references everything previously written. The one exception is a
+subagent sidecar file that disappears between uploads (e.g. the session ran in
+a git worktree that was later removed); that leaves a harmless, unreferenced
+blob. Not worth a cleanup pass.
 
 ### 4. Comment once per trace
 
@@ -137,5 +142,6 @@ result is visible inline.
 - **No `updated_at` column / migration.** The upsert refreshes trace
   *content*, which is the requirement. A "refreshed N minutes ago" timestamp
   has no UI consumer yet.
-- **No cleanup of stale agent blobs** on upsert (see §3).
+- **No cleanup of orphaned agent blobs** on upsert — only possible via the
+  narrow worktree-removal edge in §3, and the leftover blob is harmless.
 - **No async hook execution.**
