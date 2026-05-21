@@ -418,8 +418,8 @@ export function Landing() {
             <h2 className={styles.sectionTitle}>Two minutes, one marketplace.</h2>
             <p className={styles.sectionLede}>
               Drop the plugin into Claude Code, keep using your existing{" "}
-              <code>gh</code> auth, and your next <code>gh pr create</code>{" "}
-              auto-attaches a trace.
+              <code>gh</code> auth, and the next <code>gh pr create</code> you
+              run inside a Claude Code session auto-attaches a trace.
             </p>
 
             <div className={styles.installCard}>
@@ -494,7 +494,7 @@ export function Landing() {
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 3 · that's it — your next 'gh pr create'…
+                    # 3 · that's it — run 'gh pr create' inside Claude Code
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
