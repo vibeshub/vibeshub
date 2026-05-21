@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections import OrderedDict
 from time import monotonic
 
 import httpx
@@ -27,12 +28,16 @@ class RepoAccessChecker:
         api_base: str,
         *,
         ttl_seconds: int = 60,
+        max_entries: int = 512,
         timeout: float = 10.0,
     ) -> None:
         self._api_base = api_base.rstrip("/")
         self._ttl = ttl_seconds
+        self._max_entries = max_entries
         self._timeout = timeout
-        self._cache: dict[tuple[uuid.UUID, str], tuple[bool, float]] = {}
+        self._cache: OrderedDict[
+            tuple[uuid.UUID, str], tuple[bool, float]
+        ] = OrderedDict()
 
     def cache_size(self) -> int:
         return len(self._cache)
@@ -44,6 +49,7 @@ class RepoAccessChecker:
         now = monotonic()
         cached = self._cache.get(key)
         if cached is not None and cached[1] > now:
+            self._cache.move_to_end(key)
             return cached[0]
 
         headers = {
@@ -70,4 +76,7 @@ class RepoAccessChecker:
             )
 
         self._cache[key] = (allowed, now + self._ttl)
+        self._cache.move_to_end(key)
+        while len(self._cache) > self._max_entries:
+            self._cache.popitem(last=False)
         return allowed

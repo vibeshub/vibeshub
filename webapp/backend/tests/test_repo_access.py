@@ -40,6 +40,17 @@ async def test_result_is_cached_within_ttl(respx_mock):
 
 
 @pytest.mark.asyncio
+async def test_cache_evicts_oldest_when_max_entries_exceeded(respx_mock):
+    for i in range(5):
+        respx_mock.get(f"{API}/repos/alice/repo{i}").respond(200, json={})
+    checker = RepoAccessChecker(API, max_entries=2)
+    uid = uuid.uuid4()
+    for i in range(5):
+        await checker.can_read(uid, "tok", f"alice/repo{i}")
+        assert checker.cache_size() <= 2
+
+
+@pytest.mark.asyncio
 async def test_cache_does_not_leak_across_users(respx_mock):
     respx_mock.get(f"{API}/repos/alice/repo").mock(
         side_effect=[
