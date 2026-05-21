@@ -17,8 +17,8 @@ const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 
 // The runnable install commands — single source of truth for the hero block,
 // the #install block, and both copy buttons.
 const INSTALL_STEPS = [
-  "git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub",
-  "/plugin marketplace add ~/code/vibeshub",
+  "git clone https://github.com/Bhavya6187/vibeshub.git ~/vibeshub",
+  "/plugin marketplace add ~/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
@@ -102,10 +102,9 @@ export function Landing() {
                 a story. <span className={styles.hl}>Read it.</span>
               </h1>
               <p className={styles.heroSub}>
-                vibeshub is a viewer for Claude Code conversation traces,
-                attached to the pull requests they produced. Replay how a
-                feature actually got built — tool by tool, edit by edit, retry
-                by retry.
+                A pull request shows you the diff. vibeshub shows you the Claude
+                Code session that produced it — replay how the feature was
+                actually built, tool by tool, edit by edit, retry by retry.
               </p>
               <div className={styles.heroActions}>
                 <a className={`${styles.btn} ${styles.btnPrimary}`} href="#how">
@@ -152,7 +151,7 @@ export function Landing() {
                   {INSTALL_STEPS[2]}
                   {"\n\n"}
                   <span className={styles.cmt}>
-                    # your next 'gh pr create' auto-attaches a trace ✓
+                    # from now on, Claude Code's PRs auto-attach a trace ✓
                   </span>
                 </pre>
               </div>
@@ -481,10 +480,10 @@ export function Landing() {
                   <span className={styles.arg}>
                     https://github.com/Bhavya6187/vibeshub.git
                   </span>{" "}
-                  <span className={styles.arg}>~/code/vibeshub</span>
+                  <span className={styles.arg}>~/vibeshub</span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>~/code/vibeshub</span>
+                  <span className={styles.arg}>~/vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
                     # 2 · install the plugin inside Claude Code
