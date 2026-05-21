@@ -57,11 +57,22 @@ export interface ToolResult {
   injectedText?: string;
 }
 
+// A slash-command invocation (e.g. `/share-pr`). Claude Code injects these as
+// a user message assembled from <command-name>/<command-message>/<command-args>
+// tags; the parser extracts the structured pieces so the viewer can render a
+// command chip instead of raw XML.
+export interface SlashCommand {
+  name: string; // includes the leading slash, e.g. "/vibeshub:share-pr"
+  args: string; // arguments passed to the command, "" when none
+}
+
 export interface UserPromptEvent {
   kind: "user_prompt";
   text: string;
   ts: string;
   uuid: string;
+  // Set when this prompt is a slash-command invocation rather than free text.
+  command?: SlashCommand;
 }
 
 export interface AssistantTextEvent {

@@ -38,7 +38,16 @@ export function UserPrompt({ event, idx, total, nextPromptUuid }: Props) {
             </button>
           )}
         </div>
-        <div className="user-prompt-text">{event.text}</div>
+        {event.command ? (
+          <div className="slash-command" title={`${event.command.name}${event.command.args ? " " + event.command.args : ""}`}>
+            <span className="slash-command-name">{event.command.name}</span>
+            {event.command.args && (
+              <span className="slash-command-args">{event.command.args}</span>
+            )}
+          </div>
+        ) : (
+          <div className="user-prompt-text">{event.text}</div>
+        )}
       </div>
     </div>
   );

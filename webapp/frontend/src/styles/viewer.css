@@ -424,6 +424,32 @@
   word-wrap: break-word;
 }
 
+/* Slash-command invocation (e.g. /share-pr) shown in place of prompt text. */
+.vibeshub-viewer .slash-command {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+}
+.vibeshub-viewer .slash-command-name {
+  flex: none;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+  font-weight: 600;
+}
+.vibeshub-viewer .slash-command-args {
+  min-width: 0;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .vibeshub-viewer .assistant-text {
   display: flex;
   gap: 14px;
