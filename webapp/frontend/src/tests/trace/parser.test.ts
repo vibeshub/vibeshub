@@ -416,6 +416,87 @@ describe("buildSession with slash-command user messages", () => {
     expect(session.meta.firstPrompt).toBe("/plugin marketplace update vibeshub");
   });
 
+  it("attaches local-command-stdout to the preceding slash command", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(
+            "<command-name>/reload-plugins</command-name>",
+            "u1",
+            "2026-05-21T10:00:00.000Z",
+          ),
+          userRec(
+            "<local-command-stdout>Reloaded: 5 plugins · 2 skills</local-command-stdout>",
+            "u2",
+            "2026-05-21T10:00:01.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const prompts = session.stream.filter((e) => e.kind === "user_prompt");
+    expect(prompts).toHaveLength(1);
+    const p = prompts[0] as { command?: { output?: string } };
+    expect(p.command?.output).toBe("Reloaded: 5 plugins · 2 skills");
+    expect(session.meta.userPromptCount).toBe(1);
+  });
+
+  it("treats the '(no content)' stdout placeholder as empty output", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec("<command-name>/plugin</command-name>", "u1", "2026-05-21T10:00:00.000Z"),
+          userRec(
+            "<local-command-stdout>(no content)</local-command-stdout>",
+            "u2",
+            "2026-05-21T10:00:01.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const prompts = session.stream.filter((e) => e.kind === "user_prompt");
+    expect(prompts).toHaveLength(1);
+    expect((prompts[0] as { command?: { output?: string } }).command?.output).toBe("");
+  });
+
+  it("strips ANSI escapes from command output", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec("<command-name>/model</command-name>", "u1", "2026-05-21T10:00:00.000Z"),
+          userRec(
+            "<local-command-stdout>Set model to [1mOpus 4.7[22m</local-command-stdout>",
+            "u2",
+            "2026-05-21T10:00:01.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    const p = session.stream.find((e) => e.kind === "user_prompt") as {
+      command?: { output?: string };
+    };
+    expect(p.command?.output).toBe("Set model to Opus 4.7");
+  });
+
+  it("keeps orphan command output out of the prompt stream", () => {
+    const session = buildSession(
+      parseJsonl(
+        [
+          userRec(
+            "<local-command-stdout>stray output</local-command-stdout>",
+            "u1",
+            "2026-05-21T10:00:00.000Z",
+          ),
+          assistantRec("msg_1", "a1", "2026-05-21T10:00:10.000Z"),
+        ].join("\n"),
+      ),
+    );
+    expect(session.stream.filter((e) => e.kind === "user_prompt")).toHaveLength(0);
+    expect(session.stream.filter((e) => e.kind === "system_text")).toHaveLength(1);
+  });
+
   it("treats prose that merely mentions command tags as a normal prompt", () => {
     const text =
       "Why does <command-name>/foo</command-name> render as raw XML?";
