@@ -225,30 +225,29 @@ export function Landing() {
               <span className={styles.dot} /> How it works
             </div>
             <h2 className={styles.sectionTitle}>
-              PR comment in, public trace out.
+              You open a PR. The trace shares itself.
             </h2>
             <p className={styles.sectionLede}>
-              No new workflow. No new identity. Run <code>gh pr create</code>{" "}
-              inside a Claude Code session and the plugin does the rest — your
-              GitHub auth is your vibeshub identity.
+              Nothing new to learn. Open a pull request from Claude Code the way
+              you always do — vibeshub captures the session, removes anything
+              sensitive, and links it from the PR. Your GitHub login is the only
+              account you need.
             </p>
 
             <div className={styles.howFlow}>
               <article className={styles.flowStep}>
-                <span className={styles.flowNum}>01 · HOOK</span>
+                <span className={styles.flowNum}>01 · CAPTURE</span>
                 <div className={styles.flowIcon}>
                   <IconTerminal />
                 </div>
-                <h3 className={styles.flowTitle}>Hook captures the session</h3>
+                <h3 className={styles.flowTitle}>It captures itself</h3>
                 <p className={styles.flowText}>
-                  A <code>PostToolUse</code> hook fires the moment{" "}
-                  <code>gh pr create</code> finishes in your shell. It locates
-                  the matching <code>.jsonl</code> transcript on disk and reads
-                  it without leaving your machine.
+                  Open a pull request like you normally would. The moment it
+                  goes up, vibeshub grabs the Claude Code session behind it —
+                  straight from your machine, with no extra step from you.
                 </p>
                 <span className={styles.flowTag}>
-                  <span className={styles.k}>file·</span>{" "}
-                  ~/.claude/projects/…/&lt;session-id&gt;.jsonl
+                  <span className={styles.k}>auto·</span> on every PR
                 </span>
               </article>
 
@@ -257,29 +256,27 @@ export function Landing() {
                 <div className={styles.flowIcon}>
                   <IconShield />
                 </div>
-                <h3 className={styles.flowTitle}>Redact, twice.</h3>
+                <h3 className={styles.flowTitle}>Secrets stay yours</h3>
                 <p className={styles.flowText}>
-                  Client pass strips known secret shapes — AWS, GitHub, OpenAI,
-                  and Anthropic keys, JWTs, <code>KEY=value</code> env
-                  assignments, high-entropy tokens. The server runs the same
-                  pass again before storage.
+                  Before anything is uploaded, vibeshub strips out API keys,
+                  tokens, and passwords — then checks again on the server.
+                  Teammates see your work, never your credentials.
                 </p>
                 <span className={styles.flowTag}>
-                  <span className={styles.k}>client +</span> server
+                  <span className={styles.k}>safe·</span> redacted twice
                 </span>
               </article>
 
               <article className={styles.flowStep}>
-                <span className={styles.flowNum}>03 · PUBLISH</span>
+                <span className={styles.flowNum}>03 · SHARE</span>
                 <div className={styles.flowIcon}>
                   <IconGlobe />
                 </div>
-                <h3 className={styles.flowTitle}>Linked from the PR</h3>
+                <h3 className={styles.flowTitle}>A link on the PR</h3>
                 <p className={styles.flowText}>
-                  vibeshub stores the transcript, mints a short URL, and the
-                  plugin lands a single <code>gh pr comment</code> on the pull
-                  request. Anyone with the link sees the same single-page
-                  viewer.
+                  vibeshub adds one comment to the pull request with a link.
+                  Click it and the whole session opens on a single page — every
+                  prompt, edit, and decision, ready to share.
                 </p>
                 <span className={styles.flowTag}>
                   <span className={styles.k}>url·</span> vibeshub.ai/
@@ -300,12 +297,14 @@ export function Landing() {
                 <span className={styles.dot} /> Privacy &amp; redaction
               </div>
               <h2 className={styles.sectionTitle}>
-                Public by default, but never naked.
+                Only as public as your repo. Your secrets, never.
               </h2>
               <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
-                vibeshub is a public viewer. That only works if it never
-                publishes a secret. Two redaction passes, plus a one-command
-                kill switch on anything that slips through.
+                A trace inherits its repo's visibility — public repos make
+                public traces, private repos make traces only people with repo
+                access can open. Either way, secrets are scrubbed before upload
+                and again before storage, and you can delete any trace you've
+                posted at any time.
               </p>
 
               <ul className={styles.privacyPoints}>
@@ -314,9 +313,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Pattern-based stripping</strong> for AWS, GitHub,
-                    OpenAI, and Anthropic keys, JWTs, plus high-entropy tokens
-                    and <code>KEY=value</code> shapes.
+                    <strong>Visibility follows your repo.</strong> A trace from
+                    a public repo is public; a trace from a private repo opens
+                    only for people with access to that repo.
                   </span>
                 </li>
                 <li>
@@ -324,9 +323,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Double pass.</strong> Once on your machine before
-                    upload, once on the server before storage — neither pass is
-                    a guarantee, so both run.
+                    <strong>Secrets get stripped out.</strong> API keys, access
+                    tokens, and passwords — from GitHub, AWS, OpenAI, Anthropic
+                    and more — are caught and removed before anything is shared.
                   </span>
                 </li>
                 <li>
@@ -334,9 +333,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>You bring the identity.</strong> The plugin
-                    authenticates with your existing <code>gh auth token</code>{" "}
-                    — no separate account, no second password to manage.
+                    <strong>Checked twice.</strong> Once on your machine before
+                    upload, once on our server before storage. If one pass
+                    misses something, the other catches it.
                   </span>
                 </li>
                 <li>
@@ -344,9 +343,20 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>One-command revoke.</strong> Delete any trace you
-                    uploaded with <code>/share-pr delete &lt;pr-url&gt;</code> —
-                    owner is auth'd by the same <code>gh</code> token.
+                    <strong>No new account.</strong> vibeshub signs you in with
+                    your existing GitHub login — nothing extra to create, no
+                    second password to manage.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.ppMark}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Undo anytime.</strong> Change your mind about a
+                    trace? Take it down with{" "}
+                    <code>/share-pr delete &lt;pr-url&gt;</code> — and only the
+                    person who posted it can.
                   </span>
                 </li>
               </ul>
