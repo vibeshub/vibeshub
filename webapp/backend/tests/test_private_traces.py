@@ -222,6 +222,89 @@ async def test_user_overview_hides_private_from_anonymous(
     assert resp.json()["repos"] == []
 
 
+def _ingest_org_repo(
+    client, respx_mock, *, owner: str, repo: str, pr: int, private: bool,
+    uploader: str = "alice",
+) -> str:
+    """Ingest a trace for a PR in an org-owned repo (owner != uploader)."""
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": uploader, "id": 7}
+    )
+    full_name = f"{owner}/{repo}"
+    respx_mock.get(
+        f"https://api.github.test/repos/{full_name}/pulls/{pr}"
+    ).respond(
+        200,
+        json={
+            "number": pr,
+            "title": "Hello",
+            "user": {"login": uploader},
+            "html_url": f"https://github.com/{full_name}/pull/{pr}",
+            "head": {"repo": {"private": private, "full_name": full_name}},
+            "base": {"repo": {"private": private, "full_name": full_name}},
+        },
+    )
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
+    resp = client.post(
+        "/api/ingest",
+        content=body,
+        headers=_ingest_headers(f"https://github.com/{full_name}/pull/{pr}"),
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["short_id"]
+
+
+@pytest.mark.asyncio
+async def test_user_overview_private_org_trace_shown_to_authorized_viewer(
+    client, respx_mock
+):
+    # alice uploaded a trace for a PR in a *private* org repo.
+    private_id = _ingest_org_repo(
+        client, respx_mock, owner="some-org", repo="bots", pr=20,
+        private=True, uploader="alice",
+    )
+    # bob views alice's profile; GitHub grants bob read access to the repo.
+    cookies, _ = await authed_cookies(
+        client, github_id=200, login="bob",
+        token_scopes="repo,read:user,user:email",
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/some-org/bots"
+    ).respond(200, json={"id": 1})
+
+    resp = client.get("/api/users/alice", cookies=cookies)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert {t["short_id"] for t in body["traces"]} == {private_id}
+
+
+@pytest.mark.asyncio
+async def test_user_overview_private_org_trace_hidden_from_other_viewer(
+    client, respx_mock
+):
+    # alice uploaded a trace for a PR in a *private* org repo.
+    _ingest_org_repo(
+        client, respx_mock, owner="some-org", repo="bots", pr=20,
+        private=True, uploader="alice",
+    )
+    # bob views alice's profile; GitHub denies bob read access (404).
+    cookies, _ = await authed_cookies(
+        client, github_id=200, login="bob",
+        token_scopes="repo,read:user,user:email",
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/some-org/bots"
+    ).respond(404, json={})
+
+    resp = client.get("/api/users/alice", cookies=cookies)
+    assert resp.status_code == 200
+    body = resp.json()
+    # The private org trace is gated behind bob's GitHub repo access.
+    assert body["traces"] == []
+    assert body["repos"] == []
+    assert body["stats"]["trace_count"] == 0
+
+
 @pytest.mark.asyncio
 async def test_user_overview_mixed_public_private_for_anonymous(
     client, respx_mock

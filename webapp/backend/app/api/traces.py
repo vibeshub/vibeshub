@@ -4,7 +4,7 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, TraceSummary
@@ -178,13 +178,20 @@ async def get_user_overview(
     settings: Settings = Depends(get_app_settings),
     access: RepoAccessChecker = Depends(get_repo_access),
 ):
-    # All traces hosted under repos owned by this user
-    # (repo_full_name like "{login}/...").
+    # Traces uploaded by this user (owner_login) plus any traces hosted
+    # under repos in this user's namespace (repo_full_name "{login}/...").
+    # The union keeps org-repo uploads on the uploader's own profile while
+    # still serving an org's page (an org has no owner_login matches, so it
+    # falls back to the namespace prefix). Private rows are gated below by
+    # _filter_visible against the *viewer's* GitHub repo access.
     prefix = f"{login}/"
     list_stmt = (
         select(Trace)
         .where(
-            Trace.repo_full_name.startswith(prefix),
+            or_(
+                Trace.owner_login == login,
+                Trace.repo_full_name.startswith(prefix),
+            ),
             Trace.deleted_at.is_(None),
         )
         .order_by(Trace.created_at.desc())
