@@ -20,7 +20,6 @@ export function TraceViewer({
   repoOwner,
   repoName,
 }: Props) {
-  const [showReasoning, setShowReasoning] = useState(false);
   const [showSystemEvents, setShowSystemEvents] = useState(false);
 
   const empty = session.stream.length === 0;
@@ -41,15 +40,12 @@ export function TraceViewer({
       ) : (
         <>
           <ThreadControls
-            showReasoning={showReasoning}
-            setShowReasoning={setShowReasoning}
             showSystemEvents={showSystemEvents}
             setShowSystemEvents={setShowSystemEvents}
           />
           <Thread
             session={session}
             shortId={shortId}
-            showReasoning={showReasoning}
             showSystemEvents={showSystemEvents}
           />
         </>

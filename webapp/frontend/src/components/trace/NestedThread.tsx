@@ -7,7 +7,6 @@ import { progressByTool } from "./parser";
 interface Props {
   session: Session;
   shortId: string;
-  showReasoning: boolean;
 }
 
 // Stripped-down Thread variant for subagent traces:
@@ -21,7 +20,7 @@ interface Props {
 // shortId and the subagent session's own agents list are forwarded into
 // ToolCard so any nested Agent tool use can lazy-fetch its own subagent
 // trace recursively.
-export function NestedThread({ session, shortId, showReasoning }: Props) {
+export function NestedThread({ session, shortId }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
   const agents = session.meta.agents ?? [];
@@ -34,7 +33,7 @@ export function NestedThread({ session, shortId, showReasoning }: Props) {
     if (e.kind === "assistant_text") {
       out.push(<AssistantText event={e} key={key} />);
     } else if (e.kind === "thinking") {
-      if (showReasoning) out.push(<ThinkingBlock event={e} key={key} />);
+      out.push(<ThinkingBlock event={e} key={key} />);
     } else if (e.kind === "tool_use") {
       out.push(
         <ToolCard

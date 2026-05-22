@@ -10,7 +10,6 @@ import { progressByTool } from "./parser";
 interface Props {
   session: Session;
   shortId: string;
-  showReasoning: boolean;
   showSystemEvents: boolean;
 }
 
@@ -38,7 +37,6 @@ function buildNextPromptIndex(stream: StreamEvent[]): Array<string | null> {
 export function Thread({
   session,
   shortId,
-  showReasoning,
   showSystemEvents,
 }: Props) {
   const stream = session.stream;
@@ -82,7 +80,7 @@ export function Thread({
       continue;
     }
     if (e.kind === "thinking") {
-      if (showReasoning) out.push(<ThinkingBlock event={e} key={key} />);
+      out.push(<ThinkingBlock event={e} key={key} />);
       continue;
     }
     if (e.kind === "tool_use") {

@@ -1,6 +1,4 @@
 interface Props {
-  showReasoning: boolean;
-  setShowReasoning: (v: boolean) => void;
   showSystemEvents: boolean;
   setShowSystemEvents: (v: boolean) => void;
 }
@@ -28,18 +26,11 @@ function Toggle({
 }
 
 export function ThreadControls({
-  showReasoning,
-  setShowReasoning,
   showSystemEvents,
   setShowSystemEvents,
 }: Props) {
   return (
     <div className="thread-controls">
-      <Toggle
-        on={showReasoning}
-        onClick={() => setShowReasoning(!showReasoning)}
-        label="Show reasoning"
-      />
       <Toggle
         on={showSystemEvents}
         onClick={() => setShowSystemEvents(!showSystemEvents)}

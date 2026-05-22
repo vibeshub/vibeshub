@@ -60,10 +60,6 @@ test("TraceView renders the hero, tools chips, timeline, and thread", async ({
   await expect(page.locator(".tools-chips-label")).toBeVisible();
 
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
-
-  await expect(
-    page.getByRole("button", { name: /show reasoning/i }),
-  ).toBeVisible();
 });
 
 test("clicking a tool card expands its body", async ({ page }) => {
