@@ -29,4 +29,34 @@ describe("Privacy", () => {
       screen.getByRole("heading", { level: 1, name: /privacy policy/i }),
     ).toBeInTheDocument();
   });
+
+  it("renders each major policy section", () => {
+    renderPrivacy();
+    const sections = [
+      /what we collect/i,
+      /redaction/i,
+      /how we use/i,
+      /visibility & sharing/i,
+      /third parties/i,
+      /retention & deletion/i,
+      /your rights & contact/i,
+      /changes to this policy/i,
+    ];
+    for (const name of sections) {
+      expect(
+        screen.getByRole("heading", { level: 2, name }),
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("shows the contact email as a mailto link", () => {
+    renderPrivacy();
+    const link = screen.getByRole("link", { name: /bhavya@vibeshub\.ai/i });
+    expect(link).toHaveAttribute("href", "mailto:bhavya@vibeshub.ai");
+  });
+
+  it("states an effective date", () => {
+    renderPrivacy();
+    expect(screen.getByText(/effective .*2026/i)).toBeInTheDocument();
+  });
 });
