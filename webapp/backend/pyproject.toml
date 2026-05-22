@@ -23,6 +23,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "respx>=0.21",
     "aiosqlite>=0.20",
+    "python-multipart>=0.0.9",
     "azure-storage-blob>=12.19",
     "azure-identity>=1.15",
 ]
