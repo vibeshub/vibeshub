@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pr_url import parse_pr_url
 from app.api.schemas import IngestResponse
+from app.api.trace_service import create_or_update_trace
 from app.auth.github import GitHubAPIError, GitHubAuthError, GitHubClient
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
-from app.message_count import count_messages
 from app.redact.bundle import BundleError, BundleSizeError, unpack_and_redact
-from app.short_id import generate
 from app.storage.blob import BlobStore
-from app.storage.models import Trace
 from app.settings import Settings
 
 
@@ -113,101 +109,30 @@ async def ingest(
     except BundleError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Upsert: a re-upload carrying the same session_id for this PR refreshes
-    # that session's existing trace (stable short_id / URL) instead of adding
-    # a new row. A null session_id always creates a fresh trace. A trace the
-    # user has deleted (deleted_at set) is not resurrected.
-    #
-    # This is a best-effort select-then-update: there is no unique constraint
-    # on (repo_full_name, pr_number, session_id), so two truly-concurrent
-    # uploads for the same session could both insert. In practice session_id
-    # is unique per Claude Code session and its upload hook is synchronous,
-    # so concurrent same-session uploads do not occur.
-    existing: Trace | None = None
-    if x_vibeshub_session_id:
-        existing = (
-            await session.execute(
-                select(Trace)
-                .where(
-                    Trace.repo_full_name == pr.repo_full_name,
-                    Trace.pr_number == pr.number,
-                    Trace.session_id == x_vibeshub_session_id,
-                    Trace.deleted_at.is_(None),
-                )
-                .order_by(Trace.created_at.desc())
-            )
-        ).scalars().first()
-
-    created = existing is None
-    sid = existing.short_id if existing is not None else generate()
-    blob_prefix = f"traces/{sid}/"
-    await blob_store.put(f"{blob_prefix}main.jsonl", unpacked.main_bytes)
-
-    agent_summaries: list[dict] = []
-    for agent in unpacked.agents:
-        await blob_store.put(
-            f"{blob_prefix}agents/{agent.agent_id}.jsonl",
-            agent.jsonl_bytes,
-        )
-        await blob_store.put(
-            f"{blob_prefix}agents/{agent.agent_id}.meta.json",
-            json.dumps(agent.meta, ensure_ascii=False).encode("utf-8"),
-        )
-        agent_summaries.append({
-            "agent_id": agent.agent_id,
-            "tool_use_id": agent.meta.get("toolUseId"),
-            "agent_type": agent.meta["agentType"],
-            "description": agent.meta["description"],
-            "message_count": count_messages(agent.jsonl_bytes),
-        })
-
-    message_count_main = count_messages(unpacked.main_bytes)
-    byte_size = len(unpacked.main_bytes) + sum(
-        len(a.jsonl_bytes) for a in unpacked.agents
+    result = await create_or_update_trace(
+        session=session,
+        blob_store=blob_store,
+        unpacked=unpacked,
+        owner_login=user.login,
+        platform=platform,
+        plugin_version=plugin_version,
+        session_id=x_vibeshub_session_id,
+        redaction_count_client=redaction_count_client,
+        repo_full_name=pr.repo_full_name,
+        pr_number=pr.number,
+        pr_url=pr.html_url,
+        pr_title=pr.title,
+        is_private=pr.repo_is_private,
     )
-
-    if existing is not None:
-        trace = existing
-        trace.pr_url = pr.html_url
-        trace.pr_title = pr.title
-        trace.platform = platform
-        trace.plugin_version = plugin_version
-        trace.byte_size = byte_size
-        trace.message_count = message_count_main
-        trace.redaction_count_client = redaction_count_client
-        trace.redaction_count_server = unpacked.total_redactions
-        trace.is_private = pr.repo_is_private
-        trace.blob_path = None
-        trace.blob_prefix = blob_prefix
-        trace.agents = agent_summaries
-        trace.agent_count = len(agent_summaries)
-    else:
-        trace = Trace(
-            short_id=sid,
-            owner_login=user.login,
-            repo_full_name=pr.repo_full_name,
-            pr_number=pr.number,
-            pr_url=pr.html_url,
-            pr_title=pr.title,
-            platform=platform,
-            plugin_version=plugin_version,
-            session_id=x_vibeshub_session_id,
-            byte_size=byte_size,
-            message_count=message_count_main,
-            redaction_count_client=redaction_count_client,
-            redaction_count_server=unpacked.total_redactions,
-            is_private=pr.repo_is_private,
-            blob_path=None,
-            blob_prefix=blob_prefix,
-            agents=agent_summaries,
-            agent_count=len(agent_summaries),
-        )
-        session.add(trace)
     await session.commit()
+    trace = result.trace
+    created = result.created
 
     return IngestResponse(
         trace_id=str(trace.id),
-        short_id=sid,
-        trace_url=_trace_url(settings, parsed.owner, parsed.repo, parsed.number, sid),
+        short_id=trace.short_id,
+        trace_url=_trace_url(
+            settings, parsed.owner, parsed.repo, parsed.number, trace.short_id
+        ),
         created=created,
     )
