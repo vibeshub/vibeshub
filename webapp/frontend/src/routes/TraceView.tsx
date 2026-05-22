@@ -5,7 +5,6 @@ import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PrivateTraceGate } from "../components/PrivateTraceGate";
-import { TraceHeader } from "../components/TraceHeader";
 import { TraceViewer } from "../components/trace/TraceViewer";
 import { buildSession, parseJsonl } from "../components/trace/parser";
 import type { Session } from "../components/trace/types";
@@ -68,11 +67,11 @@ export function TraceView() {
 
   return (
     <div className={styles.container}>
-      <TraceHeader trace={head.trace} />
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (
         <TraceViewer
+          trace={head.trace}
           session={session}
           shortId={head.trace.short_id}
           rawHref={`/api/traces/${head.trace.short_id}/raw`}
