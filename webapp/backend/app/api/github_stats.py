@@ -217,3 +217,82 @@ async def get_user(
         "created_at": profile.get("created_at"),
         "stars_truncated": stars_truncated,
     }
+
+
+# GitHub's contribution calendar (the green-squares graph) is only exposed via
+# the GraphQL API — there is no REST equivalent. The calendar always spans the
+# trailing 12 months and GitHub computes the per-user intensity quartiles for
+# us, which map cleanly onto a 0-4 heatmap scale.
+_CONTRIBUTIONS_QUERY = """
+query Contributions($login: String!) {
+  user(login: $login) {
+    contributionsCollection {
+      contributionCalendar {
+        totalContributions
+        weeks {
+          contributionDays {
+            date
+            contributionCount
+            contributionLevel
+          }
+        }
+      }
+    }
+  }
+}
+""".strip()
+
+_CONTRIBUTION_LEVELS = {
+    "NONE": 0,
+    "FIRST_QUARTILE": 1,
+    "SECOND_QUARTILE": 2,
+    "THIRD_QUARTILE": 3,
+    "FOURTH_QUARTILE": 4,
+}
+
+
+def _project_contributions(login: str, calendar: dict) -> dict:
+    days: list[dict] = []
+    for week in calendar.get("weeks", []):
+        for day in week.get("contributionDays", []):
+            days.append(
+                {
+                    "date": day["date"],
+                    "count": day.get("contributionCount", 0),
+                    "level": _CONTRIBUTION_LEVELS.get(
+                        day.get("contributionLevel"), 0
+                    ),
+                }
+            )
+    return {
+        "login": login,
+        "total": calendar.get("totalContributions", 0),
+        "days": days,
+    }
+
+
+@router.get("/users/{login}/contributions")
+async def get_user_contributions(
+    login: str,
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    gh: PublicGitHubClient = Depends(get_public_github),
+):
+    if not settings.github_fallback_token and user is None:
+        raise HTTPException(status_code=503, detail="github_not_configured")
+    try:
+        data = await gh.graphql(
+            _CONTRIBUTIONS_QUERY,
+            {"login": login},
+            viewer_token=_viewer_token(user, settings),
+            # Contribution counts move at most once a day; cache generously.
+            ttl_seconds=600,
+        )
+    except Exception as exc:
+        raise _handle_errors(exc, not_found_detail="user_not_found") from exc
+
+    user_node = (data or {}).get("user")
+    if user_node is None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    calendar = user_node["contributionsCollection"]["contributionCalendar"]
+    return _project_contributions(login, calendar)

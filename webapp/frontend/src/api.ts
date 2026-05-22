@@ -1,4 +1,5 @@
 import type {
+  GithubContributions,
   GithubRepo,
   GithubRepoListPage,
   GithubUser,
@@ -128,4 +129,14 @@ export async function fetchGithubRepo(
     { credentials: "same-origin" },
   );
   return jsonOrThrow<GithubRepo>(r);
+}
+
+export async function fetchGithubContributions(
+  login: string,
+): Promise<GithubContributions> {
+  const r = await fetch(
+    `/api/github/users/${encodeURIComponent(login)}/contributions`,
+    { credentials: "same-origin" },
+  );
+  return jsonOrThrow<GithubContributions>(r);
 }

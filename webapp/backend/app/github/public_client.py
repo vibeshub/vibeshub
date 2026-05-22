@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -88,6 +89,90 @@ class PublicGitHubClient:
         params: dict | None = None,
     ) -> tuple[Any, Optional[str]]:
         return await self._get(path, viewer_token=viewer_token, params=params)
+
+    async def graphql(
+        self,
+        query: str,
+        variables: dict,
+        *,
+        viewer_token: str | None,
+        ttl_seconds: int | None = None,
+    ) -> Any:
+        """POST a GraphQL query and return its ``data`` object.
+
+        Cached and single-flighted like ``get_json``, keyed on the query
+        text plus variables. GraphQL ``errors`` carrying a ``NOT_FOUND``
+        type are surfaced as :class:`GitHubNotFound`; any other error list
+        becomes a :class:`GitHubUpstreamError`.
+        """
+        token = self._select_token(viewer_token)
+        ttl = self._ttl if ttl_seconds is None else ttl_seconds
+        key = self._key(
+            "POST /graphql",
+            {"q": query, "v": json.dumps(variables, sort_keys=True)},
+        )
+        now = monotonic()
+
+        cached = self._cache.get(key)
+        if cached is not None and cached.expires_at > now:
+            self._cache.move_to_end(key)
+            return cached.payload
+
+        lock = self._locks.setdefault(key, asyncio.Lock())
+        try:
+            async with lock:
+                cached = self._cache.get(key)
+                if cached is not None and cached.expires_at > monotonic():
+                    self._cache.move_to_end(key)
+                    return cached.payload
+
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                }
+                try:
+                    resp = await self._http.post(
+                        f"{self._api_base}/graphql",
+                        json={"query": query, "variables": variables},
+                        headers=headers,
+                    )
+                except httpx.HTTPError as exc:
+                    raise GitHubUpstreamError(0, str(exc)) from exc
+
+                if resp.status_code == 401:
+                    raise GitHubAuthError("upstream 401")
+                if resp.status_code == 403 and resp.headers.get(
+                    "X-RateLimit-Remaining"
+                ) == "0":
+                    reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
+                    raise GitHubRateLimited(reset_at_epoch=reset)
+                if resp.status_code != 200:
+                    raise GitHubUpstreamError(resp.status_code, resp.text)
+
+                body = resp.json()
+                errors = body.get("errors")
+                if errors:
+                    if any(e.get("type") == "NOT_FOUND" for e in errors):
+                        raise GitHubNotFound("/graphql")
+                    raise GitHubUpstreamError(200, str(errors))
+
+                data = body.get("data")
+                entry = _Entry(
+                    etag=None,
+                    payload=data,
+                    expires_at=monotonic() + ttl,
+                    link=None,
+                )
+                self._cache[key] = entry
+                self._cache.move_to_end(key)
+                while len(self._cache) > self._max_entries:
+                    evicted_key, _ = self._cache.popitem(last=False)
+                    self._locks.pop(evicted_key, None)
+                return data
+        finally:
+            if key not in self._cache:
+                self._locks.pop(key, None)
 
     # --- internals --------------------------------------------------------
 
