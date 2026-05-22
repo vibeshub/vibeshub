@@ -1,11 +1,14 @@
 import { useState } from "react";
+import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
+import { TraceHeader } from "../TraceHeader";
 import { ViewerTopbar } from "./ViewerTopbar";
 import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
 
 interface Props {
+  trace: TraceSummary;
   session: Session;
   shortId: string;
   rawHref: string;
@@ -14,6 +17,7 @@ interface Props {
 }
 
 export function TraceViewer({
+  trace,
   session,
   shortId,
   rawHref,
@@ -26,11 +30,14 @@ export function TraceViewer({
 
   return (
     <div className="vibeshub-viewer">
-      <ViewerTopbar
-        session={session}
-        repoOwner={repoOwner}
-        repoName={repoName}
-      />
+      <div className="viewer-header">
+        <ViewerTopbar
+          session={session}
+          repoOwner={repoOwner}
+          repoName={repoName}
+        />
+        <TraceHeader trace={trace} />
+      </div>
       <Hero session={session} />
       {empty ? (
         <div className="empty-state">

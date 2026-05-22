@@ -6,11 +6,15 @@
   flex-direction: column;
 }
 
-/* ---------- top bar ---------- */
-.vibeshub-viewer .topbar {
+/* ---------- sticky header (top bar + trace header stacked) ---------- */
+.vibeshub-viewer .viewer-header {
   position: sticky;
   top: 0;
   z-index: 30;
+}
+
+/* ---------- top bar ---------- */
+.vibeshub-viewer .topbar {
   background: color-mix(in oklab, var(--bg) 80%, transparent);
   backdrop-filter: saturate(140%) blur(12px);
   -webkit-backdrop-filter: saturate(140%) blur(12px);
