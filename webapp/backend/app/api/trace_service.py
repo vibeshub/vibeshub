@@ -23,9 +23,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.pr_url import parse_pr_url
+from app.auth.github import GitHubAPIError, GitHubClient
 from app.message_count import count_messages
 from app.redact.bundle import UnpackedBundle
 from app.short_id import generate
@@ -172,12 +175,6 @@ async def create_or_update_trace(
         session.add(trace)
 
     return TraceWriteResult(trace=trace, created=created)
-
-
-from fastapi import HTTPException
-
-from app.api.pr_url import parse_pr_url
-from app.auth.github import GitHubAPIError, GitHubClient
 
 
 @dataclass(frozen=True)

@@ -11,6 +11,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.schemas import IngestResponse
 from app.api.trace_service import create_or_update_trace, resolve_association
 from app.auth.crypto import TokenCipher
 from app.auth.github import GitHubClient
@@ -30,7 +31,11 @@ def _trace_url(settings: Settings, sid: str) -> str:
     return f"{base}/t/{sid}"
 
 
-@router.post("/api/uploads", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/api/uploads",
+    status_code=status.HTTP_201_CREATED,
+    response_model=IngestResponse,
+)
 async def create_upload(
     transcript: UploadFile = File(...),
     subagents: UploadFile | None = File(default=None),
@@ -42,7 +47,7 @@ async def create_upload(
     github: GitHubClient = Depends(get_github),
     settings: Settings = Depends(get_app_settings),
     user: User | None = Depends(get_current_user),
-) -> dict:
+) -> IngestResponse:
     if user is None:
         raise HTTPException(status_code=403, detail="auth_required")
 
@@ -115,9 +120,9 @@ async def create_upload(
     )
     await session.commit()
 
-    return {
-        "trace_id": str(result.trace.id),
-        "short_id": result.trace.short_id,
-        "trace_url": _trace_url(settings, result.trace.short_id),
-        "created": result.created,
-    }
+    return IngestResponse(
+        trace_id=str(result.trace.id),
+        short_id=result.trace.short_id,
+        trace_url=_trace_url(settings, result.trace.short_id),
+        created=result.created,
+    )
