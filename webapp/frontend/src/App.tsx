@@ -6,6 +6,7 @@ import { NotFound } from "./routes/NotFound";
 import { PrTracesList } from "./routes/PrTracesList";
 import { RepoPage } from "./routes/RepoPage";
 import { TraceView } from "./routes/TraceView";
+import { UploadPage } from "./routes/UploadPage";
 import { UserPage } from "./routes/UserPage";
 
 export function App() {
@@ -15,6 +16,7 @@ export function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
         <Route path="t/:shortId" element={<TraceView />} />
+        <Route path="upload" element={<UploadPage />} />
         <Route
           path=":owner/:repo/pull/:number"
           element={<PrTracesList />}
