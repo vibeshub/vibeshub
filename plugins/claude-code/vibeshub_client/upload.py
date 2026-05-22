@@ -130,6 +130,7 @@ class UploadResult:
     trace_id: str
     short_id: str
     trace_url: str
+    created: bool = True
 
 
 def _post_bytes(
@@ -196,4 +197,5 @@ async def upload_bundle(
         trace_id=data["trace_id"],
         short_id=data["short_id"],
         trace_url=data["trace_url"],
+        created=data.get("created", True),
     )
