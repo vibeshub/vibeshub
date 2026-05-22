@@ -1,18 +1,7 @@
-/* Dashboard.module.css — the signed-in homepage.
+/* UserPage.module.css — the profile page.
    Lives inside .page-shell so it inherits the topbar/footer chrome and the
    shared .stat-strip / .trace-list / .side-card primitives from pages.css.
    Tokens come from tokens.css. */
-
-.shell {
-  min-height: 100vh;
-}
-
-/* shared centered column — matches .page width without its vertical padding */
-.wrap {
-  max-width: var(--header-width);
-  margin: 0 auto;
-  padding: 0 32px;
-}
 
 /* staggered entrance for the stacked sections */
 .rise {
@@ -46,257 +35,6 @@
     opacity: 1;
     animation: none;
   }
-}
-
-/* ===================================================================
-   HERO — greeting band with a dotted-grid backdrop
-   ================================================================ */
-.hero {
-  position: relative;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 56px 0 52px;
-}
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    oklch(0.5 0.01 75 / 0.07) 1px,
-    transparent 0
-  );
-  background-size: 22px 22px;
-  mask-image: radial-gradient(
-    ellipse 70% 90% at 25% 40%,
-    black 20%,
-    transparent 78%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 70% 90% at 25% 40%,
-    black 20%,
-    transparent 78%
-  );
-}
-:global([data-theme="dark"]) .hero::before {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    oklch(0.9 0.01 75 / 0.06) 1px,
-    transparent 0
-  );
-}
-
-.heroRow {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 40px;
-  align-items: center;
-}
-
-.heroLeft {
-  min-width: 0;
-}
-
-/* monospace eyebrow with a live status dot */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 11px var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  color: var(--text-faint);
-}
-.eyebrow .pulse {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--tool-bash);
-  box-shadow: 0 0 0 0 color-mix(in oklab, var(--tool-bash) 60%, transparent);
-  animation: pulse 2.4s ease-out infinite;
-}
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--tool-bash) 55%, transparent);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .eyebrow .pulse {
-    animation: none;
-  }
-}
-
-.greeting {
-  margin: 16px 0 0;
-  font-size: clamp(30px, 4.4vw, 46px);
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-  font-weight: 600;
-  color: var(--text-strong);
-  text-wrap: balance;
-}
-.greeting .name {
-  color: var(--accent-strong);
-  font-style: italic;
-  font-weight: 500;
-}
-
-.lede {
-  margin: 14px 0 0;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--text-muted);
-  max-width: 520px;
-  text-wrap: pretty;
-}
-.lede strong {
-  color: var(--text-strong);
-  font-weight: 600;
-  font-feature-settings: "tnum";
-}
-
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-/* ----- buttons (local, so the dashboard is self-contained) ----- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 15px;
-  border-radius: 9px;
-  font-size: 13.5px;
-  font-weight: 500;
-  border: 1px solid transparent;
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    transform 80ms ease,
-    color 120ms ease;
-}
-.btn:hover {
-  text-decoration: none;
-}
-.btn:active {
-  transform: translateY(1px);
-}
-.btn svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-.btnPrimary {
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  border-color: var(--text-strong);
-}
-.btnPrimary:hover {
-  background: oklch(from var(--text-strong) calc(l + 0.08) c h);
-  border-color: oklch(from var(--text-strong) calc(l + 0.08) c h);
-  color: var(--bg-elevated);
-}
-.btnGhost {
-  background: var(--bg-elevated);
-  color: var(--text);
-  border-color: var(--border);
-}
-.btnGhost:hover {
-  background: var(--bg-subtle);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-.btnGhost.ok {
-  color: var(--tool-bash);
-  border-color: color-mix(in oklab, var(--tool-bash) 35%, var(--border));
-  background: color-mix(in oklab, var(--tool-bash) 8%, var(--bg-elevated));
-}
-
-/* ----- hero avatar card ----- */
-.idCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 22px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-2);
-  min-width: 188px;
-}
-.avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  background: linear-gradient(
-    135deg,
-    oklch(0.68 0.13 50),
-    oklch(0.55 0.1 290)
-  );
-  display: grid;
-  place-items: center;
-  color: oklch(0.98 0 0);
-  font: 600 26px var(--font-mono);
-}
-.idName {
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--text-strong);
-  text-align: center;
-  line-height: 1.3;
-}
-.idHandle {
-  font: 500 12px var(--font-mono);
-  color: var(--text-muted);
-}
-.idStatus {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font: 600 10px var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-subtle);
-  color: var(--text-faint);
-}
-.idStatus svg {
-  width: 11px;
-  height: 11px;
-}
-.idStatus.priv {
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  border-color: transparent;
-}
-
-/* ===================================================================
-   MAIN BODY
-   ================================================================ */
-.body {
-  padding: 36px 0 0;
-}
-.body > .rise + .rise {
-  margin-top: 28px;
 }
 
 /* section title shared by activity / recent-traces blocks */
@@ -519,15 +257,8 @@
 }
 
 /* ===================================================================
-   SPLIT — recent traces + aside
+   ASIDE
    ================================================================ */
-.split {
-  display: grid;
-  grid-template-columns: 1fr 288px;
-  gap: 36px;
-  align-items: start;
-}
-
 /* aside cards — mirror the .side-card primitive so the page reads as one set */
 .card {
   border: 1px solid var(--border-subtle);
@@ -555,55 +286,6 @@
 .cardHead .ct {
   font: 500 11px var(--font-mono);
   color: var(--text-faint);
-  font-feature-settings: "tnum";
-}
-.cardBody {
-  padding: 6px;
-}
-.cardEmpty {
-  padding: 18px 14px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.repoRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 7px;
-  text-decoration: none;
-  color: inherit;
-}
-.repoRow:hover {
-  background: var(--bg-subtle);
-  text-decoration: none;
-}
-.repoMark {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  background: color-mix(in oklab, var(--accent) 16%, var(--bg-elevated));
-  color: var(--accent-strong);
-  font: 600 11px var(--font-mono);
-}
-.repoName {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-strong);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.repoCount {
-  font: 500 11.5px var(--font-mono);
-  color: var(--text-muted);
   font-feature-settings: "tnum";
 }
 
@@ -832,7 +514,7 @@
 }
 
 /* ===================================================================
-   LOADING / ERROR placeholders for the data region
+   LOADING placeholder for the data region
    ================================================================ */
 .loading {
   display: flex;
@@ -859,74 +541,10 @@
     opacity: 0;
   }
 }
-.inlineError {
-  margin: 24px 0;
-  padding: 16px 18px;
-  border: 1px solid color-mix(in oklab, var(--color-danger) 35%, var(--border));
-  border-radius: var(--radius);
-  background: color-mix(in oklab, var(--color-danger) 7%, var(--bg-elevated));
-  color: var(--text);
-  font-size: 13.5px;
-}
-.inlineError strong {
-  color: var(--color-danger);
-}
-
-/* ===================================================================
-   FOOTER
-   ================================================================ */
-.foot {
-  margin-top: 64px;
-  border-top: 1px solid var(--border-subtle);
-}
-.footInner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 28px 0 56px;
-  font: 500 12px var(--font-mono);
-  color: var(--text-faint);
-}
-.footInner a {
-  color: var(--text-faint);
-  text-decoration: none;
-}
-.footInner a:hover {
-  color: var(--accent-strong);
-}
-
-.signOut {
-  margin-left: 12px;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  color: var(--text-faint);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-.signOut:hover {
-  color: var(--color-danger);
-}
-
 /* ===================================================================
    RESPONSIVE
    ================================================================ */
 @media (max-width: 900px) {
-  .heroRow {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  .idCard {
-    flex-direction: row;
-    justify-content: flex-start;
-    align-self: flex-start;
-    min-width: 0;
-  }
   .activityGrid {
     grid-template-columns: 1fr;
   }
@@ -943,10 +561,6 @@
   .figure:last-child {
     border-right: none;
   }
-  .split {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
   .onboard {
     grid-template-columns: 1fr;
   }
@@ -955,13 +569,22 @@
     border-top: 1px solid var(--border-subtle);
   }
 }
+/* ===================================================================
+   OWNER GREETING — a single line above the entity-head, owner only
+   ================================================================ */
+.greetingLine {
+  margin: 0 0 18px;
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text-muted);
+}
+.greetingLine strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
 @media (max-width: 600px) {
-  .wrap {
-    padding: 0 20px;
-  }
-  .hero {
-    padding: 40px 0 36px;
-  }
   .activityStats {
     flex-direction: column;
   }
