@@ -125,22 +125,31 @@ async def _filter_visible(
     settings: Settings,
     access: RepoAccessChecker,
 ) -> list[Trace]:
-    """Drop private traces whose repo `user` cannot read. Public rows pass.
+    """Drop private traces the viewer may not see; public rows always pass.
 
-    Checks once per distinct private repo — privacy is a property of the
-    repo, so all of a repo's traces share one access decision.
+    A repo-associated private row is gated on the viewer's GitHub read
+    access to its repo — checked once per distinct private repo. A
+    standalone-private row (no repo) is visible only to its `owner_login`.
     """
-    private_repos = {t.repo_full_name for t in rows if t.is_private}
-    if not private_repos:
-        return list(rows)
-    visible: set[str] = set()
+    def _row_visible(t: Trace, repo_visible: set[str]) -> bool:
+        if not t.is_private:
+            return True
+        if t.repo_full_name is None:
+            # Standalone-private: visible only to its owner.
+            return user is not None and t.owner_login == user.github_login
+        return t.repo_full_name in repo_visible
+
+    # Repo-associated private rows share one access decision per repo.
+    private_repos = {
+        t.repo_full_name
+        for t in rows
+        if t.is_private and t.repo_full_name is not None
+    }
+    repo_visible: set[str] = set()
     for repo in private_repos:
         if await _can_view_repo(repo, user, settings, access):
-            visible.add(repo)
-    return [
-        t for t in rows
-        if not t.is_private or t.repo_full_name in visible
-    ]
+            repo_visible.add(repo)
+    return [t for t in rows if _row_visible(t, repo_visible)]
 
 
 def _to_summary(t: Trace) -> TraceSummary:
@@ -213,9 +222,12 @@ async def get_user_overview(
     rows = await _filter_visible(list(rows), user, settings, access)
 
     # Aggregate repos from the visible rows so private repos the viewer
-    # cannot see never appear in the repo breakdown.
+    # cannot see never appear in the repo breakdown. Standalone traces
+    # (repo_full_name is None) carry no repo and are skipped here.
     repo_counts: dict[str, int] = {}
     for t in rows:
+        if t.repo_full_name is None:
+            continue
         repo_counts[t.repo_full_name] = repo_counts.get(t.repo_full_name, 0) + 1
     repos = [
         {

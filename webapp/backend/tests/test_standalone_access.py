@@ -144,3 +144,50 @@ async def test_private_standalone_raw_served_for_owner(client):
     resp = client.get("/api/traces/privstande/raw", cookies=cookies)
     assert resp.status_code == 200
     assert resp.headers["Cache-Control"] == "private, no-store"
+
+
+@pytest.mark.asyncio
+async def test_user_overview_hides_private_standalone_from_anonymous(client):
+    await _seed_standalone_trace(
+        client, owner_login="alice", short_id="ovstandpub",
+        is_private=False,
+    )
+    await _seed_standalone_trace(
+        client, owner_login="alice", short_id="ovstandprv",
+        is_private=True,
+    )
+    resp = client.get("/api/users/alice")
+    assert resp.status_code == 200
+    ids = {t["short_id"] for t in resp.json()["traces"]}
+    assert ids == {"ovstandpub"}
+
+
+@pytest.mark.asyncio
+async def test_user_overview_hides_private_standalone_from_non_owner(client):
+    await _seed_standalone_trace(
+        client, owner_login="alice", short_id="ovstandprv2",
+        is_private=True,
+    )
+    cookies, _ = await authed_cookies(
+        client, github_id=200, login="bob",
+        token_scopes="repo,read:user,user:email",
+    )
+    resp = client.get("/api/users/alice", cookies=cookies)
+    assert resp.status_code == 200
+    assert resp.json()["traces"] == []
+
+
+@pytest.mark.asyncio
+async def test_user_overview_shows_private_standalone_to_owner(client):
+    await _seed_standalone_trace(
+        client, owner_login="alice", short_id="ovstandprv3",
+        is_private=True,
+    )
+    cookies, _ = await authed_cookies(
+        client, github_id=100, login="alice",
+        token_scopes="read:user,user:email",
+    )
+    resp = client.get("/api/users/alice", cookies=cookies)
+    assert resp.status_code == 200
+    ids = {t["short_id"] for t in resp.json()["traces"]}
+    assert ids == {"ovstandprv3"}
