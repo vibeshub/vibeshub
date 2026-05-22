@@ -5,8 +5,8 @@ Manual upload / delete entry point for vibeshub.
 Usage:
   share-trace                       # auto-detect: PR, else repo, else standalone
   share-trace <pr-url-or-number>    # share a specific PR
-  share-trace delete <id>           # delete a trace by PR URL, /t/<id> URL,
-                                    # or bare short id
+  share-trace delete <id>           # delete a trace by PR URL, PR number,
+                                    # /t/<id> URL, or bare short id
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def _session_id() -> str | None:
     )
 
 
-def _delete_short_id(arg: str, server_url: str) -> str | None:
+def _delete_short_id(arg: str) -> str | None:
     """Resolve a delete argument to a trace short id, or None if `arg` is
     not a short id form (e.g. it is a PR URL — the caller resolves that
     separately).
@@ -90,6 +90,7 @@ async def _delete_by_short_id(short_id: str, server_url: str) -> None:
 
 async def _delete_by_pr(pr_url: str, server_url: str) -> None:
     import json
+    from urllib import error as urllib_error
     from urllib import request as urllib_request
 
     parts = pr_url.rstrip("/").split("/")
@@ -98,11 +99,15 @@ async def _delete_by_pr(pr_url: str, server_url: str) -> None:
         f"{_server_base(server_url)}/api/traces/{owner}/{repo}/pull/{number}"
     )
 
-    def _list() -> list[dict]:
-        with urllib_request.urlopen(list_url, timeout=15.0) as resp:
-            if resp.status >= 400:
-                raise RuntimeError(f"list failed: HTTP {resp.status}")
-            data = json.loads(resp.read().decode("utf-8"))
+    def _list() -> list[dict] | None:
+        try:
+            with urllib_request.urlopen(list_url, timeout=15.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib_error.HTTPError as e:
+            if e.code == 404:
+                return None
+            print(f"list failed: HTTP {e.code}", file=sys.stderr)
+            return None
         return data.get("traces", [])
 
     traces = await asyncio.to_thread(_list)
@@ -164,7 +169,9 @@ async def _share(
         return
 
     print(f"trace uploaded: {result.trace_url}")
-    if pr_url is None and repo_full_name is None:
+    if pr_url is None and repo_full_name is not None:
+        print(f"attached to repo {repo_full_name}")
+    elif pr_url is None and repo_full_name is None:
         print(
             "This is a standalone (public) trace. You can make it private "
             "from the trace page in the vibeshub UI."
@@ -181,11 +188,16 @@ def main() -> None:
     if args and args[0] == "delete":
         if len(args) < 2:
             print(
-                "usage: share-trace delete <pr-url | /t/<id> url | short-id>",
+                "usage: share-trace delete "
+                "<pr-url | pr-number | /t/<id> url | short-id>",
                 file=sys.stderr,
             )
             sys.exit(1)
-        short_id = _delete_short_id(args[1], server_url)
+        if args[1].isdigit():
+            # A bare number is a PR number, not a short id.
+            asyncio.run(_delete_by_pr(resolve_pr_url(args[1]), server_url))
+            return
+        short_id = _delete_short_id(args[1])
         if short_id is not None:
             asyncio.run(_delete_by_short_id(short_id, server_url))
         else:

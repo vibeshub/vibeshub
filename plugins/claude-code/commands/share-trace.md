@@ -1,7 +1,7 @@
 ---
 name: share-trace
 description: Manually upload the current Claude Code session to vibeshub, or delete an existing trace.
-argument-hint: "[<pr-number-or-url>] | delete <pr-url | /t/<id> url | short-id>"
+argument-hint: "[<pr-number-or-url>] | delete <pr-url | pr-number | /t/<id> url | short-id>"
 ---
 
 Use this command to upload the current session's trace to vibeshub. Without
@@ -15,7 +15,8 @@ arguments it picks the best target automatically:
    it to private from the trace page in the vibeshub UI.
 
 Pass a PR number or URL to force a specific PR. Use `delete` with a PR URL, a
-`/t/<id>` trace URL, or a bare short id to remove a trace.
+bare PR number, a `/t/<id>` trace URL, or a bare short id to remove a trace. A
+bare number is always treated as a PR number.
 
 Run the helper script:
 
