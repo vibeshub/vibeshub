@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { TraceView } from "../../routes/TraceView";
 
@@ -93,6 +93,118 @@ describe("TraceView", () => {
     expect(
       screen.getByRole("button", { name: /show system events/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders a Compact toggle in the thread controls", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    expect(
+      await screen.findByRole("button", { name: /compact/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("folds consecutive tool calls into group lines when Compact is on", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const toggle = await screen.findByRole("button", { name: /compact/i });
+
+    // Off by default — no tool-group summary lines.
+    expect(
+      screen.queryAllByRole("button", { name: /tool call/i }),
+    ).toHaveLength(0);
+
+    fireEvent.click(toggle);
+
+    // On — runs of consecutive tool calls collapse into group lines.
+    expect(
+      screen.getAllByRole("button", { name: /tool call/i }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("expands a tool group to reveal the individual tool cards", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const toggle = await screen.findByRole("button", { name: /compact/i });
+    fireEvent.click(toggle);
+
+    const groups = screen.getAllByRole("button", { name: /tool call/i });
+    const before = screen.getAllByRole("button").length;
+
+    fireEvent.click(groups[0]);
+
+    expect(groups[0]).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("button").length).toBeGreaterThan(before);
+  });
+
+  it("renders a lone tool call as its own group when Compact is on", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    const toggle = await screen.findByRole("button", { name: /compact/i });
+    fireEvent.click(toggle);
+
+    // The fixture has tool calls isolated between assistant text — each
+    // renders as a group of one.
+    expect(screen.getAllByText("1 tool call").length).toBeGreaterThan(0);
   });
 
   it("shows an error state when the trace summary fetch fails", async () => {

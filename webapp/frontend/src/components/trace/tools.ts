@@ -35,4 +35,19 @@ export function toolLabel(name: string): string {
   return TOOL_META[name]?.label ?? name;
 }
 
+/**
+ * "3 Bash · 2 Read · 1 Edit" — counts tool calls by friendly label,
+ * ordered by first appearance. Empty string for an empty list.
+ */
+export function formatBreakdown(names: string[]): string {
+  const order: string[] = [];
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const label = toolLabel(name);
+    if (!counts.has(label)) order.push(label);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return order.map((label) => `${counts.get(label)} ${label}`).join(" · ");
+}
+
 export { TOOL_META };
