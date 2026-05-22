@@ -1,12 +1,16 @@
 import type {
   GithubContributions,
+  GithubPickerPr,
+  GithubPickerRepo,
   GithubRepo,
   GithubRepoListPage,
   GithubUser,
   MeResponse,
   RepoOverview,
   TraceListResponse,
+  TracePatch,
   TraceSummary,
+  UploadResult,
   UserOverview,
 } from "./types";
 
@@ -139,4 +143,76 @@ export async function fetchGithubContributions(
     { credentials: "same-origin" },
   );
   return jsonOrThrow<GithubContributions>(r);
+}
+
+export interface UploadTraceArgs {
+  transcript: File;
+  subagents?: File | null;
+  isPrivate?: boolean;
+  prUrl?: string | null;
+  repoFullName?: string | null;
+}
+
+export async function uploadTrace(
+  args: UploadTraceArgs,
+): Promise<UploadResult> {
+  const form = new FormData();
+  form.append("transcript", args.transcript);
+  if (args.subagents) form.append("subagents", args.subagents);
+  form.append("is_private", String(args.isPrivate ?? false));
+  if (args.prUrl) form.append("pr_url", args.prUrl);
+  if (args.repoFullName) form.append("repo_full_name", args.repoFullName);
+  const r = await fetch("/api/uploads", {
+    method: "POST",
+    body: form,
+    credentials: "same-origin",
+  });
+  return jsonOrThrow<UploadResult>(r);
+}
+
+export async function patchTrace(
+  shortId: string,
+  patch: TracePatch,
+): Promise<TraceSummary> {
+  const r = await fetch(`/api/traces/${shortId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch),
+    credentials: "same-origin",
+  });
+  return jsonOrThrow<TraceSummary>(r);
+}
+
+export async function deleteTrace(shortId: string): Promise<void> {
+  const r = await fetch(`/api/traces/${shortId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  if (r.status !== 204) {
+    throw new ApiError(r.status, await r.text());
+  }
+}
+
+export async function fetchMyRepos(
+  query = "",
+): Promise<GithubPickerRepo[]> {
+  const qs = query ? `?q=${encodeURIComponent(query)}` : "";
+  const r = await fetch(`/api/github/my-repos${qs}`, {
+    credentials: "same-origin",
+  });
+  const data = await jsonOrThrow<{ repos: GithubPickerRepo[] }>(r);
+  return data.repos;
+}
+
+export async function fetchRepoPrs(
+  repoFullName: string,
+  query = "",
+): Promise<GithubPickerPr[]> {
+  const params = new URLSearchParams({ repo: repoFullName });
+  if (query) params.set("q", query);
+  const r = await fetch(`/api/github/repo-prs?${params.toString()}`, {
+    credentials: "same-origin",
+  });
+  const data = await jsonOrThrow<{ prs: GithubPickerPr[] }>(r);
+  return data.prs;
 }
