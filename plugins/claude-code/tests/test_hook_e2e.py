@@ -26,7 +26,7 @@ def _write_fake_gh(directory: Path, *, pr_view_url: str | None) -> Path:
         "#!/usr/bin/env bash\n"
         "case \"$1 $2\" in\n"
         "  'auth token') echo 'ghp_test_fake'; exit 0 ;;\n"
-        "  'pr comment') exit 0 ;;\n"
+        "  'pr comment') [ -n \"$VIBESHUB_TEST_COMMENT_LOG\" ] && echo x >> \"$VIBESHUB_TEST_COMMENT_LOG\"; exit 0 ;;\n"
         f"  'pr view') {pr_view} ;;\n"
         "  *) exit 1 ;;\n"
         "esac\n"
@@ -56,6 +56,7 @@ def fake_server():
     """Spin up a real FastAPI server that emulates /api/ingest (tar + headers)."""
     app = FastAPI()
     received: list[dict] = []
+    traces: dict[tuple, str] = {}  # (pr_url, session_id) -> short_id
 
     @app.post("/api/ingest", status_code=201)
     async def ingest(
@@ -63,8 +64,18 @@ def fake_server():
         x_vibeshub_pr_url: str = Header(...),
         x_vibeshub_platform: str = Header(...),
         x_vibeshub_plugin_version: str = Header(...),
+        x_vibeshub_session_id: str | None = Header(None),
     ):
         body = await request.body()
+        key = (x_vibeshub_pr_url, x_vibeshub_session_id)
+        if x_vibeshub_session_id is not None and key in traces:
+            short_id = traces[key]
+            created = False
+        else:
+            short_id = f"abc{len(received) + 1:07d}"
+            if x_vibeshub_session_id is not None:
+                traces[key] = short_id
+            created = True
         received.append(
             {
                 "tar_bytes": body,
@@ -72,12 +83,14 @@ def fake_server():
                 "platform": x_vibeshub_platform,
                 "plugin_version": x_vibeshub_plugin_version,
                 "content_type": request.headers.get("content-type", ""),
+                "created": created,
             }
         )
         return {
             "trace_id": "00000000-0000-0000-0000-000000000001",
-            "short_id": "abc1234567",
-            "trace_url": "http://localhost:9999/alice/repo/pull/3/abc1234567",
+            "short_id": short_id,
+            "trace_url": f"http://localhost:9999/alice/repo/pull/3/{short_id}",
+            "created": created,
         }
 
     config = uvicorn.Config(app, host="127.0.0.1", port=9999, log_level="error")
@@ -321,3 +334,40 @@ def test_hook_silent_when_git_push_has_no_pr(
 
     assert proc.returncode == 0
     assert proc.stderr == ""
+
+
+def test_hook_refresh_from_same_session_skips_repeat_comment(
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
+):
+    """A second push from the same session refreshes the trace (created=False
+    from the server's upsert) and must NOT post another PR comment."""
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    comment_log = tmp_path / "comments.log"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "git push"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["VIBESHUB_TEST_COMMENT_LOG"] = str(comment_log)
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc1 = _run_hook(hook_script, payload, env)
+    proc2 = _run_hook(hook_script, payload, env)
+
+    assert proc1.returncode == 0, proc1.stderr
+    assert proc2.returncode == 0, proc2.stderr
+    # Both uploads reached the server; it upserted them to one trace.
+    assert len(fake_server) == 2
+    assert fake_server[0]["created"] is True
+    assert fake_server[1]["created"] is False
+    # The PR comment was posted exactly once — for the first upload only.
+    assert comment_log.read_text().count("x") == 1
