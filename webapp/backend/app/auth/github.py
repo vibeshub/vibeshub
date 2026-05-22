@@ -29,6 +29,21 @@ class GitHubPull:
     repo_full_name: str
 
 
+@dataclass(frozen=True)
+class RepoPermission:
+    permission: str  # "admin" | "write" | "read" | "none"
+
+    @property
+    def is_collaborator(self) -> bool:
+        return self.permission != "none"
+
+
+@dataclass(frozen=True)
+class RepoInfo:
+    full_name: str
+    is_private: bool
+
+
 class GitHubClient:
     def __init__(self, api_base: str, timeout: float = 10.0):
         self.api_base = api_base.rstrip("/")
@@ -70,4 +85,38 @@ class GitHubClient:
             html_url=body["html_url"],
             repo_is_private=bool(base_repo.get("private", False)),
             repo_full_name=base_repo["full_name"],
+        )
+
+    async def get_repo_permission(
+        self, token: str, owner: str, repo: str, username: str
+    ) -> RepoPermission:
+        url = (
+            f"{self.api_base}/repos/{owner}/{repo}"
+            f"/collaborators/{username}/permission"
+        )
+        async with httpx.AsyncClient(timeout=self.timeout) as http:
+            r = await http.get(url, headers=self._headers(token))
+        if r.status_code == 404:
+            raise GitHubAPIError("repo not found or not accessible")
+        if r.status_code >= 400:
+            raise GitHubAPIError(
+                f"unexpected {r.status_code} from permission lookup"
+            )
+        body = r.json()
+        return RepoPermission(permission=body.get("permission") or "none")
+
+    async def get_repo(
+        self, token: str, owner: str, repo: str
+    ) -> RepoInfo:
+        url = f"{self.api_base}/repos/{owner}/{repo}"
+        async with httpx.AsyncClient(timeout=self.timeout) as http:
+            r = await http.get(url, headers=self._headers(token))
+        if r.status_code == 404:
+            raise GitHubAPIError("repo not found or not accessible")
+        if r.status_code >= 400:
+            raise GitHubAPIError(f"unexpected {r.status_code} from repo lookup")
+        body = r.json()
+        return RepoInfo(
+            full_name=body["full_name"],
+            is_private=bool(body.get("private", False)),
         )
