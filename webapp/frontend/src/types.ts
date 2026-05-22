@@ -10,9 +10,9 @@ export interface TraceSummary {
   trace_id: string;
   short_id: string;
   owner_login: string;
-  repo_full_name: string;
-  pr_number: number;
-  pr_url: string;
+  repo_full_name: string | null;
+  pr_number: number | null;
+  pr_url: string | null;
   pr_title: string | null;
   platform: string;
   byte_size: number;
@@ -138,4 +138,37 @@ export interface GithubContributions {
   login: string;
   total: number;
   days: GithubContributionDay[];
+}
+
+/** A repo entry from GET /api/github/my-repos. */
+export interface GithubPickerRepo {
+  full_name: string;
+  name: string;
+  private: boolean;
+}
+
+/** A PR entry from GET /api/github/repo-prs. */
+export interface GithubPickerPr {
+  number: number;
+  title: string;
+  html_url: string;
+}
+
+/** The JSON body returned by POST /api/uploads. */
+export interface UploadResult {
+  trace_id: string;
+  short_id: string;
+  trace_url: string;
+  created: boolean;
+}
+
+/**
+ * The body of PATCH /api/traces/{short_id}. Every field is optional;
+ * omitting a field leaves it unchanged, while sending `null` clears the
+ * association (matching the backend's model_fields_set semantics).
+ */
+export interface TracePatch {
+  is_private?: boolean;
+  pr_url?: string | null;
+  repo_full_name?: string | null;
 }
