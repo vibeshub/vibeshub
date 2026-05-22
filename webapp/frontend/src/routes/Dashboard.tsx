@@ -10,7 +10,7 @@ import type {
 } from "../types";
 import { PageTopbar } from "../components/PageTopbar";
 import { TraceListRow } from "../components/TraceListRow";
-import styles from "./Dashboard.module.css";
+import styles from "./UserPage.module.css";
 
 /* ------------------------------------------------------------------ *
  * formatting helpers
