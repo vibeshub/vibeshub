@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy import select
 
 from app.api.trace_service import TraceWriteResult, create_or_update_trace
-from app.redact.bundle import UnpackedBundle
+from app.redact.bundle import AgentPiece, UnpackedBundle
 from app.storage.blob import LocalDirBlobStore
 from app.storage.db import create_all, engine_for, session_maker_for
 from app.storage.models import Trace
@@ -57,9 +57,6 @@ async def test_create_standalone_trace(tmp_path):
     assert await blob_store.get(
         f"traces/{result.trace.short_id}/main.jsonl"
     ) == b'{"type":"user"}\n'
-
-
-from app.redact.bundle import AgentPiece
 
 
 @pytest.mark.asyncio

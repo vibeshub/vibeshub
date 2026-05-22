@@ -54,6 +54,10 @@ async def _find_existing(
         Trace.session_id == session_id,
         Trace.deleted_at.is_(None),
     )
+    # Invariant: ingest always sets repo_full_name and pr_number together
+    # (both present for a repo-associated upload, both None for a standalone
+    # one). Checking both keeps this consistent with traces.py, which treats
+    # repo_full_name is None as the sole standalone marker.
     if repo_full_name is not None and pr_number is not None:
         # Repo-associated: scope the match to this exact PR (today's rule).
         stmt = stmt.where(

@@ -290,7 +290,7 @@ async def get_repo_overview(
         )
     ]
 
-    pr_count = len({t.pr_number for t in rows})
+    pr_count = len({t.pr_number for t in rows if t.pr_number is not None})
     total_messages = sum(t.message_count for t in rows)
     total_bytes = sum(t.byte_size for t in rows)
     last_at = rows[0].created_at.isoformat() if rows else None

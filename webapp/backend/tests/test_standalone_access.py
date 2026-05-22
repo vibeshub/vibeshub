@@ -2,6 +2,7 @@
 import pytest
 
 from app.api.schemas import TraceSummary
+from tests._auth_helpers import authed_cookies
 
 
 def test_trace_summary_accepts_null_repo_and_pr():
@@ -23,11 +24,6 @@ def test_trace_summary_accepts_null_repo_and_pr():
     assert dumped["repo_full_name"] is None
     assert dumped["pr_number"] is None
     assert dumped["pr_url"] is None
-
-
-from sqlalchemy import select as _select
-
-from tests._auth_helpers import authed_cookies
 
 
 async def _seed_standalone_trace(
