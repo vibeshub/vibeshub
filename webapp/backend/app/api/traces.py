@@ -4,10 +4,12 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, TraceSummary
+from app.api.trace_service import resolve_association
 from app.auth.crypto import TokenCipher
 from app.auth.scopes import has_repo_scope
 from app.auth.github import GitHubAuthError, GitHubClient
@@ -30,6 +32,14 @@ router = APIRouter()
 
 
 _AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
+
+
+class TracePatch(BaseModel):
+    """All fields optional; pydantic's model_fields_set distinguishes an
+    absent field from one explicitly set to null."""
+    is_private: bool | None = None
+    pr_url: str | None = None
+    repo_full_name: str | None = None
 
 
 def _viewer_token(user: User, settings: Settings) -> str | None:
@@ -456,3 +466,78 @@ async def delete_trace(
         except FileNotFoundError:
             pass
     return Response(status_code=204)
+
+
+@router.patch("/api/traces/{short_id}", response_model=TraceSummary)
+async def patch_trace(
+    short_id: str,
+    patch: TracePatch,
+    session: AsyncSession = Depends(get_session),
+    github: GitHubClient = Depends(get_github),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+):
+    if not looks_like_short_id(short_id):
+        raise HTTPException(status_code=404, detail="not found")
+    if user is None:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    trace = (await session.execute(
+        select(Trace).where(
+            Trace.short_id == short_id, Trace.deleted_at.is_(None)
+        )
+    )).scalar_one_or_none()
+    if trace is None:
+        raise HTTPException(status_code=404, detail="not found")
+    if trace.owner_login != user.github_login:
+        raise HTTPException(status_code=403, detail="not the trace owner")
+
+    fields = patch.model_fields_set
+    touches_assoc = "pr_url" in fields or "repo_full_name" in fields
+
+    if touches_assoc:
+        # The post-edit association: a field present in the patch
+        # overrides; an absent field keeps the trace's current value.
+        new_pr_url = patch.pr_url if "pr_url" in fields else trace.pr_url
+        new_repo = (
+            patch.repo_full_name
+            if "repo_full_name" in fields
+            else trace.repo_full_name
+        )
+        if new_pr_url or new_repo:
+            cipher = TokenCipher(settings.token_encryption_key)
+            try:
+                token = cipher.decrypt(user.encrypted_access_token)
+            except Exception:
+                raise HTTPException(
+                    status_code=403, detail="github_token_unavailable"
+                )
+            assoc = await resolve_association(
+                github=github,
+                token=token,
+                uploader_login=user.github_login,
+                pr_url=new_pr_url,
+                repo_full_name=new_repo,
+            )
+            trace.repo_full_name = assoc.repo_full_name
+            trace.pr_number = assoc.pr_number
+            trace.pr_url = assoc.pr_url
+            trace.pr_title = assoc.pr_title
+            # Repo-associated: privacy mirrors GitHub.
+            trace.is_private = assoc.is_private
+        else:
+            # Cleared all association — revert to standalone.
+            trace.repo_full_name = None
+            trace.pr_number = None
+            trace.pr_url = None
+            trace.pr_title = None
+
+    # is_private is honored only when the trace is (or just became)
+    # standalone. For a repo-associated trace, privacy mirrors GitHub.
+    if "is_private" in fields and patch.is_private is not None:
+        if trace.repo_full_name is None:
+            trace.is_private = patch.is_private
+
+    await session.commit()
+    await session.refresh(trace)
+    return _to_summary(trace)
