@@ -219,3 +219,97 @@ def test_user_endpoint_404(client, respx_mock: respx.MockRouter):
     r = client.get("/api/github/users/missing")
     assert r.status_code == 404
     assert r.json()["detail"] == "user_not_found"
+
+
+# --- contribution calendar (GraphQL) -----------------------------------
+
+def _contributions_payload(*, total=4, weeks=None):
+    if weeks is None:
+        weeks = [
+            {
+                "contributionDays": [
+                    {
+                        "date": "2025-05-19",
+                        "contributionCount": 0,
+                        "contributionLevel": "NONE",
+                    },
+                    {
+                        "date": "2025-05-20",
+                        "contributionCount": 4,
+                        "contributionLevel": "FOURTH_QUARTILE",
+                    },
+                ]
+            }
+        ]
+    return {
+        "data": {
+            "user": {
+                "contributionsCollection": {
+                    "contributionCalendar": {
+                        "totalContributions": total,
+                        "weeks": weeks,
+                    }
+                }
+            }
+        }
+    }
+
+
+def test_contributions_happy_path(client, respx_mock: respx.MockRouter):
+    route = respx_mock.post(f"{API}/graphql").respond(
+        200, json=_contributions_payload()
+    )
+    r = client.get("/api/github/users/octo/contributions")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["login"] == "octo"
+    assert body["total"] == 4
+    assert body["days"] == [
+        {"date": "2025-05-19", "count": 0, "level": 0},
+        {"date": "2025-05-20", "count": 4, "level": 4},
+    ]
+    # The GraphQL request carries the login variable.
+    assert route.calls[0].request.method == "POST"
+
+
+def test_contributions_unknown_user_maps_to_404(
+    client, respx_mock: respx.MockRouter,
+):
+    respx_mock.post(f"{API}/graphql").respond(
+        200,
+        json={
+            "data": {"user": None},
+            "errors": [{"type": "NOT_FOUND", "path": ["user"]}],
+        },
+    )
+    r = client.get("/api/github/users/ghost/contributions")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "user_not_found"
+
+
+def test_contributions_uses_fallback_pat_when_anon(
+    client, respx_mock: respx.MockRouter,
+):
+    route = respx_mock.post(f"{API}/graphql").respond(
+        200, json=_contributions_payload()
+    )
+    r = client.get("/api/github/users/octo/contributions")
+    assert r.status_code == 200
+    assert (
+        route.calls[0].request.headers["authorization"]
+        == "Bearer ghp_fallback"
+    )
+
+
+def test_contributions_rate_limited(client, respx_mock: respx.MockRouter):
+    respx_mock.post(f"{API}/graphql").respond(
+        403,
+        headers={
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": "9999999999",
+        },
+        json={"message": "rate limit"},
+    )
+    r = client.get("/api/github/users/octo/contributions")
+    assert r.status_code == 503
+    assert r.headers.get("Retry-After") is not None

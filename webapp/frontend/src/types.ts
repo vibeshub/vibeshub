@@ -125,3 +125,17 @@ export interface GithubRepoListPage {
   repos: GithubRepoListItem[];
   has_next: boolean;
 }
+
+export interface GithubContributionDay {
+  /** Calendar date, YYYY-MM-DD. */
+  date: string;
+  count: number;
+  /** Intensity bucket 0-4, as computed by GitHub's per-user quartiles. */
+  level: number;
+}
+
+export interface GithubContributions {
+  login: string;
+  total: number;
+  days: GithubContributionDay[];
+}
