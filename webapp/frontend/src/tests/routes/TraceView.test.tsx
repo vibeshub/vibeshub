@@ -292,6 +292,37 @@ describe("TraceView", () => {
     expect(link.getAttribute("href")).toContain("scope=private");
   });
 
+  it("renders a clean not-found state when the summary returns 404", async () => {
+    mockUseAuth.mockReturnValue(authAs("bob"));
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.endsWith(`/api/traces/${SHORT_ID}`)) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "not_found" }), {
+            status: 404,
+          }),
+        );
+      }
+      if (url.endsWith(`/api/traces/${SHORT_ID}/raw`)) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: "not_found" }), {
+            status: 404,
+          }),
+        );
+      }
+      return Promise.resolve(new Response("", { status: 200 }));
+    });
+
+    renderAt(`/t/${SHORT_ID}`);
+
+    expect(
+      await screen.findByRole("heading", { name: /not found/i }),
+    ).toBeInTheDocument();
+    // No raw ApiError string leaks through from either fetch.
+    expect(screen.queryByText(/ApiError/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/404/)).not.toBeInTheDocument();
+  });
+
   it("renders a standalone trace with no repo or PR", async () => {
     mockFetchSequence({
       trace_id: "id",

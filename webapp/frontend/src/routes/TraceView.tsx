@@ -4,6 +4,7 @@ import { ApiError, fetchRawJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
+import { NotFound } from "./NotFound";
 import { PrivateTraceGate } from "../components/PrivateTraceGate";
 import { TraceManageMenu } from "../components/TraceManageMenu";
 import { TraceViewer } from "../components/trace/TraceViewer";
@@ -16,6 +17,7 @@ type HeadState =
   | { kind: "loading" }
   | { kind: "ready"; trace: TraceSummary }
   | { kind: "gate"; gate: "signin" | "enable" }
+  | { kind: "notfound" }
   | { kind: "error"; message: string };
 
 type BodyState =
@@ -40,6 +42,8 @@ export function TraceView() {
           setHead({ kind: "gate", gate: "signin" });
         } else if (e instanceof ApiError && e.status === 403) {
           setHead({ kind: "gate", gate: "enable" });
+        } else if (e instanceof ApiError && e.status === 404) {
+          setHead({ kind: "notfound" });
         } else {
           setHead({ kind: "error", message: String(e) });
         }
@@ -66,6 +70,7 @@ export function TraceView() {
   }, [body, trace]);
 
   if (head.kind === "gate") return <PrivateTraceGate kind={head.gate} />;
+  if (head.kind === "notfound") return <NotFound />;
   if (head.kind === "error") return <ErrorState message={head.message} />;
   if (head.kind === "loading") return <LoadingState label="Loading trace…" />;
 
