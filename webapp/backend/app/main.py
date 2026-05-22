@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="vibeshub", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="vibeshub", version="0.3.0", lifespan=lifespan)
 
     # SessionMiddleware drives Authlib's `state` storage during the OAuth
     # dance. Its cookie ("oauth_state") is distinct from our app session
