@@ -57,6 +57,7 @@ export function TraceViewer({
             session={session}
             shortId={shortId}
             showSystemEvents={showSystemEvents}
+            compact={compact}
           />
         </>
       )}

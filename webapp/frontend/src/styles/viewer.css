@@ -1243,3 +1243,74 @@
 .vibeshub-viewer .diff-code .token.attr-name {
   color: var(--syn-punct);
 }
+
+/* ---------- compact tool groups ---------- */
+/* A run of consecutive tool calls collapsed into one summary line.
+   Visually matches the collapsed tool-card head. */
+.vibeshub-viewer .tool-group {
+  margin: 6px 0;
+  padding-left: 36px;
+  position: relative;
+}
+.vibeshub-viewer .tool-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 120ms ease;
+}
+.vibeshub-viewer .tool-group-head:hover {
+  border-color: var(--border-strong);
+}
+.vibeshub-viewer .tool-group.is-open .tool-group-head {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.vibeshub-viewer .tool-group-head .chev {
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+  transition: transform 160ms ease;
+  flex: none;
+}
+.vibeshub-viewer .tool-group.is-open .tool-group-head .chev {
+  transform: rotate(90deg);
+}
+.vibeshub-viewer .tool-group-count {
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  flex: none;
+  white-space: nowrap;
+}
+.vibeshub-viewer .tool-group-breakdown {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Nested cards sit indented under the group head rather than at the
+   thread's left gutter. */
+.vibeshub-viewer .tool-group-body {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  padding: 2px 0 4px;
+}
+.vibeshub-viewer .tool-group-body .tool-card {
+  padding-left: 14px;
+}
