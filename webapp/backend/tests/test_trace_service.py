@@ -57,3 +57,62 @@ async def test_create_standalone_trace(tmp_path):
     assert await blob_store.get(
         f"traces/{result.trace.short_id}/main.jsonl"
     ) == b'{"type":"user"}\n'
+
+
+from app.redact.bundle import AgentPiece
+
+
+@pytest.mark.asyncio
+async def test_create_repo_associated_trace_with_agent(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+    aid = "a0123456789abcdef"
+    bundle = UnpackedBundle(
+        main_bytes=b'{"type":"user"}\n',
+        agents=[AgentPiece(
+            agent_id=aid,
+            jsonl_bytes=b'{"type":"assistant"}\n',
+            meta={
+                "agentType": "Explore",
+                "description": "d",
+                "toolUseId": "toolu_01x",
+            },
+        )],
+        total_redactions=3,
+    )
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session,
+            blob_store=blob_store,
+            unpacked=bundle,
+            owner_login="alice",
+            platform="claude-code",
+            plugin_version="0.2.0",
+            session_id=None,
+            redaction_count_client=2,
+            repo_full_name="alice/repo",
+            pr_number=7,
+            pr_url="https://github.com/alice/repo/pull/7",
+            pr_title="Add a feature",
+            is_private=True,
+        )
+        await session.commit()
+        sid = result.trace.short_id
+
+    assert result.created is True
+    assert result.trace.repo_full_name == "alice/repo"
+    assert result.trace.pr_number == 7
+    assert result.trace.is_private is True
+    assert result.trace.redaction_count_server == 3
+    assert result.trace.agent_count == 1
+    assert result.trace.agents == [{
+        "agent_id": aid,
+        "tool_use_id": "toolu_01x",
+        "agent_type": "Explore",
+        "description": "d",
+        "message_count": 0,
+    }]
+    assert await blob_store.get(f"traces/{sid}/agents/{aid}.jsonl") == (
+        b'{"type":"assistant"}\n'
+    )
