@@ -317,6 +317,7 @@ function PrList({
 
   const groups = new Map<number, PrGroup>();
   for (const t of traces) {
+    if (t.pr_number == null || t.pr_url == null) continue;
     const existing = groups.get(t.pr_number);
     if (existing) {
       existing.traces.push(t);

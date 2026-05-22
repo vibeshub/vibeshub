@@ -33,9 +33,17 @@ class Trace(Base):
     short_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
 
     owner_login: Mapped[str] = mapped_column(String(64), index=True)
-    repo_full_name: Mapped[str] = mapped_column(String(255), index=True)
-    pr_number: Mapped[int] = mapped_column(Integer, index=True)
-    pr_url: Mapped[str] = mapped_column(String(512))
+    # Nullable since 2026-05-22: a standalone trace has no PR/repo. See the
+    # standalone-trace-uploads design. owner_login stays non-null — it is
+    # always the uploader. The indexes are kept; nullable indexed columns
+    # are fine on both Postgres and SQLite.
+    repo_full_name: Mapped[Optional[str]] = mapped_column(
+        String(255), index=True, nullable=True
+    )
+    pr_number: Mapped[Optional[int]] = mapped_column(
+        Integer, index=True, nullable=True
+    )
+    pr_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     pr_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     platform: Mapped[str] = mapped_column(String(32))

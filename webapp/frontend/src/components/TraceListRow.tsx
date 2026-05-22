@@ -59,9 +59,9 @@ interface Props {
 export function TraceListRow({ trace, showRepoChip, showUploader }: Props) {
   const navigate = useNavigate();
   const sizeKb = Math.max(1, Math.round(trace.byte_size / 1024));
-  const [owner, repo] = trace.repo_full_name.split("/");
-  const traceHref = `/${owner}/${repo}/pull/${trace.pr_number}/${trace.short_id}`;
-  const repoHref = `/${owner}/${repo}`;
+  const [owner, repo] = trace.repo_full_name?.split("/") ?? [];
+  const traceHref = `/t/${trace.short_id}`;
+  const repoHref = owner && repo ? `/${owner}/${repo}` : null;
   const userHref = `/${trace.owner_login}`;
 
   const goTo = (href: string) => (e: MouseEvent) => {
@@ -77,7 +77,7 @@ export function TraceListRow({ trace, showRepoChip, showUploader }: Props) {
       </div>
       <div className="trace-body">
         <div className="trace-row-top">
-          {showRepoChip && (
+          {showRepoChip && trace.repo_full_name && repoHref && (
             <button
               type="button"
               className="ref repo-ref"
@@ -86,9 +86,14 @@ export function TraceListRow({ trace, showRepoChip, showUploader }: Props) {
               {trace.repo_full_name}
             </button>
           )}
-          <span className="ref">#{trace.pr_number}</span>
+          {trace.pr_number != null && (
+            <span className="ref">#{trace.pr_number}</span>
+          )}
           <span className="trace-title">
-            {trace.pr_title ?? `PR #${trace.pr_number}`}
+            {trace.pr_title ??
+              (trace.pr_number != null
+                ? `PR #${trace.pr_number}`
+                : `Trace ${trace.short_id}`)}
           </span>
         </div>
         <div className="trace-meta">

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import { AuthWidget } from "./AuthWidget";
 import { IconMoon, IconSun } from "./trace/icons";
 import { useTheme } from "./trace/theme";
@@ -15,6 +16,7 @@ interface Props {
 
 export function PageTopbar({ crumbs }: Props) {
   const { resolved, toggle } = useTheme();
+  const { user } = useAuth();
 
   return (
     <header className="topbar">
@@ -41,6 +43,11 @@ export function PageTopbar({ crumbs }: Props) {
         ))}
         <div className="topbar-spacer" />
         <div className="topbar-actions">
+          {user && (
+            <Link className="topbar-link" to="/upload">
+              Upload
+            </Link>
+          )}
           <AuthWidget />
           <button
             className="iconbtn"

@@ -15,6 +15,7 @@ import io
 import json
 import re
 import tarfile
+import zipfile
 from dataclasses import dataclass
 
 from app.redact.patterns import RedactionReport, redact_jsonl
@@ -141,6 +142,97 @@ def unpack_and_redact(tar_bytes: bytes, *, max_total_bytes: int) -> UnpackedBund
             total_report.counts[k] = total_report.counts.get(k, 0) + v
         meta = _validate_meta(redacted_meta_bytes, agent_id)
 
+        agents.append(AgentPiece(
+            agent_id=agent_id,
+            jsonl_bytes=redacted_jsonl,
+            meta=meta,
+        ))
+
+    return UnpackedBundle(
+        main_bytes=redacted_main,
+        agents=agents,
+        total_redactions=total_report.total(),
+    )
+
+
+def unpack_loose_files(
+    main_bytes: bytes,
+    subagents_zip_bytes: bytes | None,
+    *,
+    max_total_bytes: int,
+) -> UnpackedBundle:
+    """Build an UnpackedBundle from a loose transcript + optional subagent zip.
+
+    Mirrors unpack_and_redact's validation and redaction, but the inputs are
+    a raw main .jsonl and an optional .zip of agents/<id>.jsonl +
+    agents/<id>.meta.json members (same layout as the tar bundle).
+    """
+    total_bytes = len(main_bytes)
+    agent_jsonls: dict[str, bytes] = {}
+    agent_metas: dict[str, bytes] = {}
+
+    if subagents_zip_bytes is not None:
+        try:
+            zf = zipfile.ZipFile(io.BytesIO(subagents_zip_bytes))
+        except zipfile.BadZipFile as e:
+            raise BundleError(f"malformed zip: {e}")
+        try:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
+                name = info.filename
+                if (m := AGENT_JSONL_RE.match(name)):
+                    agent_id = m.group(1)
+                elif (m := AGENT_META_RE.match(name)):
+                    agent_id = m.group(1)
+                else:
+                    raise BundleError(f"disallowed zip member: {name}")
+                total_bytes += info.file_size
+                if total_bytes > max_total_bytes:
+                    raise BundleSizeError(
+                        f"bundle size {total_bytes} exceeds limit "
+                        f"{max_total_bytes}"
+                    )
+                data = zf.read(info)
+                if AGENT_JSONL_RE.match(name):
+                    agent_jsonls[agent_id] = data
+                else:
+                    agent_metas[agent_id] = data
+        finally:
+            zf.close()
+
+    if total_bytes > max_total_bytes:
+        raise BundleSizeError(
+            f"bundle size {total_bytes} exceeds limit {max_total_bytes}"
+        )
+
+    jsonl_ids = set(agent_jsonls.keys())
+    meta_ids = set(agent_metas.keys())
+    if jsonl_ids - meta_ids:
+        missing = next(iter(jsonl_ids - meta_ids))
+        raise BundleError(
+            f"agent {missing}: jsonl present but meta.json missing"
+        )
+    if meta_ids - jsonl_ids:
+        missing = next(iter(meta_ids - jsonl_ids))
+        raise BundleError(
+            f"agent {missing}: meta.json present but jsonl missing"
+        )
+
+    total_report = RedactionReport()
+    redacted_main, main_report = redact_jsonl(main_bytes)
+    for k, v in main_report.counts.items():
+        total_report.counts[k] = total_report.counts.get(k, 0) + v
+
+    agents: list[AgentPiece] = []
+    for agent_id in sorted(jsonl_ids):
+        redacted_jsonl, jr = redact_jsonl(agent_jsonls[agent_id])
+        for k, v in jr.counts.items():
+            total_report.counts[k] = total_report.counts.get(k, 0) + v
+        redacted_meta_bytes, mr = redact_jsonl(agent_metas[agent_id])
+        for k, v in mr.counts.items():
+            total_report.counts[k] = total_report.counts.get(k, 0) + v
+        meta = _validate_meta(redacted_meta_bytes, agent_id)
         agents.append(AgentPiece(
             agent_id=agent_id,
             jsonl_bytes=redacted_jsonl,

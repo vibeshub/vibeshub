@@ -1,0 +1,112 @@
+/* TraceManageMenu.module.css — owner-only trace controls.
+   Tokens come from styles/tokens.css. */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.heading {
+  font-weight: 600;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.action {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.action:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionGhost {
+  padding: 6px 12px;
+  font: inherit;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.actionGhost:hover:not(:disabled) {
+  color: var(--text);
+}
+.actionGhost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.danger {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--color-danger);
+  background: none;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.danger:hover:not(:disabled) {
+  background: var(--diff-del-bg);
+}
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editorActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+.note {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--color-danger);
+}

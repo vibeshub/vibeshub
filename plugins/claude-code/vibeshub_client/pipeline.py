@@ -19,7 +19,8 @@ log = logging.getLogger(__name__)
 class RunOptions:
     server_url: str
     token: str
-    pr_url: str
+    pr_url: Optional[str] = None
+    repo_full_name: Optional[str] = None
     session_id: Optional[str] = None
 
 
@@ -57,6 +58,7 @@ async def run_share_pipeline(
             token=options.token,
             tar_bytes=tar_bytes,
             pr_url=options.pr_url,
+            repo_full_name=options.repo_full_name,
             plugin_version=PLUGIN_VERSION,
             session_id=options.session_id,
             redaction_count_client=report.total(),
@@ -70,7 +72,7 @@ async def run_share_pipeline(
         )
     elapsed = time.monotonic() - started
 
-    if result.created:
+    if result.created and options.pr_url:
         try:
             post_pr_comment(
                 pr_url=options.pr_url,

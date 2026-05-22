@@ -19,9 +19,10 @@ class TraceSummary(BaseModel):
     trace_id: str
     short_id: str
     owner_login: str
-    repo_full_name: str
-    pr_number: int
-    pr_url: str
+    # None for a standalone trace (no PR/repo association).
+    repo_full_name: str | None
+    pr_number: int | None
+    pr_url: str | None
     pr_title: str | None
     platform: str
     byte_size: int

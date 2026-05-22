@@ -1,4 +1,3 @@
-import asyncio
 import io
 import tarfile
 
@@ -6,7 +5,6 @@ import pytest
 import respx
 from sqlalchemy import select
 
-from app.auth.github import GitHubPull, GitHubUser
 from app.short_id import looks_like_short_id
 from app.storage.models import Trace, utcnow
 
@@ -53,6 +51,22 @@ def _mock_alice_pr1(respx_mock: respx.MockRouter, *, private: bool = False, auth
     )
 
 
+def _mock_alice_collab_repo(
+    respx_mock: respx.MockRouter, *, permission: str = "write",
+    private: bool = False,
+) -> None:
+    """Stand up the GitHub responses the repo-only ingest path needs."""
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/alice/repo/collaborators/alice/permission"
+    ).respond(200, json={"permission": permission})
+    respx_mock.get("https://api.github.test/repos/alice/repo").respond(
+        200, json={"full_name": "alice/repo", "private": private}
+    )
+
+
 @pytest.mark.asyncio
 async def test_ingest_accepts_tar_bundle(client, respx_mock):
     _mock_alice_pr1(respx_mock)
@@ -63,7 +77,71 @@ async def test_ingest_accepts_tar_bundle(client, respx_mock):
     data = r.json()
     assert "trace_id" in data and "short_id" in data and "trace_url" in data
     assert looks_like_short_id(data["short_id"])
-    assert data["trace_url"].endswith(f"/alice/repo/pull/1/{data['short_id']}")
+    assert data["trace_url"].endswith(f"/t/{data['short_id']}")
+
+
+@pytest.mark.asyncio
+async def test_ingest_standalone_when_no_pr_or_repo(client, respx_mock):
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
+    headers = {k: v for k, v in COMMON_HEADERS.items()
+               if k != "X-Vibeshub-Pr-Url"}
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
+    r = client.post("/api/ingest", content=body, headers=headers)
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["trace_url"].endswith(f"/t/{data['short_id']}")
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == data["short_id"])
+        )).scalar_one()
+    assert trace.repo_full_name is None
+    assert trace.pr_number is None
+    assert trace.pr_url is None
+    assert trace.is_private is False
+    assert trace.owner_login == "alice"
+
+
+@pytest.mark.asyncio
+async def test_ingest_repo_only_for_collaborator(client, respx_mock):
+    _mock_alice_collab_repo(respx_mock, permission="write", private=True)
+    headers = {k: v for k, v in COMMON_HEADERS.items()
+               if k != "X-Vibeshub-Pr-Url"}
+    headers["X-Vibeshub-Repo"] = "alice/repo"
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
+    r = client.post("/api/ingest", content=body, headers=headers)
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == short_id)
+        )).scalar_one()
+    assert trace.repo_full_name == "alice/repo"
+    assert trace.pr_number is None
+    assert trace.is_private is True
+
+
+@pytest.mark.asyncio
+async def test_ingest_repo_only_rejects_non_collaborator(
+    client, respx_mock
+):
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
+    respx_mock.get(
+        "https://api.github.test/repos/alice/repo/collaborators/alice/permission"
+    ).respond(200, json={"permission": "none"})
+    headers = {k: v for k, v in COMMON_HEADERS.items()
+               if k != "X-Vibeshub-Pr-Url"}
+    headers["X-Vibeshub-Repo"] = "alice/repo"
+    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
+    r = client.post("/api/ingest", content=body, headers=headers)
+    assert r.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -135,12 +213,15 @@ async def test_ingest_rejects_malformed_tar(client, respx_mock):
 
 
 @pytest.mark.asyncio
-async def test_ingest_requires_pr_url_header(client, respx_mock):
-    _mock_alice_pr1(respx_mock)
+async def test_ingest_without_pr_url_header_is_standalone(client, respx_mock):
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"login": "alice", "id": 7}
+    )
     body = make_bundle({"main.jsonl": b"{}\n"})
-    headers = {k: v for k, v in COMMON_HEADERS.items() if k != "X-Vibeshub-Pr-Url"}
+    headers = {k: v for k, v in COMMON_HEADERS.items()
+               if k != "X-Vibeshub-Pr-Url"}
     r = client.post("/api/ingest", content=body, headers=headers)
-    assert r.status_code == 400
+    assert r.status_code == 201
 
 
 @pytest.mark.asyncio
@@ -181,48 +262,6 @@ async def test_ingest_rejects_pr_author_mismatch(client, respx_mock):
     r = client.post("/api/ingest", content=body, headers=COMMON_HEADERS)
     assert r.status_code == 403
     assert "author" in r.json()["detail"].lower()
-
-
-class _ConcurrencyProbeGitHub:
-    """Stand-in for GitHubClient that detects whether verify_token and
-    get_pull are awaited concurrently. Each call signals it started, then
-    waits for the other to also signal. If they're called sequentially,
-    the second call never starts within the timeout window and the test
-    surfaces a non-201 response."""
-
-    def __init__(self):
-        self.verify_started = asyncio.Event()
-        self.pull_started = asyncio.Event()
-
-    async def verify_token(self, token):
-        self.verify_started.set()
-        await asyncio.wait_for(self.pull_started.wait(), timeout=1.0)
-        return GitHubUser(login="alice", id=7)
-
-    async def get_pull(self, token, owner, repo, number):
-        self.pull_started.set()
-        await asyncio.wait_for(self.verify_started.wait(), timeout=1.0)
-        return GitHubPull(
-            number=number,
-            title="t",
-            author_login="alice",
-            html_url=f"https://github.com/{owner}/{repo}/pull/{number}",
-            repo_is_private=False,
-            repo_full_name=f"{owner}/{repo}",
-        )
-
-
-@pytest.mark.asyncio
-async def test_ingest_runs_github_calls_in_parallel(client):
-    probe = _ConcurrencyProbeGitHub()
-    client.app.state.github = probe
-
-    body = make_bundle({"main.jsonl": b'{"type":"user"}\n'})
-    r = client.post("/api/ingest", content=body, headers=COMMON_HEADERS)
-
-    assert r.status_code == 201, r.text
-    assert probe.verify_started.is_set()
-    assert probe.pull_started.is_set()
 
 
 @pytest.mark.asyncio
