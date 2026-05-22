@@ -114,12 +114,12 @@ export function Landing() {
                   See a live trace
                   <ArrowRight />
                 </a>
-                <a
+                <Link
                   className={`${styles.btn} ${styles.btnGhost}`}
-                  href="#privacy"
+                  to="/privacy"
                 >
                   Privacy &amp; redaction
-                </a>
+                </Link>
               </div>
               <div className={styles.heroInstall}>
                 <div className={styles.heroInstallHead}>
@@ -347,11 +347,16 @@ export function Landing() {
                   <span>
                     <strong>Undo anytime.</strong> Change your mind about a
                     trace? Take it down with{" "}
-                    <code>/share-pr delete &lt;pr-url&gt;</code> — and only the
+                    <code>/share-trace delete &lt;pr-url | /t/&lt;id&gt; url | short-id&gt;</code> — and only the
                     person who posted it can.
                   </span>
                 </li>
               </ul>
+              <p style={{ marginTop: 18 }}>
+                <Link to="/privacy" className={styles.ghLink}>
+                  Read the full privacy policy →
+                </Link>
+              </p>
             </div>
 
             <div className={styles.redact}>
@@ -510,7 +515,7 @@ export function Landing() {
             <div className={styles.footerLinks}>
               <a href="https://github.com/Bhavya6187/vibeshub">GitHub</a>
               <a href="#trace">Live trace</a>
-              <a href="#privacy">Privacy</a>
+              <Link to="/privacy">Privacy</Link>
               <a href="#install">Install</a>
             </div>
           </div>
