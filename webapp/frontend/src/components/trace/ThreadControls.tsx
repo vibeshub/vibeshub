@@ -1,8 +1,6 @@
 interface Props {
   showSystemEvents: boolean;
   setShowSystemEvents: (v: boolean) => void;
-  compact: boolean;
-  setCompact: (v: boolean) => void;
 }
 
 function Toggle({
@@ -30,8 +28,6 @@ function Toggle({
 export function ThreadControls({
   showSystemEvents,
   setShowSystemEvents,
-  compact,
-  setCompact,
 }: Props) {
   return (
     <div className="thread-controls">
@@ -39,11 +35,6 @@ export function ThreadControls({
         on={showSystemEvents}
         onClick={() => setShowSystemEvents(!showSystemEvents)}
         label="Show system events"
-      />
-      <Toggle
-        on={compact}
-        onClick={() => setCompact(!compact)}
-        label="Compact"
       />
     </div>
   );

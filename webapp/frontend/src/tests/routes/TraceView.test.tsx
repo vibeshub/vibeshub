@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { TraceView } from "../../routes/TraceView";
 
@@ -93,42 +93,6 @@ describe("TraceView", () => {
     expect(
       screen.getByRole("button", { name: /show system events/i }),
     ).toBeInTheDocument();
-  });
-
-  it("toggles the compact class on the viewer root via the Compact selector", async () => {
-    mockFetchSequence({
-      trace_id: "id",
-      short_id: SHORT_ID,
-      owner_login: "alice",
-      repo_full_name: "alice/repo",
-      pr_number: 7,
-      pr_url: "https://github.com/alice/repo/pull/7",
-      pr_title: "Add thing",
-      platform: "claude-code",
-      byte_size: FIXTURE.length,
-      message_count: 100,
-      created_at: "2026-05-17T00:00:00Z",
-      is_private: false,
-    });
-
-    const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
-
-    const compactBtn = await screen.findByRole("button", {
-      name: /compact/i,
-    });
-    const viewer = container.querySelector(".vibeshub-viewer");
-    expect(viewer).not.toBeNull();
-
-    // Off by default.
-    expect(viewer!.classList.contains("compact")).toBe(false);
-
-    // Clicking turns it on.
-    fireEvent.click(compactBtn);
-    expect(viewer!.classList.contains("compact")).toBe(true);
-
-    // Clicking again turns it off.
-    fireEvent.click(compactBtn);
-    expect(viewer!.classList.contains("compact")).toBe(false);
   });
 
   it("shows an error state when the trace summary fetch fails", async () => {

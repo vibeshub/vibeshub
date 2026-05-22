@@ -25,12 +25,11 @@ export function TraceViewer({
   repoName,
 }: Props) {
   const [showSystemEvents, setShowSystemEvents] = useState(false);
-  const [compact, setCompact] = useState(false);
 
   const empty = session.stream.length === 0;
 
   return (
-    <div className={"vibeshub-viewer" + (compact ? " compact" : "")}>
+    <div className="vibeshub-viewer">
       <div className="viewer-header">
         <ViewerTopbar
           session={session}
@@ -50,8 +49,6 @@ export function TraceViewer({
           <ThreadControls
             showSystemEvents={showSystemEvents}
             setShowSystemEvents={setShowSystemEvents}
-            compact={compact}
-            setCompact={setCompact}
           />
           <Thread
             session={session}
