@@ -32,7 +32,19 @@ All `npm`/`npx` commands below are run from `webapp/frontend/`.
 
 - [ ] **Step 1: Write the failing test**
 
-Add this test inside the `describe("TraceView", ...)` block in `webapp/frontend/src/tests/routes/TraceView.test.tsx`, after the existing `"renders the hero title..."` test:
+First, add `within` to the Testing Library import in `webapp/frontend/src/tests/routes/TraceView.test.tsx`:
+
+```tsx
+import { render, screen, waitFor } from "@testing-library/react";
+```
+
+to:
+
+```tsx
+import { render, screen, waitFor, within } from "@testing-library/react";
+```
+
+Then add this test inside the `describe("TraceView", ...)` block, after the existing `"renders the hero title..."` test. Note: the assertions are **scoped to the top bar** with `within()` — a global `getAllByText`/`getAllByRole` count would also catch the `PrCard` components in the thread, which render their own "view on GitHub" links.
 
 ```tsx
 it("renders a compact title and trace links in the top bar", async () => {
@@ -56,23 +68,23 @@ it("renders a compact title and trace links in the top bar", async () => {
   // Wait for the viewer to finish rendering.
   await screen.findByText("Add startup credential smoke-check");
 
-  // The title appears twice: the large TraceHeader h1 and the compact top-bar copy.
-  expect(screen.getAllByText("Add thing").length).toBe(2);
-
-  // GitHub + Raw links appear twice: once in TraceHeader, once compact in the top bar.
+  // The compact title and trace links live inside the top bar.
+  const topbar = document.querySelector("header.topbar") as HTMLElement;
+  expect(topbar).not.toBeNull();
+  expect(within(topbar).getByText("Add thing")).toBeInTheDocument();
   expect(
-    screen.getAllByRole("link", { name: /view on github/i }).length,
-  ).toBe(2);
+    within(topbar).getByRole("link", { name: /view on github/i }),
+  ).toBeInTheDocument();
   expect(
-    screen.getAllByRole("link", { name: /raw jsonl/i }).length,
-  ).toBe(2);
+    within(topbar).getByRole("link", { name: /raw jsonl/i }),
+  ).toBeInTheDocument();
 });
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/tests/routes/TraceView.test.tsx -t "compact title"`
-Expected: FAIL — `expected 1 to be 2` (only the `TraceHeader` copy exists so far).
+Expected: FAIL — `within(topbar).getByText("Add thing")` cannot find the compact title (only the `TraceHeader` copy exists so far, and it is outside `header.topbar`).
 
 - [ ] **Step 3: Add the `trace` prop and compact elements to `ViewerTopbar`**
 
