@@ -244,7 +244,7 @@ def _run_hook(hook_script: Path, payload: dict, env: dict) -> subprocess.Complet
 
 
 def test_hook_uploads_when_git_push_to_pr_branch(
-    tmp_path: Path, fake_gh_dir: Path, fake_server, monkeypatch,
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
 ):
     fake_home, cwd, session_id = _setup_transcript(tmp_path)
     plugin_root = Path(__file__).resolve().parents[1]
@@ -272,7 +272,7 @@ def test_hook_uploads_when_git_push_to_pr_branch(
 
 
 def test_hook_uploads_when_gh_pr_edit(
-    tmp_path: Path, fake_gh_dir: Path, fake_server, monkeypatch,
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
 ):
     fake_home, cwd, session_id = _setup_transcript(tmp_path)
     plugin_root = Path(__file__).resolve().parents[1]
@@ -299,7 +299,7 @@ def test_hook_uploads_when_gh_pr_edit(
 
 
 def test_hook_silent_when_git_push_has_no_pr(
-    tmp_path: Path, fake_gh_dir_no_pr: Path, monkeypatch,
+    tmp_path: Path, fake_gh_dir_no_pr: Path,
 ):
     fake_home, cwd, session_id = _setup_transcript(tmp_path)
     plugin_root = Path(__file__).resolve().parents[1]

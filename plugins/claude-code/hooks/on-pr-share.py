@@ -101,6 +101,13 @@ def main() -> None:
         # "push" / "edit": no PR URL in the command output. Resolve the open
         # PR for the current branch. A failure here is the normal case for a
         # push outside a PR — bail silently (log only, nothing on stderr).
+        #
+        # We intentionally do not check whether the push/edit command itself
+        # succeeded. The trace is the conversation transcript, not the diff,
+        # so refreshing it after a failed push just re-uploads the same
+        # conversation to the branch's existing PR — harmless and idempotent.
+        # (The `create` path bails when stdout has no PR URL only because a
+        # failed `gh pr create` leaves no PR to attach a trace to.)
         try:
             pr_url = resolve_pr_url(None, cwd=payload.get("cwd"))
         except (subprocess.SubprocessError, OSError) as e:
