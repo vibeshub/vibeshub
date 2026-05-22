@@ -170,6 +170,16 @@ function buildHeatmap(days: GithubContributionDay[]): HeatModel {
   return { weeks, monthLabels, total, thisWeek, longestStreak, busiestWeekday };
 }
 
+/* ------------------------------------------------------------------ *
+ * install snippet — single source of truth for the onboarding card
+ * ------------------------------------------------------------------ */
+
+const INSTALL_COPY = [
+  "git clone https://github.com/Bhavya6187/vibeshub.git",
+  "/plugin marketplace add ./vibeshub",
+  "/plugin install vibeshub@vibeshub",
+].join("\n");
+
 type UserTab = "traces" | "repos";
 
 export function UserPage() {
@@ -243,6 +253,7 @@ export function UserPage() {
             </div>
           </div>
           <div className="entity-actions">
+            {isOwner && <CopyLinkButton login={owner} />}
             <a
               href={githubUrl}
               target="_blank"
@@ -315,22 +326,32 @@ export function UserPage() {
             {tab === "traces" && (
               <>
                 {data.traces.length === 0 ? (
-                  <div className="trace-list">
-                    <div className="empty">No traces yet.</div>
-                  </div>
+                  isOwner ? (
+                    <Onboarding />
+                  ) : (
+                    <div className="trace-list">
+                      <div className="empty">No traces yet.</div>
+                    </div>
+                  )
                 ) : (
-                  <div className="trace-list">
-                    {data.traces.map((t) => (
-                      <TraceListRow key={t.short_id} trace={t} showRepoChip />
-                    ))}
-                  </div>
+                  <>
+                    <div className="trace-list">
+                      {data.traces.map((t) => (
+                        <TraceListRow
+                          key={t.short_id}
+                          trace={t}
+                          showRepoChip
+                        />
+                      ))}
+                    </div>
+                    <div className="list-footer">
+                      <span>
+                        Showing {data.traces.length} of{" "}
+                        {data.stats.trace_count} traces
+                      </span>
+                    </div>
+                  </>
                 )}
-
-                <div className="list-footer">
-                  <span>
-                    Showing {data.traces.length} of {data.stats.trace_count} traces
-                  </span>
-                </div>
               </>
             )}
 
@@ -371,6 +392,49 @@ export function UserPage() {
                 )}
               </div>
             </div>
+
+            {isOwner && (
+              <>
+                <div className={styles.card} style={{ marginTop: 18 }}>
+                  <div className={styles.cardHead}>
+                    <h4>Capturing more</h4>
+                  </div>
+                  <div className={styles.tip}>
+                    <p className={styles.tipText}>
+                      Every time Claude Code runs <code>gh pr create</code>,
+                      the plugin attaches a fresh trace automatically.
+                    </p>
+                    <div className={styles.term}>
+                      <span className={styles.prompt}>$ </span>
+                      <span className={styles.cmd}>gh pr create</span> --fill
+                      {"\n"}
+                      <span className={styles.echo}>
+                        ↳ vibeshub: redacted · uploaded ✓
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {user && !user.has_private_access && (
+                  <div className={styles.card}>
+                    <div className={styles.privCard}>
+                      <h4>Working in private repos?</h4>
+                      <p>
+                        Grant private access so traces from private
+                        repositories open for teammates with repo access.
+                      </p>
+                      <a
+                        className={styles.privLink}
+                        href="/api/auth/github/login?scope=private&next=%2Fhome"
+                      >
+                        <IconShield />
+                        Enable private repositories
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </aside>
         </div>
       </main>
@@ -430,6 +494,117 @@ function RepoList({ repos }: { repos: UserRepoEntry[] }) {
         </span>
       </div>
     </>
+  );
+}
+
+function CopyLinkButton({ login }: { login: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const url = `${window.location.origin}/${login}`;
+    navigator.clipboard?.writeText(url).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      },
+      () => {},
+    );
+  };
+  return (
+    <button type="button" className="iconbtn" onClick={copy}>
+      {copied ? "Link copied" : "Copy profile link"}
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * onboarding (zero-trace state)
+ * ------------------------------------------------------------------ */
+
+function Onboarding() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(INSTALL_COPY).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+      },
+      () => {},
+    );
+  };
+
+  return (
+    <section className={`${styles.rise} ${styles.onboard}`}>
+      <div className={styles.onboardLeft}>
+        <span className={styles.onboardKicker}>No traces yet</span>
+        <h2>Capture your first Claude Code session.</h2>
+        <p>
+          Install the plugin once. After that, every PR Claude Code opens with{" "}
+          <code>gh pr create</code> auto-attaches a redacted, replayable
+          trace — and it shows up right here.
+        </p>
+        <ol className={styles.steps}>
+          <li className={styles.step}>
+            <span className={styles.stepNum}>1</span>
+            <span className={styles.stepText}>
+              <strong>Clone &amp; register</strong> the vibeshub marketplace.
+            </span>
+          </li>
+          <li className={styles.step}>
+            <span className={styles.stepNum}>2</span>
+            <span className={styles.stepText}>
+              <strong>Install the plugin</strong> inside Claude Code.
+            </span>
+          </li>
+          <li className={styles.step}>
+            <span className={styles.stepNum}>3</span>
+            <span className={styles.stepText}>
+              <strong>Open a PR</strong> — the trace lands here on its own.
+            </span>
+          </li>
+        </ol>
+      </div>
+
+      <div className={styles.onboardRight}>
+        <div className={styles.codeHead}>
+          <span className={styles.codeDots}>
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className={styles.codeTitle}>install · shell</span>
+          <button
+            type="button"
+            className={`${styles.codeCopy} ${copied ? styles.copied : ""}`}
+            onClick={copy}
+          >
+            {copied ? "copied" : "copy"}
+          </button>
+        </div>
+        <pre className={styles.code}>
+          <span className={styles.cmt}># 1 · clone the repo</span>
+          {"\n"}
+          <span className={styles.prompt}>$ </span>git clone{" "}
+          <span className={styles.arg}>
+            https://github.com/Bhavya6187/vibeshub.git
+          </span>
+          {"\n\n"}
+          <span className={styles.cmt}>
+            # 2 · register + install in Claude Code
+          </span>
+          {"\n"}
+          /plugin marketplace add <span className={styles.arg}>./vibeshub</span>
+          {"\n"}
+          /plugin install <span className={styles.arg}>vibeshub@vibeshub</span>
+          {"\n\n"}
+          <span className={styles.cmt}># 3 · next PR auto-attaches a trace</span>
+          {"\n"}
+          <span className={styles.prompt}>$ </span>gh pr create --fill{"\n"}
+          <span className={styles.ok}>
+            {"  ↳ vibeshub: redacted · uploaded · commented ✓"}
+          </span>
+        </pre>
+      </div>
+    </section>
   );
 }
 
@@ -647,6 +822,23 @@ function IconGithub() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.81 0 .27.18.59.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z" />
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
     </svg>
   );
 }
