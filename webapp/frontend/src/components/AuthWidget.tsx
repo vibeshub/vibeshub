@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export function AuthWidget() {
@@ -57,6 +57,15 @@ export function AuthWidget() {
             zIndex: 10,
           }}
         >
+          <Link
+            className="iconbtn"
+            to="/home"
+            role="menuitem"
+            onClick={() => setMenuOpen(false)}
+            style={{ width: "100%", textAlign: "left", display: "block" }}
+          >
+            Home
+          </Link>
           {!user.has_private_access && (
             <a
               className="iconbtn"

@@ -641,7 +641,7 @@ function TraceSummary({
                 </p>
                 <a
                   className={styles.privLink}
-                  href="/api/auth/github/login?scope=private&next=%2F"
+                  href="/api/auth/github/login?scope=private&next=%2Fhome"
                 >
                   <IconShield />
                   Enable private repositories

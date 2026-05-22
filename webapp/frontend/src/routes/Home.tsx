@@ -1,13 +1,14 @@
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Dashboard } from "./Dashboard";
-import { Landing } from "./Landing";
 
 /**
- * The "/" route. Signed-in visitors get their personal workspace dashboard;
- * everyone else gets the marketing landing page.
+ * The "/home" route — a signed-in visitor's personal workspace dashboard.
+ * Anonymous visitors have no workspace, so they're sent back to the shared
+ * landing page at "/".
  *
  * While the session is still resolving we render an empty shell rather than
- * flashing the marketing page and then swapping it for the dashboard.
+ * redirecting prematurely and bouncing a signed-in user away.
  */
 export function Home() {
   const { loading, user } = useAuth();
@@ -16,5 +17,5 @@ export function Home() {
     return <div className="page-shell" style={{ minHeight: "100vh" }} />;
   }
 
-  return user ? <Dashboard user={user} /> : <Landing />;
+  return user ? <Dashboard user={user} /> : <Navigate to="/" replace />;
 }
