@@ -115,6 +115,7 @@
   align-items: center;
   gap: 6px;
   max-width: 0;
+  /* Negative margin cancels .topbar-inner's 16px gap while collapsed. */
   margin-right: -16px;
   opacity: 0;
   visibility: hidden;
@@ -138,6 +139,7 @@
     visibility 0s linear 0s;
 }
 .vibeshub-viewer .topbar-title-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -157,6 +159,7 @@
   align-items: center;
   gap: 12px;
   max-width: 0;
+  /* Negative margin cancels .topbar-actions' 6px gap while collapsed. */
   margin-right: -6px;
   opacity: 0;
   visibility: hidden;
