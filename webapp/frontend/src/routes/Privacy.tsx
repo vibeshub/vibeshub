@@ -138,7 +138,7 @@ export function Privacy() {
           <p>
             You can delete any trace you uploaded at any time. Inside Claude
             Code, run{" "}
-            <code>/share-pr delete &lt;pr-url-or-trace-url&gt;</code>; only
+            <code>/share-trace delete &lt;pr-url | /t/&lt;id&gt; url | short-id&gt;</code>; only
             the original uploader can delete a trace. Sessions expire on
             their own, and signing out invalidates the current session
             immediately.
