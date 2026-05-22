@@ -6,7 +6,7 @@
   flex-direction: column;
 }
 
-/* ---------- sticky header (top bar + trace header stacked) ---------- */
+/* ---------- sticky top bar ---------- */
 .vibeshub-viewer .viewer-header {
   position: sticky;
   top: 0;
@@ -107,96 +107,6 @@
 .vibeshub-viewer .iconbtn-icon {
   width: 14px;
   height: 14px;
-}
-
-/* ---------- compact title + links (revealed when the header is stuck) ---------- */
-.vibeshub-viewer .topbar-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 0;
-  /* Negative margin cancels .topbar-inner's 16px gap while collapsed. */
-  margin-right: -16px;
-  opacity: 0;
-  visibility: hidden;
-  overflow: hidden;
-  white-space: nowrap;
-  transition:
-    max-width 220ms ease,
-    margin-right 220ms ease,
-    opacity 160ms ease,
-    visibility 0s linear 220ms;
-}
-.vibeshub-viewer .viewer-header.is-stuck .topbar-title {
-  max-width: 40vw;
-  margin-right: 0;
-  opacity: 1;
-  visibility: visible;
-  transition:
-    max-width 220ms ease,
-    margin-right 220ms ease,
-    opacity 160ms ease,
-    visibility 0s linear 0s;
-}
-.vibeshub-viewer .topbar-title-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-strong);
-}
-.vibeshub-viewer .topbar-title-lock {
-  font-size: 11px;
-}
-.vibeshub-viewer .topbar-title-sep {
-  color: var(--text-faint);
-}
-
-.vibeshub-viewer .topbar-stuck-links {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 0;
-  /* Negative margin cancels .topbar-actions' 6px gap while collapsed. */
-  margin-right: -6px;
-  opacity: 0;
-  visibility: hidden;
-  overflow: hidden;
-  white-space: nowrap;
-  transition:
-    max-width 220ms ease,
-    margin-right 220ms ease,
-    opacity 160ms ease,
-    visibility 0s linear 220ms;
-}
-.vibeshub-viewer .viewer-header.is-stuck .topbar-stuck-links {
-  max-width: 320px;
-  margin-right: 0;
-  opacity: 1;
-  visibility: visible;
-  transition:
-    max-width 220ms ease,
-    margin-right 220ms ease,
-    opacity 160ms ease,
-    visibility 0s linear 0s;
-}
-.vibeshub-viewer .topbar-stuck-link {
-  font-size: 13px;
-  color: var(--text-muted);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.vibeshub-viewer .topbar-stuck-link:hover {
-  color: var(--accent-strong);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vibeshub-viewer .topbar-title,
-  .vibeshub-viewer .topbar-stuck-links {
-    transition: none;
-  }
 }
 
 /* ---------- hero ---------- */
