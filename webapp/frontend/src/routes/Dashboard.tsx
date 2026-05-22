@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import { fetchGithubContributions, fetchUserOverview } from "../api";
 import type {
   GithubContributionDay,
@@ -189,6 +190,7 @@ const INSTALL_COPY = [
  * ================================================================== */
 
 export function Dashboard({ user }: { user: MeResponse }) {
+  const { signOut } = useAuth();
   const [overview, setOverview] = useState<UserOverview | null>(null);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [contrib, setContrib] = useState<GithubContributions | null>(null);
@@ -325,7 +327,16 @@ export function Dashboard({ user }: { user: MeResponse }) {
 
         <footer className={styles.foot}>
           <div className={`${styles.wrap} ${styles.footInner}`}>
-            <span>signed in as @{user.login}</span>
+            <span>
+              signed in as @{user.login}
+              <button
+                type="button"
+                className={styles.signOut}
+                onClick={() => signOut()}
+              >
+                sign out
+              </button>
+            </span>
             <a href="https://github.com/Bhavya6187/vibeshub">
               vibeshub · github
             </a>
@@ -641,7 +652,7 @@ function TraceSummary({
                 </p>
                 <a
                   className={styles.privLink}
-                  href="/api/auth/github/login?scope=private&next=%2F"
+                  href="/api/auth/github/login?scope=private&next=%2Fhome"
                 >
                   <IconShield />
                   Enable private repositories

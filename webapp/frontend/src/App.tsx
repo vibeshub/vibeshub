@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { Home } from "./routes/Home";
+import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
 import { PrTracesList } from "./routes/PrTracesList";
 import { RepoPage } from "./routes/RepoPage";
@@ -11,7 +12,8 @@ export function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Home />} />
         <Route
           path=":owner/:repo/pull/:number"
           element={<PrTracesList />}
