@@ -67,13 +67,17 @@ async def _require_trace_access(
 ) -> None:
     """Raise the appropriate HTTPException if a viewer may not see `trace`.
 
-    Public traces pass unconditionally. Private traces produce: 401 when the
-    viewer is anonymous, 403 when logged in without `repo` scope, 404 when
-    GitHub says the viewer cannot read the repo, and 502 when the GitHub
-    upstream errors out while checking repo access (RepoAccessError).
+    Public traces pass unconditionally. For a private trace:
+
+    - **Standalone** (`repo_full_name` is None): owner-only. Anonymous →
+      401 `auth_required`; signed-in non-owner → 404 `not_found`; owner →
+      allowed.
+    - **Repo-associated**: anonymous → 401; logged in without `repo` scope
+      → 403; GitHub says no repo read access → 404; GitHub upstream error
+      while checking → 502 (RepoAccessError).
 
     Every gated error response carries `Cache-Control: no-store` so a shared
-    proxy cannot cache a stale 401/403/404/502 for a viewer whose repo access
+    proxy cannot cache a stale 401/403/404/502 for a viewer whose access
     later changes.
     """
     if not trace.is_private:
@@ -83,6 +87,15 @@ async def _require_trace_access(
         raise HTTPException(
             status_code=401, detail="auth_required", headers=no_store
         )
+    # Standalone trace (no repo association): owner-only. A signed-in
+    # non-owner gets 404 (the trace's existence is not disclosed).
+    if trace.repo_full_name is None:
+        if trace.owner_login != user.github_login:
+            raise HTTPException(
+                status_code=404, detail="not_found", headers=no_store
+            )
+        return
+    # Repo-associated: live GitHub repo-read-access check (unchanged).
     if not has_repo_scope(user):
         raise HTTPException(
             status_code=403, detail="private_scope_required", headers=no_store
