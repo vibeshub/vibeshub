@@ -10,20 +10,45 @@ import uvicorn
 from fastapi import FastAPI, Header, Request
 
 
-@pytest.fixture
-def fake_gh_dir(tmp_path: Path) -> Path:
-    """Create a directory with a fake `gh` script that prints a token then no-ops on comment."""
-    gh = tmp_path / "gh"
+def _write_fake_gh(directory: Path, *, pr_view_url: str | None) -> Path:
+    """Write a fake `gh` script into `directory` and return `directory`.
+
+    `gh auth token` and `gh pr comment` always succeed. `gh pr view` echoes
+    `pr_view_url` and exits 0, or exits 1 when `pr_view_url` is None (the
+    branch has no open PR). Anything else exits 1.
+    """
+    if pr_view_url is None:
+        pr_view = "exit 1"
+    else:
+        pr_view = f"echo '{pr_view_url}'; exit 0"
+    gh = directory / "gh"
     gh.write_text(
         "#!/usr/bin/env bash\n"
         "case \"$1 $2\" in\n"
         "  'auth token') echo 'ghp_test_fake'; exit 0 ;;\n"
-        "  'pr comment') exit 0 ;;\n"
+        "  'pr comment') [ -n \"$VIBESHUB_TEST_COMMENT_LOG\" ] && echo x >> \"$VIBESHUB_TEST_COMMENT_LOG\"; exit 0 ;;\n"
+        f"  'pr view') {pr_view} ;;\n"
         "  *) exit 1 ;;\n"
         "esac\n"
     )
     gh.chmod(0o755)
-    return tmp_path
+    return directory
+
+
+@pytest.fixture
+def fake_gh_dir(tmp_path: Path) -> Path:
+    """A dir with a fake `gh` whose `pr view` resolves to alice/repo PR 3."""
+    d = tmp_path / "ghbin"
+    d.mkdir()
+    return _write_fake_gh(d, pr_view_url="https://github.com/alice/repo/pull/3")
+
+
+@pytest.fixture
+def fake_gh_dir_no_pr(tmp_path: Path) -> Path:
+    """A dir with a fake `gh` whose `pr view` fails (branch has no PR)."""
+    d = tmp_path / "ghbin"
+    d.mkdir()
+    return _write_fake_gh(d, pr_view_url=None)
 
 
 @pytest.fixture
@@ -31,6 +56,7 @@ def fake_server():
     """Spin up a real FastAPI server that emulates /api/ingest (tar + headers)."""
     app = FastAPI()
     received: list[dict] = []
+    traces: dict[tuple, str] = {}  # (pr_url, session_id) -> short_id
 
     @app.post("/api/ingest", status_code=201)
     async def ingest(
@@ -38,8 +64,18 @@ def fake_server():
         x_vibeshub_pr_url: str = Header(...),
         x_vibeshub_platform: str = Header(...),
         x_vibeshub_plugin_version: str = Header(...),
+        x_vibeshub_session_id: str | None = Header(None),
     ):
         body = await request.body()
+        key = (x_vibeshub_pr_url, x_vibeshub_session_id)
+        if x_vibeshub_session_id is not None and key in traces:
+            short_id = traces[key]
+            created = False
+        else:
+            short_id = f"abc{len(received) + 1:07d}"
+            if x_vibeshub_session_id is not None:
+                traces[key] = short_id
+            created = True
         received.append(
             {
                 "tar_bytes": body,
@@ -47,12 +83,14 @@ def fake_server():
                 "platform": x_vibeshub_platform,
                 "plugin_version": x_vibeshub_plugin_version,
                 "content_type": request.headers.get("content-type", ""),
+                "created": created,
             }
         )
         return {
             "trace_id": "00000000-0000-0000-0000-000000000001",
-            "short_id": "abc1234567",
-            "trace_url": "http://localhost:9999/alice/repo/pull/3/abc1234567",
+            "short_id": short_id,
+            "trace_url": f"http://localhost:9999/alice/repo/pull/3/{short_id}",
+            "created": created,
         }
 
     config = uvicorn.Config(app, host="127.0.0.1", port=9999, log_level="error")
@@ -91,7 +129,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     )
 
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
     hook_log = tmp_path / "hook.log"
 
     payload = {
@@ -142,7 +180,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
 
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
 
     payload = {
         "session_id": "irrelevant",
@@ -168,7 +206,7 @@ def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
 
 def test_hook_silent_when_pr_create_failed(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
 
     payload = {
         "session_id": "irrelevant",
@@ -190,3 +228,146 @@ def test_hook_silent_when_pr_create_failed(tmp_path: Path):
 
     assert proc.returncode == 0
     assert proc.stderr == ""
+
+
+def _setup_transcript(tmp_path: Path) -> tuple[Path, Path, str]:
+    """Create Claude Code's on-disk transcript layout under `tmp_path`.
+    Returns (fake_home, cwd, session_id)."""
+    fake_home = tmp_path / "home"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    encoded = str(cwd).replace("/", "-")
+    transcript_dir = fake_home / ".claude" / "projects" / encoded
+    transcript_dir.mkdir(parents=True)
+    session_id = "session-xyz"
+    (transcript_dir / f"{session_id}.jsonl").write_text(
+        '{"type":"user","message":{"role":"user","content":"hi"}}\n'
+    )
+    return fake_home, cwd, session_id
+
+
+def _run_hook(hook_script: Path, payload: dict, env: dict) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(hook_script)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_hook_uploads_when_git_push_to_pr_branch(
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
+):
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "git push origin HEAD"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1
+    assert fake_server[0]["pr_url"] == "https://github.com/alice/repo/pull/3"
+    assert "[vibeshub] trace uploaded" in proc.stderr
+
+
+def test_hook_uploads_when_gh_pr_edit(
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
+):
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "gh pr edit --title 'new title'"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1
+    assert fake_server[0]["pr_url"] == "https://github.com/alice/repo/pull/3"
+
+
+def test_hook_silent_when_git_push_has_no_pr(
+    tmp_path: Path, fake_gh_dir_no_pr: Path,
+):
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "git push"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["PATH"] = str(fake_gh_dir_no_pr) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0
+    assert proc.stderr == ""
+
+
+def test_hook_refresh_from_same_session_skips_repeat_comment(
+    tmp_path: Path, fake_gh_dir: Path, fake_server,
+):
+    """A second push from the same session refreshes the trace (created=False
+    from the server's upsert) and must NOT post another PR comment."""
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    comment_log = tmp_path / "comments.log"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "git push"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["VIBESHUB_TEST_COMMENT_LOG"] = str(comment_log)
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc1 = _run_hook(hook_script, payload, env)
+    proc2 = _run_hook(hook_script, payload, env)
+
+    assert proc1.returncode == 0, proc1.stderr
+    assert proc2.returncode == 0, proc2.stderr
+    # Both uploads reached the server; it upserted them to one trace.
+    assert len(fake_server) == 2
+    assert fake_server[0]["created"] is True
+    assert fake_server[1]["created"] is False
+    # The PR comment was posted exactly once — for the first upload only.
+    assert comment_log.read_text().count("x") == 1

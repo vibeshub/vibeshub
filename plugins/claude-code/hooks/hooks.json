@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/on-pr-create.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/on-pr-share.py\"",
             "async": false
           }
         ]

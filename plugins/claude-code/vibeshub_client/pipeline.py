@@ -31,6 +31,7 @@ class RunResult:
     skip_reason: str | None = None
     payload_bytes: int | None = None
     upload_elapsed_seconds: float | None = None
+    created: bool = True
 
 
 async def run_share_pipeline(
@@ -69,20 +70,22 @@ async def run_share_pipeline(
         )
     elapsed = time.monotonic() - started
 
-    try:
-        post_pr_comment(
-            pr_url=options.pr_url,
-            body=build_comment_body(result.trace_url),
-        )
-    except RuntimeError as e:
-        return RunResult(
-            uploaded=True,
-            short_id=result.short_id,
-            trace_url=result.trace_url,
-            skip_reason=f"comment failed: {e}",
-            payload_bytes=payload_bytes,
-            upload_elapsed_seconds=elapsed,
-        )
+    if result.created:
+        try:
+            post_pr_comment(
+                pr_url=options.pr_url,
+                body=build_comment_body(result.trace_url),
+            )
+        except RuntimeError as e:
+            return RunResult(
+                uploaded=True,
+                short_id=result.short_id,
+                trace_url=result.trace_url,
+                skip_reason=f"comment failed: {e}",
+                payload_bytes=payload_bytes,
+                upload_elapsed_seconds=elapsed,
+                created=result.created,
+            )
 
     return RunResult(
         uploaded=True,
@@ -90,4 +93,5 @@ async def run_share_pipeline(
         trace_url=result.trace_url,
         payload_bytes=payload_bytes,
         upload_elapsed_seconds=elapsed,
+        created=result.created,
     )

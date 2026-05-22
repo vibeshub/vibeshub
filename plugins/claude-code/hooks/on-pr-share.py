@@ -2,9 +2,10 @@
 """
 PostToolUse hook for Claude Code.
 
-Reads the hook payload from stdin (JSON), checks if the tool call was
-`gh pr create`, and if so runs the vibeshub share pipeline: redact,
-upload, and comment on the PR.
+Reads the hook payload from stdin (JSON). When the tool call was a command
+that creates or updates a PR — `gh pr create`, `git push`, or `gh pr edit` —
+it runs the vibeshub share pipeline: redact, upload, and (for a brand-new
+trace) comment on the PR.
 
 Exits 0 on success or any non-fatal failure (we never want to block Claude).
 Errors are written to stderr.
@@ -14,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -67,32 +69,55 @@ def main() -> None:
 
     tool_input = payload.get("tool_input", {})
     tool_response = payload.get("tool_response", {})
-
     command = tool_input.get("command", "")
-    if "gh pr create" not in command:
-        _log("skipped: not a gh pr create command")
-        return  # not for us
-
-    stdout = ""
-    if isinstance(tool_response, dict):
-        stdout = tool_response.get("stdout", "") or tool_response.get("output", "")
-    elif isinstance(tool_response, str):
-        stdout = tool_response
 
     try:
         from vibeshub_client.gh_token import GhTokenError, get_gh_token
         from vibeshub_client.parse_pr_url import extract_pr_url_from_gh_stdout
         from vibeshub_client.pipeline import RunOptions, run_share_pipeline
+        from vibeshub_client.pr_resolve import resolve_pr_url
+        from vibeshub_client.share_trigger import classify_share_trigger
     except ImportError as e:
         _bail(f"failed to import vibeshub_client (is the plugin's Python missing deps?): {e}")
         return
 
-    pr_url = extract_pr_url_from_gh_stdout(stdout)
-    if not pr_url:
-        _log("skipped: no PR URL in gh stdout (command likely failed)")
-        return  # likely the command failed; nothing to share
+    trigger = classify_share_trigger(command)
+    if trigger is None:
+        _log("skipped: command is not a share trigger")
+        return  # not for us
 
-    _log(f"detected PR: {pr_url}")
+    pr_url: str | None = None
+    if trigger == "create":
+        stdout = ""
+        if isinstance(tool_response, dict):
+            stdout = tool_response.get("stdout", "") or tool_response.get("output", "")
+        elif isinstance(tool_response, str):
+            stdout = tool_response
+        pr_url = extract_pr_url_from_gh_stdout(stdout)
+        if not pr_url:
+            _log("skipped: no PR URL in gh stdout (command likely failed)")
+            return  # likely the command failed; nothing to share
+    else:
+        # "push" / "edit": no PR URL in the command output. Resolve the open
+        # PR for the current branch. A failure here is the normal case for a
+        # push outside a PR — bail silently (log only, nothing on stderr).
+        #
+        # We intentionally do not check whether the push/edit command itself
+        # succeeded. The trace is the conversation transcript, not the diff,
+        # so refreshing it after a failed push just re-uploads the same
+        # conversation to the branch's existing PR — harmless and idempotent.
+        # (The `create` path bails when stdout has no PR URL only because a
+        # failed `gh pr create` leaves no PR to attach a trace to.)
+        try:
+            pr_url = resolve_pr_url(None, cwd=payload.get("cwd"))
+        except (subprocess.SubprocessError, OSError) as e:
+            _log(f"skipped: no open PR for current branch ({e})")
+            return
+        if not pr_url:
+            _log("skipped: no open PR for current branch")
+            return
+
+    _log(f"detected PR ({trigger}): {pr_url}")
 
     try:
         token = get_gh_token()
