@@ -14,6 +14,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
+        <Route path="t/:shortId" element={<TraceView />} />
         <Route
           path=":owner/:repo/pull/:number"
           element={<PrTracesList />}
