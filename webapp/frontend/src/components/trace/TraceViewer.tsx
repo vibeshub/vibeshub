@@ -6,6 +6,7 @@ import { ViewerTopbar } from "./ViewerTopbar";
 import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
+import { usePersistedBoolean } from "./persistedState";
 
 interface Props {
   trace: TraceSummary;
@@ -25,7 +26,10 @@ export function TraceViewer({
   repoName,
 }: Props) {
   const [showSystemEvents, setShowSystemEvents] = useState(false);
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = usePersistedBoolean(
+    "vibeshub.trace.compact",
+    false,
+  );
 
   const empty = session.stream.length === 0;
 
