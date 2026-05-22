@@ -45,7 +45,7 @@ export function ToolGroup({ items, root, shortId, agents }: Props) {
       </button>
       {open && (
         <div className="tool-group-body">
-          {items.map((it, i) => (
+          {items.map((it) => (
             <ToolCard
               event={it.event}
               root={root}
@@ -53,7 +53,7 @@ export function ToolGroup({ items, root, shortId, agents }: Props) {
               shortId={shortId}
               agents={agents}
               progress={it.progress}
-              key={i}
+              key={it.event.id}
             />
           ))}
         </div>
