@@ -218,8 +218,11 @@ async def test_user_overview_aggregates_across_repos(client, respx_mock):
     _ingest_for(client, respx_mock, "alice", "repo-a", 1, "First")
     _ingest_for(client, respx_mock, "alice", "repo-a", 2, "Second")
     _ingest_for(client, respx_mock, "alice", "repo-b", 1, "Third")
-    # A trace owned by another user shouldn't bleed in.
-    _ingest_for(client, respx_mock, "bob", "elsewhere", 1, "Bob's")
+    # A trace another user uploaded to their own repo shouldn't bleed in:
+    # it matches neither alice's owner_login nor her repo namespace.
+    _ingest_for(
+        client, respx_mock, "bob", "elsewhere", 1, "Bob's", uploader="bob"
+    )
 
     resp = client.get("/api/users/alice")
     assert resp.status_code == 200
@@ -230,6 +233,32 @@ async def test_user_overview_aggregates_across_repos(client, respx_mock):
     assert repo_names == {"alice/repo-a": 2, "alice/repo-b": 1}
     titles = {t["pr_title"] for t in body["traces"]}
     assert titles == {"First", "Second", "Third"}
+
+
+@pytest.mark.asyncio
+async def test_user_overview_includes_traces_uploaded_to_org_repos(
+    client, respx_mock
+):
+    # alice opens a PR in an org-owned repo (repo namespace != her login)
+    # and one in a repo under her own namespace.
+    _ingest_for(
+        client, respx_mock, "some-org", "sansa-bots", 20, "OrgPR",
+        uploader="alice",
+    )
+    _ingest_for(
+        client, respx_mock, "alice", "personal", 1, "MyPR", uploader="alice",
+    )
+
+    resp = client.get("/api/users/alice")
+    assert resp.status_code == 200
+    body = resp.json()
+    # The org-repo trace appears on alice's profile because she uploaded it,
+    # even though the repo lives under the org's namespace.
+    assert body["stats"]["trace_count"] == 2
+    titles = {t["pr_title"] for t in body["traces"]}
+    assert titles == {"OrgPR", "MyPR"}
+    repo_names = {r["repo_full_name"] for r in body["repos"]}
+    assert repo_names == {"some-org/sansa-bots", "alice/personal"}
 
 
 @pytest.mark.asyncio
