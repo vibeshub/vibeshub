@@ -66,6 +66,7 @@ async def test_upload_success_sends_tar_and_headers():
             token="ghp_test",
             tar_bytes=b"\x1f\x8b\x08\x00fake-tar-bytes",
             pr_url="https://github.com/alice/repo/pull/3",
+            repo_full_name=None,
             plugin_version="0.2.0",
             session_id="abc",
             redaction_count_client=2,
@@ -101,6 +102,7 @@ async def test_upload_omits_session_header_when_none():
             token="ghp_test",
             tar_bytes=b"tar",
             pr_url="https://github.com/alice/repo/pull/3",
+            repo_full_name=None,
             plugin_version="0.2.0",
             session_id=None,
             redaction_count_client=0,
@@ -127,6 +129,7 @@ async def test_upload_default_timeout_is_60s():
             token="ghp_test",
             tar_bytes=b"tar",
             pr_url="https://github.com/alice/repo/pull/3",
+            repo_full_name=None,
             plugin_version="0.2.0",
             session_id=None,
             redaction_count_client=0,
@@ -147,6 +150,7 @@ async def test_upload_401_raises_unauthorized():
                 token="bad",
                 tar_bytes=b"tar",
                 pr_url="https://github.com/alice/repo/pull/3",
+                repo_full_name=None,
                 plugin_version="0.2.0",
                 session_id=None,
                 redaction_count_client=0,
@@ -167,6 +171,7 @@ async def test_upload_5xx_raises_server_error():
                 token="ghp_test",
                 tar_bytes=b"tar",
                 pr_url="https://github.com/alice/repo/pull/3",
+                repo_full_name=None,
                 plugin_version="0.2.0",
                 session_id=None,
                 redaction_count_client=0,
@@ -179,12 +184,61 @@ async def _upload(**overrides):
         token="ghp_test",
         tar_bytes=b"tar",
         pr_url="https://github.com/alice/repo/pull/3",
+        repo_full_name=None,
         plugin_version="0.2.0",
         session_id=None,
         redaction_count_client=0,
     )
     kwargs.update(overrides)
     return await upload_bundle(**kwargs)
+
+
+@pytest.mark.asyncio
+async def test_upload_standalone_sends_no_pr_or_repo_header():
+    captured: dict = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.header_items())
+        return _ok_response()
+
+    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
+        await upload_bundle(
+            server_url="https://vibeshub.test",
+            token="ghp_test",
+            tar_bytes=b"tar",
+            pr_url=None,
+            repo_full_name=None,
+            plugin_version="0.2.0",
+            session_id=None,
+            redaction_count_client=0,
+        )
+
+    assert "X-vibeshub-pr-url" not in captured["headers"]
+    assert "X-vibeshub-repo" not in captured["headers"]
+
+
+@pytest.mark.asyncio
+async def test_upload_repo_only_sends_repo_header_not_pr_header():
+    captured: dict = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.header_items())
+        return _ok_response()
+
+    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
+        await upload_bundle(
+            server_url="https://vibeshub.test",
+            token="ghp_test",
+            tar_bytes=b"tar",
+            pr_url=None,
+            repo_full_name="alice/repo",
+            plugin_version="0.2.0",
+            session_id=None,
+            redaction_count_client=0,
+        )
+
+    assert "X-vibeshub-pr-url" not in captured["headers"]
+    assert captured["headers"]["X-vibeshub-repo"] == "alice/repo"
 
 
 _CERT_ERR = urllib_error.URLError(

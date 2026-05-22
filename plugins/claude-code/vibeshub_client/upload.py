@@ -166,7 +166,8 @@ async def upload_bundle(
     server_url: str,
     token: str,
     tar_bytes: bytes,
-    pr_url: str,
+    pr_url: str | None,
+    repo_full_name: str | None,
     plugin_version: str,
     session_id: str | None,
     redaction_count_client: int,
@@ -176,11 +177,14 @@ async def upload_bundle(
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/x-tar",
-        "X-Vibeshub-Pr-Url": pr_url,
         "X-Vibeshub-Platform": "claude-code",
         "X-Vibeshub-Plugin-Version": plugin_version,
         "X-Vibeshub-Client-Redactions": str(redaction_count_client),
     }
+    if pr_url:
+        headers["X-Vibeshub-Pr-Url"] = pr_url
+    if repo_full_name:
+        headers["X-Vibeshub-Repo"] = repo_full_name
     if session_id:
         headers["X-Vibeshub-Session-Id"] = session_id
 
