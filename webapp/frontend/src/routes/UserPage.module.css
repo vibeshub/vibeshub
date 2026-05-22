@@ -288,15 +288,6 @@
   color: var(--text-faint);
   font-feature-settings: "tnum";
 }
-.cardBody {
-  padding: 6px;
-}
-.cardEmpty {
-  padding: 18px 14px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  text-align: center;
-}
 
 /* "capture tip" — a tiny terminal vignette */
 .tip {
