@@ -95,6 +95,29 @@ describe("TraceView", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders a Compact toggle in the thread controls", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    expect(
+      await screen.findByRole("button", { name: /compact/i }),
+    ).toBeInTheDocument();
+  });
+
   it("shows an error state when the trace summary fetch fails", async () => {
     vi.spyOn(global, "fetch").mockImplementation((input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
