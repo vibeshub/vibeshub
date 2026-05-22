@@ -33,6 +33,7 @@ export function TraceViewer({
       <div className="viewer-header">
         <ViewerTopbar
           session={session}
+          trace={trace}
           repoOwner={repoOwner}
           repoName={repoName}
         />

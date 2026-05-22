@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { TraceView } from "../../routes/TraceView";
 
@@ -92,6 +92,39 @@ describe("TraceView", () => {
     // Thread controls render.
     expect(
       screen.getByRole("button", { name: /show system events/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a compact title and trace links in the top bar", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    // Wait for the viewer to finish rendering.
+    await screen.findByText("Add startup credential smoke-check");
+
+    // The compact title and trace links live inside the top bar.
+    const topbar = document.querySelector("header.topbar") as HTMLElement;
+    expect(topbar).not.toBeNull();
+    expect(within(topbar).getByText("Add thing")).toBeInTheDocument();
+    expect(
+      within(topbar).getByRole("link", { name: /view on github/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(topbar).getByRole("link", { name: /raw jsonl/i }),
     ).toBeInTheDocument();
   });
 
