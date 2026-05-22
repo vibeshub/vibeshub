@@ -18,6 +18,7 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
+        <Route path="t/:shortId" element={<TraceView />} />
         <Route
           path=":owner/:repo/pull/:number/:shortId"
           element={<TraceView />}
@@ -264,6 +265,41 @@ describe("TraceView", () => {
       name: /enable private repositories/i,
     });
     expect(link.getAttribute("href")).toContain("scope=private");
+  });
+
+  it("renders a standalone trace with no repo or PR", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: null,
+      pr_number: null,
+      pr_url: null,
+      pr_title: null,
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    const { container } = renderAt(`/t/${SHORT_ID}`);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+    // The standalone TraceHeader renders no "View on GitHub" link and
+    // falls back to a generic "Trace <short_id>" title.
+    const heading = await screen.findByRole("heading", {
+      name: `Trace ${SHORT_ID}`,
+      level: 1,
+    });
+    const header = heading.closest("header");
+    expect(header).not.toBeNull();
+    expect(
+      header!.textContent?.toLowerCase(),
+    ).not.toContain("view on github");
+    void container;
   });
 
   it("renders a Private badge for a private trace", async () => {

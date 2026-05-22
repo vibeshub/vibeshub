@@ -65,6 +65,8 @@ export function TraceView() {
   if (head.kind === "error") return <ErrorState message={head.message} />;
   if (head.kind === "loading") return <LoadingState label="Loading trace…" />;
 
+  const repoParts = head.trace.repo_full_name?.split("/") ?? [];
+
   return (
     <div className={styles.container}>
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
@@ -75,8 +77,8 @@ export function TraceView() {
           session={session}
           shortId={head.trace.short_id}
           rawHref={`/api/traces/${head.trace.short_id}/raw`}
-          repoOwner={head.trace.repo_full_name.split("/")[0]}
-          repoName={head.trace.repo_full_name.split("/")[1]}
+          repoOwner={repoParts[0]}
+          repoName={repoParts[1]}
         />
       )}
     </div>
