@@ -76,7 +76,7 @@ export function AgentBody({ input, toolUseId, shortId, agents }: Props) {
         <div className="subagent-error">Failed to load: {error}</div>
       )}
       {expanded && nested && (
-        <NestedThread session={nested} shortId={shortId} showReasoning={false} />
+        <NestedThread session={nested} shortId={shortId} />
       )}
     </div>
   );

@@ -91,9 +91,6 @@ describe("TraceView", () => {
 
     // Thread controls render.
     expect(
-      screen.getByRole("button", { name: /show reasoning/i }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("button", { name: /show system events/i }),
     ).toBeInTheDocument();
   });
