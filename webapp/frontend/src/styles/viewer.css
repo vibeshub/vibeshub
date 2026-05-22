@@ -1243,3 +1243,39 @@
 .vibeshub-viewer .diff-code .token.attr-name {
   color: var(--syn-punct);
 }
+
+/* ---------- compact mode ---------- */
+/* Tightens the navigation skeleton — margins, separators, collapsed tool
+   rows. Font sizes and expanded tool bodies are intentionally left alone. */
+.vibeshub-viewer.compact .thread {
+  margin: 28px auto 80px;
+}
+.vibeshub-viewer.compact .turn-sep {
+  height: 28px;
+  margin: 4px 0;
+}
+.vibeshub-viewer.compact .user-prompt {
+  margin: 14px 0 6px;
+  padding: 12px 14px;
+}
+.vibeshub-viewer.compact .assistant-text {
+  margin: 3px 0;
+}
+.vibeshub-viewer.compact .assistant-text-body {
+  line-height: 1.55;
+}
+.vibeshub-viewer.compact .thinking-block {
+  margin: 2px 0 4px 36px;
+}
+.vibeshub-viewer.compact .thinking-empty {
+  margin: 2px 0 4px 36px;
+}
+.vibeshub-viewer.compact .tool-card {
+  margin: 2px 0;
+}
+.vibeshub-viewer.compact .tool-head {
+  padding: 5px 12px;
+}
+.vibeshub-viewer.compact .pr-card {
+  margin-top: 16px;
+}
