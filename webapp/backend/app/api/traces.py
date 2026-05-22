@@ -423,18 +423,29 @@ async def delete_trace(
     session: AsyncSession = Depends(get_session),
     blob_store: BlobStore = Depends(get_blob_store),
     github: GitHubClient = Depends(get_github),
+    user: User | None = Depends(get_current_user),
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404)
 
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="missing bearer token")
-    token = authorization.split(None, 1)[1].strip()
+    # Resolve the owner login from either a bearer GitHub token (CLI) or
+    # a session cookie (web). Bearer wins when both are present so the
+    # existing CLI behavior is unchanged.
+    owner_login: str | None = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(None, 1)[1].strip()
+        try:
+            gh_user = await github.verify_token(token)
+        except GitHubAuthError as e:
+            raise HTTPException(status_code=401, detail=str(e))
+        owner_login = gh_user.login
+    elif user is not None:
+        owner_login = user.github_login
 
-    try:
-        user = await github.verify_token(token)
-    except GitHubAuthError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    if owner_login is None:
+        raise HTTPException(
+            status_code=401, detail="missing bearer token or session"
+        )
 
     stmt = select(Trace).where(
         Trace.short_id == short_id, Trace.deleted_at.is_(None)
@@ -442,7 +453,7 @@ async def delete_trace(
     trace = (await session.execute(stmt)).scalar_one_or_none()
     if trace is None:
         raise HTTPException(status_code=404)
-    if trace.owner_login != user.login:
+    if trace.owner_login != owner_login:
         raise HTTPException(status_code=403, detail="not the trace owner")
 
     # Build the full key list before deleting (so a mid-flight crash

@@ -2,6 +2,38 @@ import io
 import tarfile
 
 import pytest
+from sqlalchemy import select
+
+from app.storage.models import Trace
+from tests._auth_helpers import authed_cookies
+
+
+async def _seed_standalone_trace(client, *, owner_login: str) -> str:
+    """Insert a standalone trace owned by owner_login; return its short_id."""
+    from app.short_id import generate
+    SessionLocal = client.app.state.session_maker
+    sid = generate()
+    async with SessionLocal() as session:
+        session.add(Trace(
+            short_id=sid,
+            owner_login=owner_login,
+            repo_full_name=None,
+            pr_number=None,
+            pr_url=None,
+            pr_title=None,
+            platform="web",
+            plugin_version=None,
+            session_id=None,
+            byte_size=10,
+            message_count=1,
+            is_private=False,
+            blob_path=None,
+            blob_prefix=f"traces/{sid}/",
+            agents=[],
+            agent_count=0,
+        ))
+        await session.commit()
+    return sid
 
 
 def make_bundle(members: dict[str, bytes]) -> bytes:
@@ -290,3 +322,40 @@ async def test_repo_overview_aggregates_contributors(client, respx_mock):
     assert body["stats"]["contributor_count"] == 2
     contribs = {c["login"]: c["trace_count"] for c in body["contributors"]}
     assert contribs == {"alice": 2, "bob": 1}
+
+
+@pytest.mark.asyncio
+async def test_delete_trace_with_session_cookie(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.delete(f"/api/traces/{sid}", cookies=cookies)
+    assert r.status_code == 204, r.text
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == sid)
+        )).scalar_one()
+    assert trace.deleted_at is not None
+
+
+@pytest.mark.asyncio
+async def test_delete_trace_cookie_non_owner_is_403(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="bob", github_id=200)
+    r = client.delete(f"/api/traces/{sid}", cookies=cookies)
+    assert r.status_code == 403
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == sid)
+        )).scalar_one()
+    assert trace.deleted_at is None
+
+
+@pytest.mark.asyncio
+async def test_delete_trace_no_auth_is_401(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    r = client.delete(f"/api/traces/{sid}")
+    assert r.status_code == 401
