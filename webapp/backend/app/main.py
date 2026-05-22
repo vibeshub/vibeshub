@@ -12,6 +12,7 @@ from app.api import (
     health,
     ingest as ingest_api,
     traces as traces_api,
+    uploads as uploads_api,
 )
 from app.deps import init_state
 from app.settings import get_settings
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(ingest_api.router)
     app.include_router(traces_api.router)
+    app.include_router(uploads_api.router)
     app.include_router(auth_api.router)
     app.include_router(github_stats_api.router)
 
