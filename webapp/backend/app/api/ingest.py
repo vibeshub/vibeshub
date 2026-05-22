@@ -117,6 +117,12 @@ async def ingest(
     # that session's existing trace (stable short_id / URL) instead of adding
     # a new row. A null session_id always creates a fresh trace. A trace the
     # user has deleted (deleted_at set) is not resurrected.
+    #
+    # This is a best-effort select-then-update: there is no unique constraint
+    # on (repo_full_name, pr_number, session_id), so two truly-concurrent
+    # uploads for the same session could both insert. In practice session_id
+    # is unique per Claude Code session and its upload hook is synchronous,
+    # so concurrent same-session uploads do not occur.
     existing: Trace | None = None
     if x_vibeshub_session_id:
         existing = (
