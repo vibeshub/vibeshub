@@ -223,3 +223,61 @@ async def test_ingest_runs_github_calls_in_parallel(client):
     assert r.status_code == 201, r.text
     assert probe.verify_started.is_set()
     assert probe.pull_started.is_set()
+
+
+@pytest.mark.asyncio
+async def test_ingest_upserts_trace_for_same_session(client, respx_mock):
+    _mock_alice_pr1(respx_mock)
+    headers = {**COMMON_HEADERS, "X-Vibeshub-Session-Id": "sess-A"}
+    SessionLocal = client.app.state.session_maker
+
+    r1 = client.post(
+        "/api/ingest",
+        content=make_bundle({"main.jsonl": b'{"type":"user"}\n'}),
+        headers=headers,
+    )
+    assert r1.status_code == 201, r1.text
+    assert r1.json()["created"] is True
+    sid1 = r1.json()["short_id"]
+
+    async with SessionLocal() as session:
+        row1 = (
+            await session.execute(
+                select(Trace).where(Trace.session_id == "sess-A")
+            )
+        ).scalar_one()
+        byte_size_1 = row1.byte_size
+
+    r2 = client.post(
+        "/api/ingest",
+        content=make_bundle(
+            {"main.jsonl": b'{"type":"user"}\n{"type":"assistant"}\n'}
+        ),
+        headers=headers,
+    )
+    assert r2.status_code == 201, r2.text
+    assert r2.json()["created"] is False
+    assert r2.json()["short_id"] == sid1
+
+    async with SessionLocal() as session:
+        rows = (
+            await session.execute(
+                select(Trace).where(Trace.session_id == "sess-A")
+            )
+        ).scalars().all()
+
+    assert len(rows) == 1                    # upserted, not duplicated
+    assert rows[0].byte_size != byte_size_1  # content refreshed in place
+
+
+@pytest.mark.asyncio
+async def test_ingest_without_session_always_creates(client, respx_mock):
+    _mock_alice_pr1(respx_mock)
+    # COMMON_HEADERS carries no X-Vibeshub-Session-Id.
+    body = make_bundle({"main.jsonl": b"{}\n"})
+    r1 = client.post("/api/ingest", content=body, headers=COMMON_HEADERS)
+    r2 = client.post("/api/ingest", content=body, headers=COMMON_HEADERS)
+    assert r1.status_code == 201 and r2.status_code == 201
+    assert r1.json()["created"] is True
+    assert r2.json()["created"] is True
+    assert r1.json()["short_id"] != r2.json()["short_id"]

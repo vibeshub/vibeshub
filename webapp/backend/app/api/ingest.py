@@ -5,6 +5,7 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pr_url import parse_pr_url
@@ -112,7 +113,27 @@ async def ingest(
     except BundleError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    sid = generate()
+    # Upsert: a re-upload carrying the same session_id for this PR refreshes
+    # that session's existing trace (stable short_id / URL) instead of adding
+    # a new row. A null session_id always creates a fresh trace. A trace the
+    # user has deleted (deleted_at set) is not resurrected.
+    existing: Trace | None = None
+    if x_vibeshub_session_id:
+        existing = (
+            await session.execute(
+                select(Trace)
+                .where(
+                    Trace.repo_full_name == pr.repo_full_name,
+                    Trace.pr_number == pr.number,
+                    Trace.session_id == x_vibeshub_session_id,
+                    Trace.deleted_at.is_(None),
+                )
+                .order_by(Trace.created_at.desc())
+            )
+        ).scalars().first()
+
+    created = existing is None
+    sid = existing.short_id if existing is not None else generate()
     blob_prefix = f"traces/{sid}/"
     await blob_store.put(f"{blob_prefix}main.jsonl", unpacked.main_bytes)
 
@@ -135,32 +156,52 @@ async def ingest(
         })
 
     message_count_main = count_messages(unpacked.main_bytes)
-
-    trace = Trace(
-        short_id=sid,
-        owner_login=user.login,
-        repo_full_name=pr.repo_full_name,
-        pr_number=pr.number,
-        pr_url=pr.html_url,
-        pr_title=pr.title,
-        platform=platform,
-        plugin_version=plugin_version,
-        session_id=x_vibeshub_session_id,
-        byte_size=len(unpacked.main_bytes) + sum(len(a.jsonl_bytes) for a in unpacked.agents),
-        message_count=message_count_main,
-        redaction_count_client=redaction_count_client,
-        redaction_count_server=unpacked.total_redactions,
-        is_private=pr.repo_is_private,
-        blob_path=None,
-        blob_prefix=blob_prefix,
-        agents=agent_summaries,
-        agent_count=len(agent_summaries),
+    byte_size = len(unpacked.main_bytes) + sum(
+        len(a.jsonl_bytes) for a in unpacked.agents
     )
-    session.add(trace)
+
+    if existing is not None:
+        trace = existing
+        trace.pr_url = pr.html_url
+        trace.pr_title = pr.title
+        trace.platform = platform
+        trace.plugin_version = plugin_version
+        trace.byte_size = byte_size
+        trace.message_count = message_count_main
+        trace.redaction_count_client = redaction_count_client
+        trace.redaction_count_server = unpacked.total_redactions
+        trace.is_private = pr.repo_is_private
+        trace.blob_path = None
+        trace.blob_prefix = blob_prefix
+        trace.agents = agent_summaries
+        trace.agent_count = len(agent_summaries)
+    else:
+        trace = Trace(
+            short_id=sid,
+            owner_login=user.login,
+            repo_full_name=pr.repo_full_name,
+            pr_number=pr.number,
+            pr_url=pr.html_url,
+            pr_title=pr.title,
+            platform=platform,
+            plugin_version=plugin_version,
+            session_id=x_vibeshub_session_id,
+            byte_size=byte_size,
+            message_count=message_count_main,
+            redaction_count_client=redaction_count_client,
+            redaction_count_server=unpacked.total_redactions,
+            is_private=pr.repo_is_private,
+            blob_path=None,
+            blob_prefix=blob_prefix,
+            agents=agent_summaries,
+            agent_count=len(agent_summaries),
+        )
+        session.add(trace)
     await session.commit()
 
     return IngestResponse(
         trace_id=str(trace.id),
         short_id=sid,
         trace_url=_trace_url(settings, parsed.owner, parsed.repo, parsed.number, sid),
+        created=created,
     )

@@ -37,3 +37,4 @@ class IngestResponse(BaseModel):
     trace_id: str
     short_id: str
     trace_url: str
+    created: bool = True
