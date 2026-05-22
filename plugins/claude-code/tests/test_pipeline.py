@@ -37,12 +37,13 @@ async def test_pipeline_builds_bundle_with_agents(tmp_path):
     captured: dict = {}
 
     async def fake_upload(
-        *, server_url, token, tar_bytes, pr_url, plugin_version,
-        session_id, redaction_count_client, timeout=60.0,
+        *, server_url, token, tar_bytes, pr_url, repo_full_name,
+        plugin_version, session_id, redaction_count_client, timeout=60.0,
     ):
         captured["tar_bytes"] = tar_bytes
         captured["plugin_version"] = plugin_version
         captured["pr_url"] = pr_url
+        captured["repo_full_name"] = repo_full_name
         return UploadResult(trace_id="t1", short_id="abc", trace_url="https://x/abc")
 
     with patch("vibeshub_client.pipeline.upload_bundle", new=fake_upload), \
@@ -124,8 +125,8 @@ async def test_pipeline_skips_comment_when_trace_not_created(tmp_path):
     }
 
     async def fake_upload(
-        *, server_url, token, tar_bytes, pr_url, plugin_version,
-        session_id, redaction_count_client, timeout=60.0,
+        *, server_url, token, tar_bytes, pr_url, repo_full_name,
+        plugin_version, session_id, redaction_count_client, timeout=60.0,
     ):
         return UploadResult(
             trace_id="t1", short_id="abc",
@@ -147,4 +148,105 @@ async def test_pipeline_skips_comment_when_trace_not_created(tmp_path):
 
     assert result.uploaded is True
     assert result.created is False
+    mock_comment.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_pipeline_standalone_uploads_without_comment(tmp_path):
+    project_root = tmp_path / "projects" / "-fake-cwd"
+    project_root.mkdir(parents=True)
+    (project_root / "sess1.jsonl").write_bytes(
+        (FIXTURES / "single-agent" / "session.jsonl").read_bytes()
+    )
+    session_dir = project_root / "sess1"
+    session_dir.mkdir()
+    (session_dir / "subagents").mkdir()
+    for f in (FIXTURES / "single-agent" / "subagents").iterdir():
+        (session_dir / "subagents" / f.name).write_bytes(f.read_bytes())
+
+    reader = ClaudeCodeTranscriptReader()
+    hook_input = {
+        "session_id": "sess1",
+        "cwd": "/fake/cwd",
+        "transcript_path": str(project_root / "sess1.jsonl"),
+    }
+
+    captured: dict = {}
+
+    async def fake_upload(
+        *, server_url, token, tar_bytes, pr_url, repo_full_name,
+        plugin_version, session_id, redaction_count_client, timeout=60.0,
+    ):
+        captured["pr_url"] = pr_url
+        captured["repo_full_name"] = repo_full_name
+        return UploadResult(trace_id="t1", short_id="abc", trace_url="https://x/t/abc")
+
+    with patch("vibeshub_client.pipeline.upload_bundle", new=fake_upload), \
+         patch("vibeshub_client.pipeline.post_pr_comment") as mock_comment:
+        result = await run_share_pipeline(
+            reader=reader,
+            hook_input=hook_input,
+            options=RunOptions(
+                server_url="https://x",
+                token="t",
+                pr_url=None,
+                repo_full_name=None,
+                session_id="sess1",
+            ),
+        )
+
+    assert result.uploaded is True
+    assert result.trace_url == "https://x/t/abc"
+    assert captured["pr_url"] is None
+    assert captured["repo_full_name"] is None
+    mock_comment.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_pipeline_repo_only_uploads_without_comment(tmp_path):
+    project_root = tmp_path / "projects" / "-fake-cwd"
+    project_root.mkdir(parents=True)
+    (project_root / "sess1.jsonl").write_bytes(
+        (FIXTURES / "single-agent" / "session.jsonl").read_bytes()
+    )
+    session_dir = project_root / "sess1"
+    session_dir.mkdir()
+    (session_dir / "subagents").mkdir()
+    for f in (FIXTURES / "single-agent" / "subagents").iterdir():
+        (session_dir / "subagents" / f.name).write_bytes(f.read_bytes())
+
+    reader = ClaudeCodeTranscriptReader()
+    hook_input = {
+        "session_id": "sess1",
+        "cwd": "/fake/cwd",
+        "transcript_path": str(project_root / "sess1.jsonl"),
+    }
+
+    captured: dict = {}
+
+    async def fake_upload(
+        *, server_url, token, tar_bytes, pr_url, repo_full_name,
+        plugin_version, session_id, redaction_count_client, timeout=60.0,
+    ):
+        captured["pr_url"] = pr_url
+        captured["repo_full_name"] = repo_full_name
+        return UploadResult(trace_id="t1", short_id="abc", trace_url="https://x/t/abc")
+
+    with patch("vibeshub_client.pipeline.upload_bundle", new=fake_upload), \
+         patch("vibeshub_client.pipeline.post_pr_comment") as mock_comment:
+        result = await run_share_pipeline(
+            reader=reader,
+            hook_input=hook_input,
+            options=RunOptions(
+                server_url="https://x",
+                token="t",
+                pr_url=None,
+                repo_full_name="alice/repo",
+                session_id="sess1",
+            ),
+        )
+
+    assert result.uploaded is True
+    assert captured["pr_url"] is None
+    assert captured["repo_full_name"] == "alice/repo"
     mock_comment.assert_not_called()
