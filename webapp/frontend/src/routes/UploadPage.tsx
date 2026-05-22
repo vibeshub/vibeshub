@@ -50,6 +50,11 @@ export function UploadPage() {
   const uploading = status.kind === "uploading";
   const canSubmit = transcript !== null && !uploading;
 
+  // Clear any stale upload error once the user adjusts the form inputs.
+  function clearError() {
+    setStatus((s) => (s.kind === "error" ? { kind: "idle" } : s));
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!transcript) return;
@@ -99,9 +104,10 @@ export function UploadPage() {
               type="file"
               accept=".jsonl"
               disabled={uploading}
-              onChange={(e) =>
-                setTranscript(e.target.files?.[0] ?? null)
-              }
+              onChange={(e) => {
+                setTranscript(e.target.files?.[0] ?? null);
+                clearError();
+              }}
             />
           </div>
 
@@ -114,9 +120,10 @@ export function UploadPage() {
               type="file"
               accept=".zip"
               disabled={uploading}
-              onChange={(e) =>
-                setSubagents(e.target.files?.[0] ?? null)
-              }
+              onChange={(e) => {
+                setSubagents(e.target.files?.[0] ?? null);
+                clearError();
+              }}
             />
           </div>
 
@@ -124,7 +131,10 @@ export function UploadPage() {
             <span className={styles.label}>Link a repo or PR (optional)</span>
             <RepoPrPicker
               value={selection}
-              onChange={setSelection}
+              onChange={(next) => {
+                setSelection(next);
+                clearError();
+              }}
               disabled={uploading}
             />
           </div>

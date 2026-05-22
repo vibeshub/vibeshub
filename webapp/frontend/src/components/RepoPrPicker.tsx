@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, fetchMyRepos, fetchRepoPrs } from "../api";
 import type { GithubPickerPr, GithubPickerRepo } from "../types";
 import styles from "./RepoPrPicker.module.css";
@@ -39,14 +39,6 @@ export function RepoPrPicker({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mirror the parent-supplied value into local state on mount only.
-  const seeded = useRef(false);
-  useEffect(() => {
-    if (seeded.current) return;
-    seeded.current = true;
-    if (value.kind !== "none") setChosenRepo(value.repoFullName);
-  }, [value]);
-
   // Debounced repo search (only while no repo is chosen).
   useEffect(() => {
     if (chosenRepo) return;
@@ -55,29 +47,52 @@ export function RepoPrPicker({
       setRepoResults([]);
       return;
     }
+    let ignore = false;
     const handle = setTimeout(() => {
       setLoading(true);
       setError(null);
       fetchMyRepos(q)
-        .then((repos) => setRepoResults(repos.slice(0, MAX_RESULTS)))
-        .catch((e) => setError(errMessage(e)))
-        .finally(() => setLoading(false));
+        .then((repos) => {
+          if (!ignore) setRepoResults(repos.slice(0, MAX_RESULTS));
+        })
+        .catch((e) => {
+          if (!ignore) setError(errMessage(e));
+        })
+        .finally(() => {
+          if (!ignore) setLoading(false);
+        });
     }, DEBOUNCE_MS);
-    return () => clearTimeout(handle);
+    return () => {
+      ignore = true;
+      clearTimeout(handle);
+    };
   }, [repoQuery, chosenRepo]);
 
-  // Debounced PR search (only once a repo is chosen).
+  // Debounced PR search (only once a repo is chosen). An empty query is
+  // intentional here: selecting a repo lists its recent PRs immediately so
+  // the user can pick one without typing — unlike the repo search above,
+  // which has no useful "recent" list to show before a query is entered.
   useEffect(() => {
     if (!chosenRepo) return;
+    let ignore = false;
     const handle = setTimeout(() => {
       setLoading(true);
       setError(null);
       fetchRepoPrs(chosenRepo, prQuery.trim())
-        .then((prs) => setPrResults(prs.slice(0, MAX_RESULTS)))
-        .catch((e) => setError(errMessage(e)))
-        .finally(() => setLoading(false));
+        .then((prs) => {
+          if (!ignore) setPrResults(prs.slice(0, MAX_RESULTS));
+        })
+        .catch((e) => {
+          if (!ignore) setError(errMessage(e));
+        })
+        .finally(() => {
+          if (!ignore) setLoading(false);
+        });
     }, DEBOUNCE_MS);
-    return () => clearTimeout(handle);
+    return () => {
+      ignore = true;
+      clearTimeout(handle);
+    };
   }, [prQuery, chosenRepo]);
 
   function selectRepo(repo: GithubPickerRepo) {
@@ -91,6 +106,7 @@ export function RepoPrPicker({
 
   function selectPr(pr: GithubPickerPr) {
     if (!chosenRepo) return;
+    setPrResults([]);
     onChange({
       kind: "pr",
       prUrl: pr.html_url,

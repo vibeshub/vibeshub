@@ -23,7 +23,7 @@ vi.mock("../../api", () => ({
 }));
 
 import { useAuth } from "../../auth/AuthContext";
-import { uploadTrace, ApiError } from "../../api";
+import { uploadTrace, ApiError, fetchMyRepos, fetchRepoPrs } from "../../api";
 
 const mockUseAuth = useAuth as unknown as Mock;
 
@@ -50,6 +50,8 @@ describe("UploadPage", () => {
     vi.restoreAllMocks();
     mockUseAuth.mockReset();
     (uploadTrace as Mock).mockReset();
+    (fetchMyRepos as Mock).mockReset();
+    (fetchRepoPrs as Mock).mockReset();
   });
 
   it("shows a sign-in prompt and no form for anonymous visitors", () => {
@@ -97,6 +99,32 @@ describe("UploadPage", () => {
     mockUseAuth.mockReturnValue(signedInAuth);
     renderUploadPage();
     expect(screen.getByText(/public/i)).toBeInTheDocument();
+  });
+
+  it("disables the privacy toggle and shows the repo-mirror note once a repo is associated", async () => {
+    mockUseAuth.mockReturnValue(signedInAuth);
+    (fetchMyRepos as Mock).mockResolvedValue([
+      { full_name: "alice/widget", private: false },
+    ]);
+    (fetchRepoPrs as Mock).mockResolvedValue([]);
+    renderUploadPage();
+
+    const privacyToggle = screen.getByRole("checkbox", {
+      name: /make this trace private/i,
+    });
+    expect(privacyToggle).not.toBeDisabled();
+
+    fireEvent.change(
+      screen.getByPlaceholderText(/search your repositories/i),
+      { target: { value: "widget" } },
+    );
+    fireEvent.click(await screen.findByText("alice/widget"));
+
+    await waitFor(() => expect(privacyToggle).toBeDisabled());
+    expect(privacyToggle).not.toBeChecked();
+    expect(
+      screen.getByText(/privacy mirrors the linked github repository/i),
+    ).toBeInTheDocument();
   });
 
   it("shows the error message and stays on the form when upload fails", async () => {
