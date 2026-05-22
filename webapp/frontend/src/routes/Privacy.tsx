@@ -9,7 +9,7 @@ export function Privacy() {
       <main className={`page ${styles.privacy}`}>
         <header className={styles.header}>
           <div className={styles.eyebrow}>
-            <span className="dot" />
+            <span className={styles.dot} />
             <span>POLICY</span>
           </div>
           <h1 className={styles.title}>Privacy policy</h1>
