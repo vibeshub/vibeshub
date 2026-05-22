@@ -61,7 +61,8 @@ def fake_server():
     @app.post("/api/ingest", status_code=201)
     async def ingest(
         request: Request,
-        x_vibeshub_pr_url: str = Header(...),
+        x_vibeshub_pr_url: str | None = Header(None),
+        x_vibeshub_repo: str | None = Header(None),
         x_vibeshub_platform: str = Header(...),
         x_vibeshub_plugin_version: str = Header(...),
         x_vibeshub_session_id: str | None = Header(None),
@@ -80,6 +81,7 @@ def fake_server():
             {
                 "tar_bytes": body,
                 "pr_url": x_vibeshub_pr_url,
+                "repo": x_vibeshub_repo,
                 "platform": x_vibeshub_platform,
                 "plugin_version": x_vibeshub_plugin_version,
                 "content_type": request.headers.get("content-type", ""),
