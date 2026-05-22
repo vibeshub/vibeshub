@@ -339,10 +339,10 @@
 }
 
 .vibeshub-viewer .turn-sep {
-  height: 56px;
+  height: 44px;
   display: flex;
   align-items: center;
-  margin: 8px 0;
+  margin: 0;
 }
 .vibeshub-viewer .turn-sep::after {
   content: "";
@@ -360,7 +360,7 @@
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  margin: 28px 0 8px;
+  margin: 0 0 8px;
   padding: 18px 20px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
