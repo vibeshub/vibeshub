@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,20 +22,6 @@ def _session_id() -> str | None:
     return os.environ.get("CLAUDE_CODE_SESSION_ID") or os.environ.get(
         "CLAUDE_SESSION_ID"
     )
-
-
-def _gh(*args: str) -> str:
-    return subprocess.run(
-        ["gh", *args], check=True, capture_output=True, text=True
-    ).stdout.strip()
-
-
-def _resolve_pr_url(arg: str | None) -> str:
-    if arg is None:
-        return _gh("pr", "view", "--json", "url", "-q", ".url")
-    if arg.isdigit():
-        return _gh("pr", "view", arg, "--json", "url", "-q", ".url")
-    return arg
 
 
 async def _share(pr_url: str, server_url: str, session_id: str | None) -> None:
@@ -124,15 +109,20 @@ def main() -> None:
     server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.ai")
     session_id = _session_id()
 
+    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).resolve().parent.parent))
+    if str(plugin_root) not in sys.path:
+        sys.path.insert(0, str(plugin_root))
+    from vibeshub_client.pr_resolve import resolve_pr_url
+
     if args and args[0] == "delete":
         if len(args) < 2:
             print("usage: share-pr delete <pr-url>", file=sys.stderr)
             sys.exit(1)
-        asyncio.run(_delete(_resolve_pr_url(args[1]), server_url))
+        asyncio.run(_delete(resolve_pr_url(args[1]), server_url))
         return
 
     pr_arg = args[0] if args else None
-    pr_url = _resolve_pr_url(pr_arg)
+    pr_url = resolve_pr_url(pr_arg)
     asyncio.run(_share(pr_url, server_url, session_id))
 
 
