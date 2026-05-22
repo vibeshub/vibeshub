@@ -199,3 +199,117 @@ async def test_standalone_upsert_keys_on_session_id_alone(tmp_path):
         )).scalars().all()
     assert len(rows) == 1
     assert rows[0].repo_full_name is None
+
+
+# --- resolve_association tests ---
+import respx
+from fastapi import HTTPException
+
+from app.api.trace_service import resolve_association, ResolvedAssociation
+from app.auth.github import GitHubClient
+
+
+API = "https://api.github.test"
+
+
+@pytest.mark.asyncio
+async def test_resolve_standalone_when_no_pr_or_repo():
+    gh = GitHubClient(api_base=API)
+    result = await resolve_association(
+        github=gh, token="ghp_x", uploader_login="alice",
+        pr_url=None, repo_full_name=None,
+    )
+    assert result == ResolvedAssociation(
+        repo_full_name=None, pr_number=None, pr_url=None,
+        pr_title=None, is_private=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_pr_path(respx_mock: respx.MockRouter):
+    respx_mock.get(f"{API}/repos/alice/repo/pulls/3").respond(
+        200,
+        json={
+            "number": 3, "title": "Hello", "user": {"login": "alice"},
+            "html_url": "https://github.com/alice/repo/pull/3",
+            "head": {"repo": {"private": True, "full_name": "alice/repo"}},
+            "base": {"repo": {"private": True, "full_name": "alice/repo"}},
+        },
+    )
+    gh = GitHubClient(api_base=API)
+    result = await resolve_association(
+        github=gh, token="ghp_x", uploader_login="alice",
+        pr_url="https://github.com/alice/repo/pull/3", repo_full_name=None,
+    )
+    assert result.repo_full_name == "alice/repo"
+    assert result.pr_number == 3
+    assert result.pr_title == "Hello"
+    assert result.is_private is True
+
+
+@pytest.mark.asyncio
+async def test_resolve_pr_rejects_author_mismatch(
+    respx_mock: respx.MockRouter,
+):
+    respx_mock.get(f"{API}/repos/alice/repo/pulls/3").respond(
+        200,
+        json={
+            "number": 3, "title": "Hello", "user": {"login": "bob"},
+            "html_url": "https://github.com/alice/repo/pull/3",
+            "head": {"repo": {"private": False, "full_name": "alice/repo"}},
+            "base": {"repo": {"private": False, "full_name": "alice/repo"}},
+        },
+    )
+    gh = GitHubClient(api_base=API)
+    with pytest.raises(HTTPException) as exc:
+        await resolve_association(
+            github=gh, token="ghp_x", uploader_login="alice",
+            pr_url="https://github.com/alice/repo/pull/3",
+            repo_full_name=None,
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_resolve_repo_only_collaborator(respx_mock: respx.MockRouter):
+    respx_mock.get(
+        f"{API}/repos/alice/repo/collaborators/alice/permission"
+    ).respond(200, json={"permission": "write"})
+    respx_mock.get(f"{API}/repos/alice/repo").respond(
+        200, json={"full_name": "alice/repo", "private": True}
+    )
+    gh = GitHubClient(api_base=API)
+    result = await resolve_association(
+        github=gh, token="ghp_x", uploader_login="alice",
+        pr_url=None, repo_full_name="alice/repo",
+    )
+    assert result.repo_full_name == "alice/repo"
+    assert result.pr_number is None
+    assert result.is_private is True
+
+
+@pytest.mark.asyncio
+async def test_resolve_repo_only_rejects_non_collaborator(
+    respx_mock: respx.MockRouter,
+):
+    respx_mock.get(
+        f"{API}/repos/alice/repo/collaborators/bob/permission"
+    ).respond(200, json={"permission": "none"})
+    gh = GitHubClient(api_base=API)
+    with pytest.raises(HTTPException) as exc:
+        await resolve_association(
+            github=gh, token="ghp_x", uploader_login="bob",
+            pr_url=None, repo_full_name="alice/repo",
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_resolve_repo_only_rejects_bad_repo_string():
+    gh = GitHubClient(api_base=API)
+    with pytest.raises(HTTPException) as exc:
+        await resolve_association(
+            github=gh, token="ghp_x", uploader_login="bob",
+            pr_url=None, repo_full_name="not-a-repo",
+        )
+    assert exc.value.status_code == 400

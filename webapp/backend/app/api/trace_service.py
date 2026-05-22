@@ -172,3 +172,123 @@ async def create_or_update_trace(
         session.add(trace)
 
     return TraceWriteResult(trace=trace, created=created)
+
+
+from fastapi import HTTPException
+
+from app.api.pr_url import parse_pr_url
+from app.auth.github import GitHubAPIError, GitHubClient
+
+
+@dataclass(frozen=True)
+class ResolvedAssociation:
+    repo_full_name: str | None
+    pr_number: int | None
+    pr_url: str | None
+    pr_title: str | None
+    is_private: bool
+
+
+_STANDALONE = ResolvedAssociation(
+    repo_full_name=None, pr_number=None, pr_url=None,
+    pr_title=None, is_private=False,
+)
+
+
+def _parse_repo_full_name(value: str) -> tuple[str, str]:
+    parts = value.strip().split("/")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise HTTPException(
+            status_code=400, detail=f"invalid repo: {value}"
+        )
+    return parts[0], parts[1]
+
+
+async def resolve_association(
+    *,
+    github: GitHubClient,
+    token: str,
+    uploader_login: str,
+    pr_url: str | None,
+    repo_full_name: str | None,
+) -> ResolvedAssociation:
+    """Resolve an optional PR/repo association for an upload.
+
+    PR wins over repo. Verifies the uploader is the PR author (PR path) or
+    a repo collaborator (repo-only path), snapshotting repo visibility.
+    Raises HTTPException (400/403/404/502) on failure; returns a standalone
+    association when neither is given.
+    """
+    if pr_url:
+        try:
+            parsed = parse_pr_url(pr_url)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        try:
+            pr = await github.get_pull(
+                token, parsed.owner, parsed.repo, parsed.number
+            )
+        except GitHubAPIError as e:
+            msg = str(e)
+            if "not found" in msg.lower():
+                raise HTTPException(
+                    status_code=404, detail=f"PR not found: {pr_url}"
+                )
+            raise HTTPException(
+                status_code=502, detail=f"github upstream error: {msg}"
+            )
+        if pr.author_login != uploader_login:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"PR author ({pr.author_login}) does not match "
+                    f"uploader ({uploader_login})"
+                ),
+            )
+        return ResolvedAssociation(
+            repo_full_name=pr.repo_full_name,
+            pr_number=pr.number,
+            pr_url=pr.html_url,
+            pr_title=pr.title,
+            is_private=pr.repo_is_private,
+        )
+
+    if repo_full_name:
+        owner, repo = _parse_repo_full_name(repo_full_name)
+        try:
+            perm = await github.get_repo_permission(
+                token, owner, repo, uploader_login
+            )
+        except GitHubAPIError as e:
+            msg = str(e)
+            if "not found" in msg.lower():
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"repo not found: {repo_full_name}",
+                )
+            raise HTTPException(
+                status_code=502, detail=f"github upstream error: {msg}"
+            )
+        if not perm.is_collaborator:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"{uploader_login} is not a collaborator on "
+                    f"{repo_full_name}"
+                ),
+            )
+        try:
+            info = await github.get_repo(token, owner, repo)
+        except GitHubAPIError as e:
+            raise HTTPException(
+                status_code=502, detail=f"github upstream error: {e}"
+            )
+        return ResolvedAssociation(
+            repo_full_name=info.full_name,
+            pr_number=None,
+            pr_url=None,
+            pr_title=None,
+            is_private=info.is_private,
+        )
+
+    return _STANDALONE
