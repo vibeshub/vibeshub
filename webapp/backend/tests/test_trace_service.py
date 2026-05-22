@@ -116,3 +116,89 @@ async def test_create_repo_associated_trace_with_agent(tmp_path):
     assert await blob_store.get(f"traces/{sid}/agents/{aid}.jsonl") == (
         b'{"type":"assistant"}\n'
     )
+
+
+@pytest.mark.asyncio
+async def test_repo_upsert_refreshes_same_session(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+
+    async def _write(main: bytes):
+        async with SessionLocal() as session:
+            result = await create_or_update_trace(
+                session=session,
+                blob_store=blob_store,
+                unpacked=UnpackedBundle(
+                    main_bytes=main, agents=[], total_redactions=0
+                ),
+                owner_login="alice",
+                platform="claude-code",
+                plugin_version="0.2.0",
+                session_id="sess-R",
+                redaction_count_client=0,
+                repo_full_name="alice/repo",
+                pr_number=1,
+                pr_url="https://github.com/alice/repo/pull/1",
+                pr_title="t",
+                is_private=False,
+            )
+            await session.commit()
+            return result
+
+    first = await _write(b'{"type":"user"}\n')
+    second = await _write(b'{"type":"user"}\n{"type":"assistant"}\n')
+
+    assert first.created is True
+    assert second.created is False
+    assert second.trace.short_id == first.trace.short_id
+
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(Trace).where(Trace.session_id == "sess-R")
+        )).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].byte_size > len(b'{"type":"user"}\n')
+
+
+@pytest.mark.asyncio
+async def test_standalone_upsert_keys_on_session_id_alone(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+
+    async def _write_standalone():
+        async with SessionLocal() as session:
+            result = await create_or_update_trace(
+                session=session,
+                blob_store=blob_store,
+                unpacked=UnpackedBundle(
+                    main_bytes=b'{"type":"user"}\n',
+                    agents=[],
+                    total_redactions=0,
+                ),
+                owner_login="alice",
+                platform="claude-code",
+                plugin_version="0.2.0",
+                session_id="sess-S",
+                redaction_count_client=0,
+                repo_full_name=None,
+                pr_number=None,
+                pr_url=None,
+                pr_title=None,
+                is_private=False,
+            )
+            await session.commit()
+            return result
+
+    first = await _write_standalone()
+    second = await _write_standalone()
+
+    assert first.created is True
+    assert second.created is False
+    assert second.trace.short_id == first.trace.short_id
+
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(Trace).where(Trace.session_id == "sess-S")
+        )).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].repo_full_name is None
