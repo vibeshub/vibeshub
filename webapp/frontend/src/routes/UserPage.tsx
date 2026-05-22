@@ -6,6 +6,8 @@ import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
 import { TraceListRow } from "../components/TraceListRow";
+import { useAuth } from "../auth/AuthContext";
+import styles from "./UserPage.module.css";
 
 function compactCount(n: number): string {
   if (n >= 1000) {
@@ -26,6 +28,14 @@ function relativeFrom(iso: string | null): string {
   if (h < 24) return `${h} hr ago`;
   const d = Math.round(h / 24);
   return `${d} day${d === 1 ? "" : "s"} ago`;
+}
+
+function greetingFor(date: Date): string {
+  const h = date.getHours();
+  if (h < 5) return "Burning the midnight oil";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 type UserTab = "traces" | "repos";
@@ -56,6 +66,13 @@ export function UserPage() {
       .catch((e) => setGhError(String(e)));
   }, [owner]);
 
+  const { user } = useAuth();
+  const isOwner =
+    !!user && !!owner && user.login.toLowerCase() === owner.toLowerCase();
+  const firstName = user
+    ? (user.name?.trim().split(/\s+/)[0] || user.login).trim()
+    : "";
+
   if (!owner) return null;
   if (error) return <ErrorState message={error} />;
   if (!data) return <LoadingState label="Loading…" />;
@@ -69,6 +86,11 @@ export function UserPage() {
         crumbs={[{ label: owner, to: `/${owner}`, current: true }]}
       />
       <main className="page">
+        {isOwner && (
+          <div className={styles.greetingLine}>
+            {greetingFor(new Date())}, <strong>{firstName}</strong>.
+          </div>
+        )}
         <section className="entity-head">
           <div className="entity-avatar user">{initial}</div>
           <div className="entity-body">

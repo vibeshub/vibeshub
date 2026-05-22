@@ -955,6 +955,21 @@
     border-top: 1px solid var(--border-subtle);
   }
 }
+/* ===================================================================
+   OWNER GREETING — a single line above the entity-head, owner only
+   ================================================================ */
+.greetingLine {
+  margin: 0 0 18px;
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text-muted);
+}
+.greetingLine strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
 @media (max-width: 600px) {
   .wrap {
     padding: 0 20px;
