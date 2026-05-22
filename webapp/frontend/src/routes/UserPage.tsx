@@ -123,56 +123,38 @@ export function UserPage() {
         </section>
 
         <div className="stat-strip">
-          {ghError || !ghUser ? (
-            <div className="stat-cell">
-              <div className="stat-label">GitHub</div>
-              <div className="stat-value">—</div>
-              <div className="stat-sub">
-                {ghError ? "Stats unavailable" : "Loading…"}
-              </div>
+          <div className="stat-cell">
+            <div className="stat-label">Traces</div>
+            <div className="stat-value">{data.stats.trace_count}</div>
+            <div className="stat-sub">
+              last upload {relativeFrom(data.stats.last_trace_at)}
             </div>
-          ) : (
-            <>
-              <div className="stat-cell">
-                <div className="stat-label">Public repos</div>
-                <div className="stat-value">
-                  {compactCount(ghUser.public_repos)}
-                </div>
-                <div className="stat-sub">on github.com/{owner}</div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Stars</div>
-                <div className="stat-value">
-                  {compactCount(ghUser.total_public_stars)}
-                </div>
-                <div className="stat-sub">
-                  {ghUser.stars_truncated
-                    ? "from top 300 repos"
-                    : "across public repos"}
-                </div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Followers</div>
-                <div className="stat-value">
-                  {compactCount(ghUser.followers)}
-                </div>
-                <div className="stat-sub">
-                  following {compactCount(ghUser.following)}
-                </div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Top languages</div>
-                <div className="stat-value" style={{ fontSize: 16 }}>
-                  {ghUser.top_languages.length > 0
-                    ? ghUser.top_languages.join(" · ")
-                    : "—"}
-                </div>
-                <div className="stat-sub">
-                  joined {ghUser.created_at?.slice(0, 4) ?? "—"}
-                </div>
-              </div>
-            </>
-          )}
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Repositories</div>
+            <div className="stat-value">{data.stats.repo_count}</div>
+            <div className="stat-sub">with captured sessions</div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Messages</div>
+            <div className="stat-value">
+              {compactCount(data.stats.message_count)}
+            </div>
+            <div className="stat-sub">across every session</div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Followers</div>
+            <div className="stat-value">
+              {ghError || !ghUser ? "—" : compactCount(ghUser.followers)}
+            </div>
+            <div className="stat-sub">
+              {ghError
+                ? "GitHub stats unavailable"
+                : !ghUser
+                  ? "loading…"
+                  : `following ${compactCount(ghUser.following)}`}
+            </div>
+          </div>
         </div>
 
         <div className="tabs">
