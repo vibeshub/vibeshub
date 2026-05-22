@@ -68,3 +68,54 @@ def test_delete_short_id_returns_none_for_pr_url():
     assert mod._delete_short_id(
         "https://github.com/alice/repo/pull/3", "https://vibeshub.ai"
     ) is None
+
+
+import subprocess
+
+
+def test_resolve_target_prefers_pr():
+    mod = _load_share_trace()
+    with patch.object(mod, "resolve_pr_url", return_value="https://github.com/a/r/pull/9"), \
+         patch.object(mod, "resolve_repo_full_name") as repo:
+        pr_url, repo_full_name = mod._resolve_target(arg=None)
+    assert pr_url == "https://github.com/a/r/pull/9"
+    assert repo_full_name is None
+    repo.assert_not_called()
+
+
+def test_resolve_target_falls_back_to_repo_when_no_pr():
+    mod = _load_share_trace()
+
+    def no_pr(arg, cwd=None):
+        raise subprocess.CalledProcessError(1, "gh", stderr="no PR")
+
+    with patch.object(mod, "resolve_pr_url", side_effect=no_pr), \
+         patch.object(mod, "resolve_repo_full_name", return_value="alice/repo"):
+        pr_url, repo_full_name = mod._resolve_target(arg=None)
+    assert pr_url is None
+    assert repo_full_name == "alice/repo"
+
+
+def test_resolve_target_falls_back_to_standalone_when_no_pr_or_repo():
+    mod = _load_share_trace()
+
+    def no_pr(arg, cwd=None):
+        raise subprocess.CalledProcessError(1, "gh", stderr="no PR")
+
+    with patch.object(mod, "resolve_pr_url", side_effect=no_pr), \
+         patch.object(mod, "resolve_repo_full_name", return_value=None):
+        pr_url, repo_full_name = mod._resolve_target(arg=None)
+    assert pr_url is None
+    assert repo_full_name is None
+
+
+def test_resolve_target_uses_explicit_pr_arg():
+    mod = _load_share_trace()
+    with patch.object(
+        mod, "resolve_pr_url", return_value="https://github.com/a/r/pull/4"
+    ) as pr, patch.object(mod, "resolve_repo_full_name") as repo:
+        pr_url, repo_full_name = mod._resolve_target(arg="4")
+    assert pr_url == "https://github.com/a/r/pull/4"
+    assert repo_full_name is None
+    assert pr.call_args.args[0] == "4"
+    repo.assert_not_called()
