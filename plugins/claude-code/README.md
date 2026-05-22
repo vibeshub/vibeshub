@@ -45,19 +45,24 @@ command included `gh pr create`. If so, the hook:
 
 Installing the plugin is consent for upload. To stop uploading, uninstall the
 plugin or remove the hook entry from your Claude Code settings. After-the-fact
-deletion of any trace is available via `/share-pr delete <pr-url>`.
+deletion of any trace is available via
+`/share-trace delete <pr-url | /t/<id> url | short-id>`.
 
 ## Slash command
 
-`/share-pr` lets you upload manually (e.g., the hook didn't run, or you want to
-re-share after fixing something) or delete an existing trace:
+`/share-trace` lets you upload manually (e.g., the hook didn't run, or you want
+to re-share after fixing something) or delete an existing trace. Without a PR it
+falls back to attaching the trace to the current repo, or to a standalone
+public trace:
 
-- `/share-pr` — share the current branch's open PR
-- `/share-pr <pr-url-or-number>` — share a specific PR
-- `/share-pr delete <pr-url>` — delete the most recent trace for a PR
+- `/share-trace` — upload the current session: an open PR if there is one,
+  else the current GitHub repo, else a standalone public trace
+- `/share-trace <pr-url-or-number>` — share a specific PR
+- `/share-trace delete <pr-url | /t/<id> url | short-id>` — delete a trace
 
 ## Privacy
 
 Traces are public by default. Two redaction passes (client + server) catch
 known secret patterns, but neither is a guarantee. You can also delete any
-trace after the fact via `/share-pr delete <pr-url>`.
+trace after the fact via
+`/share-trace delete <pr-url | /t/<id> url | short-id>`.
