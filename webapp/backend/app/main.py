@@ -8,6 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import (
     auth as auth_api,
+    github_picker as github_picker_api,
     github_stats as github_stats_api,
     health,
     ingest as ingest_api,
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(uploads_api.router)
     app.include_router(auth_api.router)
     app.include_router(github_stats_api.router)
+    app.include_router(github_picker_api.router)
 
     frontend_dist = _frontend_dist_override or (
         Path(__file__).resolve().parent.parent / "frontend_dist"
