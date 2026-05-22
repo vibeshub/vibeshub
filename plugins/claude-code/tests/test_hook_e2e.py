@@ -91,7 +91,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     )
 
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
     hook_log = tmp_path / "hook.log"
 
     payload = {
@@ -142,7 +142,7 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
 
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
 
     payload = {
         "session_id": "irrelevant",
@@ -168,7 +168,7 @@ def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
 
 def test_hook_silent_when_pr_create_failed(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
-    hook_script = plugin_root / "hooks" / "on-pr-create.py"
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
 
     payload = {
         "session_id": "irrelevant",
