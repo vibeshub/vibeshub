@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, fetchRawJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PrivateTraceGate } from "../components/PrivateTraceGate";
+import { TraceManageMenu } from "../components/TraceManageMenu";
 import { TraceViewer } from "../components/trace/TraceViewer";
 import { buildSession, parseJsonl } from "../components/trace/parser";
 import type { Session } from "../components/trace/types";
+import { useAuth } from "../auth/AuthContext";
 import styles from "./TraceView.module.css";
 
 type HeadState =
@@ -23,6 +25,8 @@ type BodyState =
 
 export function TraceView() {
   const { shortId } = useParams<{ shortId: string }>();
+  const auth = useAuth();
+  const navigate = useNavigate();
   const [head, setHead] = useState<HeadState>({ kind: "loading" });
   const [body, setBody] = useState<BodyState>({ kind: "loading" });
 
@@ -66,9 +70,21 @@ export function TraceView() {
   if (head.kind === "loading") return <LoadingState label="Loading trace…" />;
 
   const repoParts = head.trace.repo_full_name?.split("/") ?? [];
+  const isOwner = auth.user?.login === head.trace.owner_login;
 
   return (
     <div className={styles.container}>
+      {isOwner && (
+        <div className={styles.manage}>
+          <TraceManageMenu
+            trace={head.trace}
+            onUpdated={(updated) =>
+              setHead({ kind: "ready", trace: updated })
+            }
+            onDeleted={() => navigate("/" + head.trace.owner_login)}
+          />
+        </div>
+      )}
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (

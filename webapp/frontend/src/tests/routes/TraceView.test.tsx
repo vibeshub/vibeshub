@@ -4,7 +4,31 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+
+vi.mock("../../auth/AuthContext", () => ({
+  useAuth: vi.fn(),
+}));
+
 import { TraceView } from "../../routes/TraceView";
+import { useAuth } from "../../auth/AuthContext";
+
+const mockUseAuth = useAuth as unknown as ReturnType<typeof vi.fn>;
+
+const anonAuth = {
+  loading: false,
+  user: null,
+  refresh: vi.fn(),
+  signOut: vi.fn(),
+};
+
+function authAs(login: string) {
+  return {
+    loading: false,
+    user: { id: "u1", login, name: login, avatar_url: null },
+    refresh: vi.fn(),
+    signOut: vi.fn(),
+  };
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = readFileSync(
@@ -54,6 +78,7 @@ function mockFetchSequence(traceSummary: object) {
 describe("TraceView", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockUseAuth.mockReturnValue(anonAuth);
   });
 
   it("renders the hero title and at least one tool card from the parsed trace", async () => {
@@ -323,5 +348,79 @@ describe("TraceView", () => {
     const badge = await screen.findByText(/Private/);
     expect(badge).toBeInTheDocument();
     expect(badge.textContent).toContain("🔒");
+  });
+
+  it("renders the manage menu for the trace owner", async () => {
+    mockUseAuth.mockReturnValue(authAs("alice"));
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: null,
+      pr_number: null,
+      pr_url: null,
+      pr_title: null,
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/t/${SHORT_ID}`);
+
+    expect(
+      await screen.findByText(/manage trace/i),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the manage menu from a non-owner", async () => {
+    mockUseAuth.mockReturnValue(authAs("bob"));
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: null,
+      pr_number: null,
+      pr_url: null,
+      pr_title: null,
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/t/${SHORT_ID}`);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/manage trace/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the manage menu from an anonymous visitor", async () => {
+    mockUseAuth.mockReturnValue(anonAuth);
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: null,
+      pr_number: null,
+      pr_url: null,
+      pr_title: null,
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/t/${SHORT_ID}`);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/manage trace/i)).not.toBeInTheDocument();
   });
 });
