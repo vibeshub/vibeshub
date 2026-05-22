@@ -1,0 +1,95 @@
+/* Privacy.module.css — typographic layout for the /privacy policy page.
+   Local to the Privacy route; all selectors are class-scoped via CSS Modules. */
+
+.privacy {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+.header {
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0 0 10px;
+}
+
+.effective {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ---------- prose ---------- */
+
+.prose {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.prose h2 {
+  margin: 40px 0 12px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+
+.prose h2:first-child {
+  margin-top: 0;
+}
+
+.prose p {
+  margin: 0 0 14px;
+}
+
+.prose ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+.prose li {
+  margin-bottom: 8px;
+}
+
+.prose li > strong {
+  color: var(--text-strong);
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-soft, color-mix(in oklab, var(--accent) 12%, transparent));
+  color: var(--text-strong);
+}
+
+.prose a {
+  color: var(--accent-strong, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  text-decoration-thickness: 2px;
+}
