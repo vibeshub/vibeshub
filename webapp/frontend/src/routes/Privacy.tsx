@@ -6,7 +6,7 @@ export function Privacy() {
     <div className="page-shell">
       <PageTopbar crumbs={[{ label: "Privacy", current: true }]} />
 
-      <main className={`page ${styles.privacy}`}>
+      <main className={styles.privacy}>
         <header className={styles.header}>
           <div className={styles.eyebrow}>
             <span className={styles.dot} />

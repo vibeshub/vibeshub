@@ -2,7 +2,7 @@
    Local to the Privacy route; all selectors are class-scoped via CSS Modules. */
 
 .privacy {
-  max-width: 760px;
+  max-width: var(--content-width);
   margin: 0 auto;
   padding: 56px 24px 96px;
 }
@@ -21,7 +21,7 @@
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-faint);
   margin-bottom: 14px;
 }
 
