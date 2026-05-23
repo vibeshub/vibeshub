@@ -31,8 +31,8 @@ export function TraceViewer({
   ownerControls,
 }: Props) {
   const [showSystemEvents, setShowSystemEvents] = useState(false);
-  const [compact, setCompact] = usePersistedBoolean(
-    "vibeshub.trace.compact",
+  const [expandToolCalls, setExpandToolCalls] = usePersistedBoolean(
+    "vibeshub.trace.expandToolCalls",
     false,
   );
 
@@ -62,14 +62,14 @@ export function TraceViewer({
             <ThreadControls
               showSystemEvents={showSystemEvents}
               setShowSystemEvents={setShowSystemEvents}
-              compact={compact}
-              setCompact={setCompact}
+              expandToolCalls={expandToolCalls}
+              setExpandToolCalls={setExpandToolCalls}
             />
             <Thread
               session={session}
               shortId={shortId}
               showSystemEvents={showSystemEvents}
-              compact={compact}
+              expandToolCalls={expandToolCalls}
             />
           </div>
         </div>
