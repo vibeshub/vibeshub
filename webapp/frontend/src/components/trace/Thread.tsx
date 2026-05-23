@@ -12,7 +12,7 @@ interface Props {
   session: Session;
   shortId: string;
   showSystemEvents: boolean;
-  compact: boolean;
+  expandToolCalls: boolean;
 }
 
 function isSystemish(e: StreamEvent): boolean {
@@ -40,7 +40,7 @@ export function Thread({
   session,
   shortId,
   showSystemEvents,
-  compact,
+  expandToolCalls,
 }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
@@ -56,8 +56,9 @@ export function Thread({
   const out: React.ReactNode[] = [];
   let promptCounter = -1;
 
-  // Compact mode accumulates consecutive tool calls; flushRun() emits the
-  // accumulated run as one ToolGroup and is called before any non-tool node.
+  // When "Expand tool calls" is off (the default), consecutive tool calls
+  // accumulate; flushRun() emits the run as one ToolGroup and is called
+  // before any non-tool node.
   let pendingRun: ToolGroupItem[] = [];
   const flushRun = () => {
     if (pendingRun.length === 0) return;
@@ -110,7 +111,7 @@ export function Thread({
         followingPrompt: nextPrompt[i],
         progress: hooksByTool.get(e.id) ?? [],
       };
-      if (compact) {
+      if (!expandToolCalls) {
         pendingRun.push(item);
       } else {
         out.push(

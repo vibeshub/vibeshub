@@ -1,8 +1,8 @@
 interface Props {
   showSystemEvents: boolean;
   setShowSystemEvents: (v: boolean) => void;
-  compact: boolean;
-  setCompact: (v: boolean) => void;
+  expandToolCalls: boolean;
+  setExpandToolCalls: (v: boolean) => void;
 }
 
 function Toggle({
@@ -30,8 +30,8 @@ function Toggle({
 export function ThreadControls({
   showSystemEvents,
   setShowSystemEvents,
-  compact,
-  setCompact,
+  expandToolCalls,
+  setExpandToolCalls,
 }: Props) {
   return (
     <div className="thread-controls">
@@ -41,9 +41,9 @@ export function ThreadControls({
         label="Show system events"
       />
       <Toggle
-        on={compact}
-        onClick={() => setCompact(!compact)}
-        label="Compact"
+        on={expandToolCalls}
+        onClick={() => setExpandToolCalls(!expandToolCalls)}
+        label="Expand tool calls"
       />
     </div>
   );

@@ -121,7 +121,7 @@ describe("TraceView", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a Compact toggle in the thread controls", async () => {
+  it("renders an Expand tool calls toggle in the thread controls", async () => {
     mockFetchSequence({
       trace_id: "id",
       short_id: SHORT_ID,
@@ -140,11 +140,11 @@ describe("TraceView", () => {
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
 
     expect(
-      await screen.findByRole("button", { name: /compact/i }),
+      await screen.findByRole("button", { name: /expand tool calls/i }),
     ).toBeInTheDocument();
   });
 
-  it("folds consecutive tool calls into group lines when Compact is on", async () => {
+  it("folds consecutive tool calls into group lines when Expand tool calls is off", async () => {
     mockFetchSequence({
       trace_id: "id",
       short_id: SHORT_ID,
@@ -162,19 +162,21 @@ describe("TraceView", () => {
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
 
-    const toggle = await screen.findByRole("button", { name: /compact/i });
+    const toggle = await screen.findByRole("button", {
+      name: /expand tool calls/i,
+    });
 
-    // Off by default — no tool-group summary lines.
+    // Off by default — runs of consecutive tool calls collapse into group lines.
     expect(
-      screen.queryAllByRole("button", { name: /tool call/i }),
-    ).toHaveLength(0);
+      screen.getAllByRole("button", { name: /\d+ tool call/i }).length,
+    ).toBeGreaterThan(0);
 
     fireEvent.click(toggle);
 
-    // On — runs of consecutive tool calls collapse into group lines.
+    // On — tool cards render individually, no group summary lines remain.
     expect(
-      screen.getAllByRole("button", { name: /tool call/i }).length,
-    ).toBeGreaterThan(0);
+      screen.queryAllByRole("button", { name: /\d+ tool call/i }),
+    ).toHaveLength(0);
   });
 
   it("expands a tool group to reveal the individual tool cards", async () => {
@@ -195,10 +197,10 @@ describe("TraceView", () => {
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
 
-    const toggle = await screen.findByRole("button", { name: /compact/i });
-    fireEvent.click(toggle);
+    // Wait for the controls to render — groups are visible by default.
+    await screen.findByRole("button", { name: /expand tool calls/i });
 
-    const groups = screen.getAllByRole("button", { name: /tool call/i });
+    const groups = screen.getAllByRole("button", { name: /\d+ tool call/i });
     const before = screen.getAllByRole("button").length;
 
     fireEvent.click(groups[0]);
@@ -207,7 +209,7 @@ describe("TraceView", () => {
     expect(screen.getAllByRole("button").length).toBeGreaterThan(before);
   });
 
-  it("renders a lone tool call as its own group when Compact is on", async () => {
+  it("renders a lone tool call as its own group by default", async () => {
     mockFetchSequence({
       trace_id: "id",
       short_id: SHORT_ID,
@@ -225,8 +227,7 @@ describe("TraceView", () => {
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
 
-    const toggle = await screen.findByRole("button", { name: /compact/i });
-    fireEvent.click(toggle);
+    await screen.findByRole("button", { name: /expand tool calls/i });
 
     // The fixture has tool calls isolated between assistant text — each
     // renders as a group of one.
