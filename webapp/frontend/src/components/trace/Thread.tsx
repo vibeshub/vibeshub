@@ -47,10 +47,8 @@ export function Thread({
   const totalPrompts = session.meta.userPromptCount;
   const agents = session.meta.agents ?? [];
   const nextPrompt = buildNextPromptIndex(stream);
-  const promptUuids: string[] = [];
   const toolIds = new Set<string>();
   for (const ev of stream) {
-    if (ev.kind === "user_prompt" && ev.uuid) promptUuids.push(ev.uuid);
     if (ev.kind === "tool_use") toolIds.add(ev.id);
   }
   const hooksByTool = progressByTool(stream);
@@ -91,7 +89,6 @@ export function Thread({
           event={e}
           idx={promptCounter}
           total={totalPrompts}
-          nextPromptUuid={promptUuids[promptCounter + 1]}
           key={key}
         />,
       );
