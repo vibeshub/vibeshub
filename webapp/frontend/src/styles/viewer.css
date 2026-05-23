@@ -484,11 +484,12 @@
 /* ---------- outcome panel ---------- */
 .vibeshub-viewer .outcome-grid {
   max-width: var(--header-width);
-  margin: 16px auto 0;
+  margin: 28px auto 0;
   padding: 0 32px;
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 12px;
+  align-items: stretch;
 }
 @media (max-width: 720px) {
   .vibeshub-viewer .outcome-grid {
@@ -503,6 +504,23 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+/* Negative margins + padding must mirror .outcome-card padding (16px 18px) so
+   the stat row bleeds flush to the card edges and the bottom border reads as
+   a true card divider. */
+.vibeshub-viewer .outcome-stats {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 16px;
+  margin: -16px -18px 0;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.vibeshub-viewer .outcome-stat {
+  background: none;
+  padding: 0;
+  gap: 4px;
 }
 .vibeshub-viewer .outcome-loading {
   text-transform: none;
@@ -698,18 +716,6 @@
   text-transform: lowercase;
 }
 
-.vibeshub-viewer .meta-strip {
-  max-width: var(--header-width);
-  margin: 0 auto;
-  padding: 4px 32px 0;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
 .vibeshub-viewer .meta-cell {
   background: var(--bg-elevated);
   padding: 14px 18px;

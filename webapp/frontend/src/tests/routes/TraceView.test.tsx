@@ -466,4 +466,51 @@ describe("TraceView", () => {
       screen.queryByRole("button", { name: /^owner$/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders two outcome cards (Result, Files Touched) and surfaces tokens on the metaline", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+
+    // Two outcome cards now — Result and Files Touched. Tokens moved to MetaLine.
+    expect(container.querySelectorAll(".outcome-card")).toHaveLength(2);
+
+    // Neither the standalone stats strip nor the side-stack wrapper survives.
+    expect(container.querySelector(".meta-strip")).toBeNull();
+    expect(container.querySelector(".outcome-side")).toBeNull();
+
+    // Each stat label appears in the specific card it belongs to. Catches a
+    // regression where the labels are present but land in the wrong card.
+    const cards = Array.from(container.querySelectorAll(".outcome-card"));
+    const [resultCard, filesCard] = cards;
+    expect(resultCard.textContent).toMatch(/Active Time/i);
+    expect(resultCard.textContent).toMatch(/Turns/i);
+    expect(resultCard.textContent).toMatch(/Tool calls/i);
+    expect(filesCard.textContent).toMatch(/Files touched/i);
+
+    // No token bar visualization anywhere.
+    expect(container.querySelector(".outcome-token-seg")).toBeNull();
+
+    // Tokens now appears as a kv pair on the metaline below the outcome grid.
+    const metaline = container.querySelector(".metaline");
+    expect(metaline).not.toBeNull();
+    expect(metaline!.textContent).toMatch(/tokens/i);
+  });
 });
