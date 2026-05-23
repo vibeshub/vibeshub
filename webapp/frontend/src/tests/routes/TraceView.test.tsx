@@ -344,17 +344,21 @@ describe("TraceView", () => {
     await waitFor(() =>
       expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
     );
-    // The standalone TraceHeader renders no "View on GitHub" link and
-    // falls back to a generic "Trace <short_id>" title.
+    // The hero H1 still reads the parsed aiTitle even with no repo/PR.
     const heading = await screen.findByRole("heading", {
-      name: `Trace ${SHORT_ID}`,
+      name: "Add startup credential smoke-check",
       level: 1,
     });
-    const header = heading.closest("header");
-    expect(header).not.toBeNull();
+    // Eyebrow above the title shows session + Raw JSONL but never a
+    // GitHub link when there's no linked PR.
+    const heroSection = heading.closest("section");
+    expect(heroSection).not.toBeNull();
+    const heroEyebrow = heroSection!.querySelector(".hero-eyebrow");
+    expect(heroEyebrow).not.toBeNull();
     expect(
-      header!.textContent?.toLowerCase(),
+      heroEyebrow!.textContent?.toLowerCase(),
     ).not.toContain("view on github");
+    expect(heroEyebrow!.textContent).toContain("Raw JSONL");
     void container;
   });
 

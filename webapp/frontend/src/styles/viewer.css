@@ -109,63 +109,398 @@
   height: 14px;
 }
 
+/* ---------- jump strip (sticky prompt nav) ---------- */
+.vibeshub-viewer .jumpstrip {
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+}
+.vibeshub-viewer .jumpstrip-inner {
+  max-width: var(--header-width);
+  margin: 0 auto;
+  padding: 8px 32px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.vibeshub-viewer .jumpstrip-label {
+  flex: none;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .jumpstrip-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+.vibeshub-viewer .jumpstrip-scroll::-webkit-scrollbar {
+  display: none;
+}
+.vibeshub-viewer .jumpchip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  max-width: 240px;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.vibeshub-viewer .jumpchip .n {
+  font-weight: 600;
+  color: var(--text);
+  flex: none;
+}
+.vibeshub-viewer .jumpchip .pv {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.vibeshub-viewer .jumpchip:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+.vibeshub-viewer .jumpchip.cur {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.vibeshub-viewer .jumpchip.cur .n {
+  color: var(--accent-strong);
+}
+
 /* ---------- hero ---------- */
 .vibeshub-viewer .hero {
   max-width: var(--header-width);
   margin: 0 auto;
-  padding: 56px 32px 28px;
+  padding: 40px 32px 24px;
 }
 .vibeshub-viewer .hero-eyebrow {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 14px;
-  white-space: nowrap;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 .vibeshub-viewer .hero-eyebrow .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
+  flex: none;
+}
+.vibeshub-viewer .hero-eyebrow-repo {
+  color: var(--text-strong);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  text-decoration: none;
+}
+.vibeshub-viewer .hero-eyebrow-repo:hover {
+  color: var(--accent-strong);
+}
+.vibeshub-viewer .hero-eyebrow-spacer {
+  flex: 1;
+  min-width: 12px;
+}
+.vibeshub-viewer .hero-eyebrow-actions {
+  display: inline-flex;
+  gap: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.vibeshub-viewer .hero-eyebrow-actions a {
+  font-size: 12px;
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+.vibeshub-viewer .hero-eyebrow-actions a:hover {
+  text-decoration: underline;
 }
 .vibeshub-viewer .hero-title {
-  font-size: 40px;
+  font-size: 42px;
   line-height: 1.08;
   font-weight: 600;
   letter-spacing: -0.022em;
   color: var(--text-strong);
-  margin: 0 0 20px;
+  margin: 0 0 18px;
   text-wrap: balance;
 }
-.vibeshub-viewer .hero-prompt {
+.vibeshub-viewer .hero-badges {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vibeshub-viewer .hero-pr {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12.5px;
   color: var(--text);
-  font-size: 15px;
-  max-width: 700px;
+  text-decoration: none !important;
+  max-width: 460px;
 }
-.vibeshub-viewer .hero-prompt-tag {
+.vibeshub-viewer .hero-pr:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+.vibeshub-viewer .hero-pr-num {
+  font: 600 11.5px var(--font-mono);
+  color: var(--text-muted);
   flex: none;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  padding-top: 4px;
 }
-.vibeshub-viewer .hero-prompt-body {
+.vibeshub-viewer .hero-pr-title {
+  min-width: 0;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vibeshub-viewer .hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font: 11.5px/1 var(--font-mono);
+  color: var(--text-muted);
+}
+.vibeshub-viewer .hero-tag--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-faint);
+  padding: 0 2px;
+}
+.vibeshub-viewer .hero-tag--quiet a {
+  color: var(--text-muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+.vibeshub-viewer .hero-tag--quiet a:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+.vibeshub-viewer .hero-tag--private {
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 500;
+}
+
+/* ---------- outcome panel ---------- */
+.vibeshub-viewer .outcome-grid {
+  max-width: var(--header-width);
+  margin: 16px auto 0;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .vibeshub-viewer .outcome-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.vibeshub-viewer .outcome-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vibeshub-viewer .outcome-loading {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-sans);
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 11px;
+}
+.vibeshub-viewer .outcome-card h4 {
+  margin: 0;
+  font: 10.5px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .outcome-status {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.vibeshub-viewer .outcome-status .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.vibeshub-viewer .outcome-status.ok {
+  background: color-mix(in oklab, var(--tool-bash) 14%, var(--bg-elevated));
+  color: var(--tool-bash);
+}
+.vibeshub-viewer .outcome-status.ok .dot {
+  background: var(--tool-bash);
+}
+.vibeshub-viewer .outcome-status.neutral {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.vibeshub-viewer .outcome-status.neutral .dot {
+  background: var(--text-faint);
+}
+.vibeshub-viewer .outcome-summary {
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.55;
   flex: 1;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vibeshub-viewer .outcome-summary--empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.vibeshub-viewer .outcome-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  font-style: italic;
+  flex: 1;
+}
+.vibeshub-viewer .outcome-pr {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: 12px;
+  text-decoration: none !important;
+  color: var(--text);
+  margin-top: auto;
+  max-width: 100%;
+}
+.vibeshub-viewer .outcome-pr:hover {
+  border-color: var(--border-strong);
+}
+.vibeshub-viewer .outcome-pr .pr-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-muted);
+  flex: none;
+}
+.vibeshub-viewer .outcome-pr .pr-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.vibeshub-viewer .outcome-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.vibeshub-viewer .outcome-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  min-width: 0;
+}
+.vibeshub-viewer .outcome-path {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.vibeshub-viewer .outcome-badge {
+  font: 9.5px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  flex: none;
+}
+.vibeshub-viewer .outcome-badge.new {
+  background: color-mix(in oklab, var(--tool-bash) 18%, var(--bg-elevated));
+  color: var(--tool-bash);
+}
+.vibeshub-viewer .outcome-badge.mod {
+  background: color-mix(in oklab, var(--tool-write) 18%, var(--bg-elevated));
+  color: var(--tool-write);
+}
+.vibeshub-viewer .outcome-files-more {
+  list-style: none;
+  font: 11.5px var(--font-mono);
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+/* gap label in the timeline head */
+.vibeshub-viewer .timeline-gap-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: var(--bg-subtle);
+  font: 10.5px var(--font-mono);
+  color: var(--text-faint);
+  text-transform: lowercase;
 }
 
 .vibeshub-viewer .meta-strip {
