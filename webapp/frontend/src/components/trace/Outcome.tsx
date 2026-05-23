@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session, StreamEvent } from "./types";
 import type { TraceSummary } from "../../types";
-import { shortenPath } from "./format";
+import {
+  fmtDuration,
+  fmtDurationCompact,
+  fmtTokens,
+  shortenPath,
+} from "./format";
 import { buildSession, parseJsonl } from "./parser";
 import { fetchAgentJsonl } from "../../api";
 
@@ -111,10 +116,34 @@ function lastAssistantText(stream: StreamEvent[]): string | null {
   return null;
 }
 
+function StatCell({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+}) {
+  return (
+    <div className="meta-cell outcome-stat">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">{value}</div>
+      {sub && <div className="meta-sub">{sub}</div>}
+    </div>
+  );
+}
+
 const FILES_COLLAPSED = 6;
 
 export function Outcome({ session, trace }: Props) {
   const { meta, stream } = session;
+  const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
+  const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
+  const wall = Math.max(0, end - start);
+  const tokensTotal =
+    meta.tokens.input + meta.tokens.cacheCreate + meta.tokens.output;
+  const distinctToolCount = Object.keys(meta.toolCounts).length;
   const { streams: subStreams, loading: subLoading } =
     useSubagentStreams(trace);
 
@@ -150,6 +179,19 @@ export function Outcome({ session, trace }: Props) {
   return (
     <div className="outcome-grid">
       <section className="outcome-card">
+        <div className="outcome-stats">
+          <StatCell
+            label="Duration"
+            value={fmtDurationCompact(meta.assistantThinkMs)}
+            sub={`wall: ${fmtDuration(wall)}`}
+          />
+          <StatCell
+            label="Turns"
+            value={meta.userPromptCount}
+            sub={`${meta.assistantTextCount} replies`}
+          />
+        </div>
+        <div className="outcome-divider" />
         <h4>Result</h4>
         <span className={"outcome-status " + (linkedPr ? "ok" : "neutral")}>
           <span className="dot" />
@@ -196,6 +238,14 @@ export function Outcome({ session, trace }: Props) {
       </section>
 
       <section className="outcome-card">
+        <div className="outcome-stats">
+          <StatCell
+            label="Tool calls"
+            value={meta.toolCallCount}
+            sub={`${distinctToolCount} distinct tools`}
+          />
+        </div>
+        <div className="outcome-divider" />
         <h4>
           Files touched · {files.length}
           {subLoading && (
@@ -230,6 +280,16 @@ export function Outcome({ session, trace }: Props) {
             )}
           </ul>
         )}
+      </section>
+
+      <section className="outcome-card">
+        <div className="outcome-stats">
+          <StatCell
+            label="Tokens"
+            value={fmtTokens(tokensTotal + meta.tokens.cacheRead)}
+            sub={`${fmtTokens(meta.tokens.output)} out · ${fmtTokens(meta.tokens.cacheRead)} cache`}
+          />
+        </div>
       </section>
     </div>
   );

@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Session } from "./types";
 import type { TraceSummary } from "../../types";
-import { fmtDuration, fmtDurationCompact, fmtTokens } from "./format";
 import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
@@ -101,50 +100,6 @@ function HeroBadges({ trace }: { trace: TraceSummary }) {
   );
 }
 
-function MetaStrip({ session }: { session: Session }) {
-  const meta = session.meta;
-  const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
-  const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
-  const wall = Math.max(0, end - start);
-  const tokensTotal =
-    meta.tokens.input + meta.tokens.cacheCreate + meta.tokens.output;
-  return (
-    <div className="meta-wrap">
-      <div className="meta-strip">
-        <div className="meta-cell">
-          <div className="meta-label">Duration</div>
-          <div className="meta-value">
-            {fmtDurationCompact(meta.assistantThinkMs)}
-          </div>
-          <div className="meta-sub">wall: {fmtDuration(wall)}</div>
-        </div>
-        <div className="meta-cell">
-          <div className="meta-label">Turns</div>
-          <div className="meta-value">{meta.userPromptCount}</div>
-          <div className="meta-sub">{meta.assistantTextCount} replies</div>
-        </div>
-        <div className="meta-cell">
-          <div className="meta-label">Tool calls</div>
-          <div className="meta-value">{meta.toolCallCount}</div>
-          <div className="meta-sub">
-            {Object.keys(meta.toolCounts).length} distinct tools
-          </div>
-        </div>
-        <div className="meta-cell">
-          <div className="meta-label">Tokens</div>
-          <div className="meta-value">
-            {fmtTokens(tokensTotal + meta.tokens.cacheRead)}
-          </div>
-          <div className="meta-sub">
-            {fmtTokens(meta.tokens.output)} out ·{" "}
-            {fmtTokens(meta.tokens.cacheRead)} cache
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MetaLine({ session }: { session: Session }) {
   const meta = session.meta;
   const items: Array<{ k: string; v: string }> = [];
@@ -205,7 +160,6 @@ export function Hero({ session, trace, rawHref }: Props) {
         <h1 className="hero-title">{meta.aiTitle || "Untitled session"}</h1>
         <HeroBadges trace={trace} />
       </div>
-      <MetaStrip session={session} />
       <Outcome session={session} trace={trace} />
       <MetaLine session={session} />
       <ToolsChips session={session} />

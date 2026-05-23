@@ -466,4 +466,41 @@ describe("TraceView", () => {
       screen.queryByRole("button", { name: /^owner$/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders three outcome cards (Result, Files Touched, Tokens) and no standalone stats bar", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+
+    // Three outcome cards now — Result, Files Touched, Tokens.
+    expect(container.querySelectorAll(".outcome-card")).toHaveLength(3);
+
+    // Standalone stats strip is gone.
+    expect(container.querySelector(".meta-strip")).toBeNull();
+
+    // The stats moved into the outcome cards — each label appears inside one.
+    const cards = Array.from(container.querySelectorAll(".outcome-card"));
+    const cardText = cards.map((c) => c.textContent ?? "").join(" | ");
+    expect(cardText).toMatch(/DURATION/i);
+    expect(cardText).toMatch(/TURNS/i);
+    expect(cardText).toMatch(/TOOL CALLS/i);
+    expect(cardText).toMatch(/TOKENS/i);
+  });
 });
