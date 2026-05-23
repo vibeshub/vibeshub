@@ -503,5 +503,20 @@ describe("TraceView", () => {
     expect(resultCard.textContent).toMatch(/Turns/i);
     expect(filesCard.textContent).toMatch(/Tool calls/i);
     expect(tokensCard.textContent).toMatch(/Tokens/i);
+
+    // Files Touched and Tokens live inside the side-stack wrapper so the
+    // grid lays out as Result | (Files / Tokens).
+    const side = container.querySelector(".outcome-side");
+    expect(side).not.toBeNull();
+    expect(side!.contains(filesCard)).toBe(true);
+    expect(side!.contains(tokensCard)).toBe(true);
+
+    // Tokens card now carries a four-segment bar and a four-item legend.
+    expect(
+      tokensCard.querySelectorAll(".outcome-token-seg"),
+    ).toHaveLength(4);
+    expect(
+      tokensCard.querySelectorAll(".outcome-token-legend-item"),
+    ).toHaveLength(4);
   });
 });
