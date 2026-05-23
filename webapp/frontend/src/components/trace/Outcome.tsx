@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Session, StreamEvent } from "./types";
+import type { Session, StreamEvent, TokenTotals } from "./types";
 import type { TraceSummary } from "../../types";
 import {
   fmtDuration,
@@ -136,6 +136,66 @@ function StatCell({
 
 const FILES_COLLAPSED = 6;
 
+const TOKEN_SEGMENTS = [
+  { key: "cacheRead", label: "Cache read", color: "var(--tool-read)" },
+  { key: "input", label: "Input", color: "var(--tool-bash)" },
+  { key: "cacheCreate", label: "Cache create", color: "var(--tool-write)" },
+  { key: "output", label: "Output", color: "var(--accent-strong)" },
+] as const;
+
+// Cache reads can dominate by 50-100x, which would otherwise erase the other
+// segments. Floor each non-zero segment to MIN_SEG_PCT so it still reads as a
+// sliver, then normalize so the row totals 100%.
+const MIN_SEG_PCT = 2;
+
+function TokenBar({ tokens }: { tokens: TokenTotals }) {
+  const total =
+    tokens.cacheRead + tokens.input + tokens.cacheCreate + tokens.output;
+  const raw = TOKEN_SEGMENTS.map((s) => ({
+    ...s,
+    value: tokens[s.key],
+    pct: total > 0 ? (tokens[s.key] / total) * 100 : 0,
+  }));
+  const floored = raw.map((s) => ({
+    ...s,
+    width: s.value > 0 ? Math.max(s.pct, MIN_SEG_PCT) : 0,
+  }));
+  const widthSum = floored.reduce((acc, s) => acc + s.width, 0);
+  const segments = floored.map((s) => ({
+    ...s,
+    width: widthSum > 0 ? (s.width / widthSum) * 100 : 0,
+  }));
+  return (
+    <div className="outcome-token-body">
+      <div className="outcome-token-bar" role="img" aria-label="Token mix">
+        {segments.map((s) => (
+          <span
+            key={s.key}
+            className="outcome-token-seg"
+            style={{
+              width: `${s.width}%`,
+              background: s.color,
+            }}
+            title={`${s.label}: ${fmtTokens(s.value)}`}
+          />
+        ))}
+      </div>
+      <ul className="outcome-token-legend">
+        {segments.map((s) => (
+          <li key={s.key} className="outcome-token-legend-item">
+            <span
+              className="outcome-token-dot"
+              style={{ background: s.color }}
+            />
+            <span className="outcome-token-label">{s.label}</span>
+            <span className="outcome-token-value">{fmtTokens(s.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function Outcome({ session, trace }: Props) {
   const { meta, stream } = session;
   const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
@@ -236,59 +296,62 @@ export function Outcome({ session, trace }: Props) {
         )}
       </section>
 
-      <section className="outcome-card">
-        <div className="outcome-stats">
-          <StatCell
-            label="Tool calls"
-            value={meta.toolCallCount}
-            sub={`${distinctToolCount} distinct tools`}
-          />
-        </div>
-        <h4>
-          Files touched · {files.length}
-          {subLoading && (
-            <span className="outcome-loading"> · loading subagents…</span>
-          )}
-        </h4>
-        {files.length === 0 && !subLoading ? (
-          <div className="outcome-empty">No file writes recorded.</div>
-        ) : (
-          <ul className="outcome-files">
-            {visibleFiles.map((f) => (
-              <li key={f.path} className="outcome-file">
-                <span className={"outcome-badge " + f.kind}>
-                  {f.kind === "new" ? "new" : "mod"}
-                </span>
-                <span className="outcome-path" title={f.path}>
-                  {f.path}
-                </span>
-              </li>
-            ))}
-            {extraFiles > 0 && (
-              <li>
-                <button
-                  type="button"
-                  className="outcome-files-more"
-                  onClick={() => setFilesExpanded((v) => !v)}
-                  aria-expanded={filesExpanded}
-                >
-                  {filesExpanded ? "Show fewer" : `+ ${extraFiles} more`}
-                </button>
-              </li>
+      <div className="outcome-side">
+        <section className="outcome-card">
+          <div className="outcome-stats">
+            <StatCell
+              label="Tool calls"
+              value={meta.toolCallCount}
+              sub={`${distinctToolCount} distinct tools`}
+            />
+          </div>
+          <h4>
+            Files touched · {files.length}
+            {subLoading && (
+              <span className="outcome-loading"> · loading subagents…</span>
             )}
-          </ul>
-        )}
-      </section>
+          </h4>
+          {files.length === 0 && !subLoading ? (
+            <div className="outcome-empty">No file writes recorded.</div>
+          ) : (
+            <ul className="outcome-files">
+              {visibleFiles.map((f) => (
+                <li key={f.path} className="outcome-file">
+                  <span className={"outcome-badge " + f.kind}>
+                    {f.kind === "new" ? "new" : "mod"}
+                  </span>
+                  <span className="outcome-path" title={f.path}>
+                    {f.path}
+                  </span>
+                </li>
+              ))}
+              {extraFiles > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    className="outcome-files-more"
+                    onClick={() => setFilesExpanded((v) => !v)}
+                    aria-expanded={filesExpanded}
+                  >
+                    {filesExpanded ? "Show fewer" : `+ ${extraFiles} more`}
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+        </section>
 
-      <section className="outcome-card">
-        <div className="outcome-stats">
-          <StatCell
-            label="Tokens"
-            value={fmtTokens(tokensTotal + meta.tokens.cacheRead)}
-            sub={`${fmtTokens(meta.tokens.output)} out · ${fmtTokens(meta.tokens.cacheRead)} cache`}
-          />
-        </div>
-      </section>
+        <section className="outcome-card">
+          <div className="outcome-stats">
+            <StatCell
+              label="Tokens"
+              value={fmtTokens(tokensTotal + meta.tokens.cacheRead)}
+              sub={`${fmtTokens(meta.tokens.output)} out · ${fmtTokens(meta.tokens.cacheRead)} cache`}
+            />
+          </div>
+          <TokenBar tokens={meta.tokens} />
+        </section>
+      </div>
     </div>
   );
 }
