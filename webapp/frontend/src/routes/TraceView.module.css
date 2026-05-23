@@ -3,10 +3,3 @@
   flex-direction: column;
   min-height: 100vh;
 }
-
-.manage {
-  width: 100%;
-  max-width: var(--content-width);
-  margin: var(--space-3) auto 0;
-  padding: 0 var(--space-4);
-}

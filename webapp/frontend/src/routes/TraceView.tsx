@@ -77,19 +77,16 @@ export function TraceView() {
   const repoParts = head.trace.repo_full_name?.split("/") ?? [];
   const isOwner = auth.user?.login === head.trace.owner_login;
 
+  const ownerControls = isOwner ? (
+    <TraceManageMenu
+      trace={head.trace}
+      onUpdated={(updated) => setHead({ kind: "ready", trace: updated })}
+      onDeleted={() => navigate("/" + head.trace.owner_login)}
+    />
+  ) : undefined;
+
   return (
     <div className={styles.container}>
-      {isOwner && (
-        <div className={styles.manage}>
-          <TraceManageMenu
-            trace={head.trace}
-            onUpdated={(updated) =>
-              setHead({ kind: "ready", trace: updated })
-            }
-            onDeleted={() => navigate("/" + head.trace.owner_login)}
-          />
-        </div>
-      )}
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (
@@ -100,6 +97,7 @@ export function TraceView() {
           rawHref={`/api/traces/${head.trace.short_id}/raw`}
           repoOwner={repoParts[0]}
           repoName={repoParts[1]}
+          ownerControls={ownerControls}
         />
       )}
     </div>

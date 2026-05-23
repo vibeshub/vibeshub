@@ -46,12 +46,32 @@ const repoTrace: TraceSummary = {
   pr_title: "Add a thing",
 };
 
+function openPopover() {
+  fireEvent.click(screen.getByRole("button", { name: /^owner$/i }));
+}
+
 describe("TraceManageMenu", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     (patchTrace as Mock).mockReset();
     (deleteTrace as Mock).mockReset();
     (fetchMyRepos as Mock).mockReset();
+  });
+
+  it("collapses controls behind an Owner trigger by default", () => {
+    render(
+      <TraceManageMenu
+        trace={standaloneTrace}
+        onUpdated={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /^owner$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /make private/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("toggles privacy on a standalone trace", async () => {
@@ -67,6 +87,7 @@ describe("TraceManageMenu", () => {
         onDeleted={vi.fn()}
       />,
     );
+    openPopover();
     fireEvent.click(screen.getByRole("button", { name: /make private/i }));
     await waitFor(() =>
       expect(patchTrace).toHaveBeenCalledWith(standaloneTrace.short_id, {
@@ -84,6 +105,7 @@ describe("TraceManageMenu", () => {
         onDeleted={vi.fn()}
       />,
     );
+    openPopover();
     const toggle = screen.getByRole("button", { name: /private/i });
     expect(toggle).toBeDisabled();
     expect(screen.getByText(/mirrors github/i)).toBeInTheDocument();
@@ -99,6 +121,7 @@ describe("TraceManageMenu", () => {
         onDeleted={onDeleted}
       />,
     );
+    openPopover();
     fireEvent.click(screen.getByRole("button", { name: /^delete/i }));
     expect(deleteTrace).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
@@ -124,6 +147,7 @@ describe("TraceManageMenu", () => {
         onDeleted={vi.fn()}
       />,
     );
+    openPopover();
     fireEvent.click(
       screen.getByRole("button", { name: /edit association/i }),
     );
@@ -151,6 +175,7 @@ describe("TraceManageMenu", () => {
         onDeleted={vi.fn()}
       />,
     );
+    openPopover();
     fireEvent.click(
       screen.getByRole("button", { name: /edit association/i }),
     );

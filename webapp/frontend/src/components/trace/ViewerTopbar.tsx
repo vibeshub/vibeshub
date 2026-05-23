@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Session } from "./types";
 import { IconLink, IconMoon, IconSun } from "./icons";
@@ -7,9 +8,16 @@ interface Props {
   session: Session;
   repoOwner?: string;
   repoName?: string;
+  /** Optional owner-only controls rendered in the actions row. */
+  ownerControls?: ReactNode;
 }
 
-export function ViewerTopbar({ session, repoOwner, repoName }: Props) {
+export function ViewerTopbar({
+  session,
+  repoOwner,
+  repoName,
+  ownerControls,
+}: Props) {
   const { resolved, toggle } = useTheme();
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
@@ -51,6 +59,7 @@ export function ViewerTopbar({ session, repoOwner, repoName }: Props) {
         <span className="brand-trace">trace/{id}</span>
         <div className="topbar-spacer" />
         <div className="topbar-actions">
+          {ownerControls}
           <button
             className="iconbtn"
             onClick={copyLink}

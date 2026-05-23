@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
 import { TraceHeader } from "../TraceHeader";
@@ -15,6 +16,8 @@ interface Props {
   rawHref: string;
   repoOwner?: string;
   repoName?: string;
+  /** Optional owner-only controls rendered inside the topbar. */
+  ownerControls?: ReactNode;
 }
 
 export function TraceViewer({
@@ -24,6 +27,7 @@ export function TraceViewer({
   rawHref,
   repoOwner,
   repoName,
+  ownerControls,
 }: Props) {
   const [showSystemEvents, setShowSystemEvents] = useState(false);
   const [compact, setCompact] = usePersistedBoolean(
@@ -40,6 +44,7 @@ export function TraceViewer({
           session={session}
           repoOwner={repoOwner}
           repoName={repoName}
+          ownerControls={ownerControls}
         />
       </div>
       <TraceHeader trace={trace} />

@@ -1,112 +1,277 @@
-/* TraceManageMenu.module.css — owner-only trace controls.
-   Tokens come from styles/tokens.css. */
+/* TraceManageMenu.module.css — owner-only trace controls, presented
+   as a quiet topbar popover. Tokens come from styles/tokens.css. */
 
-.menu {
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+/* --- trigger: matches the topbar iconbtn aesthetic ----------------------- */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 80ms ease;
+}
+.trigger:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+.trigger:active {
+  transform: translateY(1px);
+}
+.trigger[aria-expanded="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.triggerIcon {
+  width: 14px;
+  height: 14px;
+}
+.triggerLabel {
+  font-weight: 500;
+}
+@media (max-width: 560px) {
+  .triggerLabel {
+    display: none;
+  }
+}
+
+/* --- popover ------------------------------------------------------------- */
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(calc(100vh - 80px), 640px);
+  overflow: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: 14px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+  animation: manageMenuIn 140ms ease-out;
+  transform-origin: top right;
 }
 
-.heading {
-  font-weight: 600;
-  font-size: 0.9em;
+/* small caret pointing to the trigger */
+.popover::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 16px;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+@keyframes manageMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* --- eyebrow ------------------------------------------------------------- */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.eyebrowId {
   color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
+/* --- sections ------------------------------------------------------------ */
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.sectionLabel {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+
+/* --- buttons ------------------------------------------------------------- */
+.action,
+.actionPrimary,
+.actionGhost,
+.danger,
+.dangerFilled {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 80ms ease;
+}
+.action:active,
+.actionPrimary:active,
+.danger:active,
+.dangerFilled:active {
+  transform: translateY(1px);
 }
 
 .action {
-  align-self: flex-start;
-  padding: 6px 12px;
-  font: inherit;
-  font-weight: 500;
   color: var(--text);
-  background: var(--bg-inset);
+  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
 }
 .action:hover:not(:disabled) {
-  border-color: var(--accent);
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
 }
-.action:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+
+.actionPrimary {
+  color: var(--accent-fg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  font-weight: 600;
+}
+.actionPrimary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent-soft) 70%, var(--accent));
 }
 
 .actionGhost {
-  padding: 6px 12px;
-  font: inherit;
   color: var(--text-muted);
   background: none;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
 }
 .actionGhost:hover:not(:disabled) {
   color: var(--text);
-}
-.actionGhost:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: var(--bg-subtle);
 }
 
 .danger {
-  align-self: flex-start;
-  padding: 6px 12px;
-  font: inherit;
-  font-weight: 500;
   color: var(--color-danger);
   background: none;
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  border: 1px solid color-mix(in oklab, var(--color-danger) 40%, var(--border));
 }
 .danger:hover:not(:disabled) {
   background: var(--diff-del-bg);
+  border-color: var(--color-danger);
 }
-.danger:disabled {
+
+.dangerFilled {
+  color: oklch(0.99 0.01 25);
+  background: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  font-weight: 600;
+}
+.dangerFilled:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.action:disabled,
+.actionPrimary:disabled,
+.actionGhost:disabled,
+.danger:disabled,
+.dangerFilled:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* --- privacy dot --------------------------------------------------------- */
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tool-bash);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--tool-bash) 25%, transparent);
+}
+.dot[data-state="private"] {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+/* --- editor + confirm ---------------------------------------------------- */
 .editor {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 10px;
 }
-
 .editorActions {
   display: flex;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .confirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  font-size: 0.9em;
+  gap: 10px;
+}
+.confirmText {
+  font-size: 13px;
   color: var(--text);
+  line-height: 1.45;
 }
 
 .note {
   margin: 0;
-  font-size: 0.85em;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .error {
   margin: 0;
-  font-size: 0.85em;
+  padding: 8px 10px;
+  font-size: 12.5px;
   color: var(--color-danger);
+  background: var(--diff-del-bg);
+  border-radius: 6px;
 }
