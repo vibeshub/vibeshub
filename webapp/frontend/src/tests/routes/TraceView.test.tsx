@@ -400,8 +400,11 @@ describe("TraceView", () => {
 
     renderAt(`/t/${SHORT_ID}`);
 
+    const trigger = await screen.findByRole("button", { name: /^owner$/i });
+    expect(trigger).toBeInTheDocument();
+    fireEvent.click(trigger);
     expect(
-      await screen.findByText(/manage trace/i),
+      await screen.findByRole("dialog", { name: /manage trace/i }),
     ).toBeInTheDocument();
   });
 
@@ -427,7 +430,9 @@ describe("TraceView", () => {
     await waitFor(() =>
       expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
     );
-    expect(screen.queryByText(/manage trace/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^owner$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides the manage menu from an anonymous visitor", async () => {
@@ -452,6 +457,8 @@ describe("TraceView", () => {
     await waitFor(() =>
       expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
     );
-    expect(screen.queryByText(/manage trace/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^owner$/i }),
+    ).not.toBeInTheDocument();
   });
 });
