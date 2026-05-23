@@ -191,7 +191,6 @@ export function Outcome({ session, trace }: Props) {
             sub={`${meta.assistantTextCount} replies`}
           />
         </div>
-        <div className="outcome-divider" />
         <h4>Result</h4>
         <span className={"outcome-status " + (linkedPr ? "ok" : "neutral")}>
           <span className="dot" />
@@ -245,7 +244,6 @@ export function Outcome({ session, trace }: Props) {
             sub={`${distinctToolCount} distinct tools`}
           />
         </div>
-        <div className="outcome-divider" />
         <h4>
           Files touched · {files.length}
           {subLoading && (

@@ -495,12 +495,13 @@ describe("TraceView", () => {
     // Standalone stats strip is gone.
     expect(container.querySelector(".meta-strip")).toBeNull();
 
-    // The stats moved into the outcome cards — each label appears inside one.
+    // Each stat label appears in the specific card it belongs to. Catches a
+    // regression where the labels are present but land in the wrong card.
     const cards = Array.from(container.querySelectorAll(".outcome-card"));
-    const cardText = cards.map((c) => c.textContent ?? "").join(" | ");
-    expect(cardText).toMatch(/DURATION/i);
-    expect(cardText).toMatch(/TURNS/i);
-    expect(cardText).toMatch(/TOOL CALLS/i);
-    expect(cardText).toMatch(/TOKENS/i);
+    const [resultCard, filesCard, tokensCard] = cards;
+    expect(resultCard.textContent).toMatch(/Duration/i);
+    expect(resultCard.textContent).toMatch(/Turns/i);
+    expect(filesCard.textContent).toMatch(/Tool calls/i);
+    expect(tokensCard.textContent).toMatch(/Tokens/i);
   });
 });

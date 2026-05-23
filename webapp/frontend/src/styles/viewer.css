@@ -504,6 +504,9 @@
   flex-direction: column;
   gap: 10px;
 }
+/* Negative margins + padding must mirror .outcome-card padding (16px 18px) so
+   the stat row bleeds flush to the card edges and the bottom border reads as
+   a true card divider. */
 .vibeshub-viewer .outcome-stats {
   display: grid;
   grid-auto-flow: column;
@@ -517,9 +520,6 @@
   background: none;
   padding: 0;
   gap: 4px;
-}
-.vibeshub-viewer .outcome-divider {
-  display: none;
 }
 .vibeshub-viewer .outcome-loading {
   text-transform: none;
