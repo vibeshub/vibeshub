@@ -1,6 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
 import type { Session, StreamEvent } from "./types";
 import type { TraceSummary } from "../../types";
-import { shortenPath, fmtTokens } from "./format";
+import { shortenPath } from "./format";
+import { buildSession, parseJsonl } from "./parser";
+import { fetchAgentJsonl } from "../../api";
 
 interface Props {
   session: Session;
@@ -12,99 +15,100 @@ interface TouchedFile {
   kind: "new" | "mod";
 }
 
-// Files touched = unique paths written to via Write / Edit / MultiEdit.
-// Mark "new" only when the first action on a path is Write and we never
-// observed a prior Read for that path — otherwise treat it as "mod".
+// Aggressively shorten paths that fall outside cwd: keep the last few
+// segments with a leading ellipsis so the row doesn't overflow the card.
+function tightPath(absolute: string, root: string | null): string {
+  const short = shortenPath(absolute, root);
+  if (short !== absolute) return short;
+  const parts = absolute.split("/").filter(Boolean);
+  if (parts.length <= 3) return absolute;
+  return "…/" + parts.slice(-3).join("/");
+}
+
+// Files touched = unique paths written to via Write / Edit / MultiEdit, taken
+// across the parent stream AND every subagent stream. Treat the first write
+// to a path as "new" only when we never observed a Read for that path
+// anywhere in the combined trace — otherwise it's a "mod".
 function deriveFiles(
-  stream: StreamEvent[],
+  streams: StreamEvent[][],
   root: string | null,
 ): TouchedFile[] {
-  const seenRead = new Set<string>();
-  const firstKind = new Map<string, "new" | "mod">();
-  for (const e of stream) {
-    if (e.kind !== "tool_use") continue;
-    const fp =
-      typeof e.input?.file_path === "string"
-        ? (e.input.file_path as string)
-        : null;
-    if (e.name === "Read" && fp) seenRead.add(fp);
-    if (e.name === "Write" || e.name === "Edit" || e.name === "MultiEdit") {
-      if (!fp || firstKind.has(fp)) continue;
-      const kind: "new" | "mod" =
-        e.name === "Write" && !seenRead.has(fp) ? "new" : "mod";
-      firstKind.set(fp, kind);
+  const reads = new Set<string>();
+  const writes: Array<{ path: string; name: string; ts: string }> = [];
+  for (const stream of streams) {
+    for (const e of stream) {
+      if (e.kind !== "tool_use") continue;
+      const fp =
+        typeof e.input?.file_path === "string"
+          ? (e.input.file_path as string)
+          : null;
+      if (!fp) continue;
+      if (e.name === "Read") reads.add(fp);
+      if (e.name === "Write" || e.name === "Edit" || e.name === "MultiEdit") {
+        writes.push({ path: fp, name: e.name, ts: e.ts });
+      }
     }
   }
+  writes.sort((a, b) => a.ts.localeCompare(b.ts));
+  const kindByPath = new Map<string, "new" | "mod">();
+  for (const w of writes) {
+    if (kindByPath.has(w.path)) continue;
+    const kind: "new" | "mod" =
+      w.name === "Write" && !reads.has(w.path) ? "new" : "mod";
+    kindByPath.set(w.path, kind);
+  }
   const out: TouchedFile[] = [];
-  for (const [path, kind] of firstKind) {
-    out.push({ path: shortenPath(path, root), kind });
+  for (const [path, kind] of kindByPath) {
+    out.push({ path: tightPath(path, root), kind });
   }
   return out;
 }
 
-// Last assistant text in the stream, used as the trace's natural wrap-up.
+// Fetch and parse every subagent's stream once per trace. Failures are
+// swallowed per-agent so one broken subagent doesn't blank the panel.
+function useSubagentStreams(trace: TraceSummary): {
+  streams: StreamEvent[][];
+  loading: boolean;
+} {
+  const [streams, setStreams] = useState<StreamEvent[][]>([]);
+  const [loading, setLoading] = useState<boolean>(
+    (trace.agents?.length ?? 0) > 0,
+  );
+
+  useEffect(() => {
+    const agents = trace.agents ?? [];
+    if (agents.length === 0) {
+      setStreams([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.all(
+      agents.map((a) =>
+        fetchAgentJsonl(trace.short_id, a.agent_id)
+          .then((jsonl) => buildSession(parseJsonl(jsonl)).stream)
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+      setStreams(results.filter((s): s is StreamEvent[] => s !== null));
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trace.short_id, trace.agents]);
+
+  return { streams, loading };
+}
+
 function lastAssistantText(stream: StreamEvent[]): string | null {
   for (let i = stream.length - 1; i >= 0; i--) {
     const e = stream[i];
     if (e.kind === "assistant_text" && e.text.trim()) return e.text.trim();
   }
   return null;
-}
-
-function bashFailures(stream: StreamEvent[]): number {
-  let n = 0;
-  for (const e of stream) {
-    if (e.kind === "tool_use" && e.name === "Bash" && e.result?.isError) n++;
-  }
-  return n;
-}
-
-function askCount(stream: StreamEvent[]): number {
-  let n = 0;
-  for (const e of stream) {
-    if (e.kind === "tool_use" && e.name === "AskUserQuestion") n++;
-  }
-  return n;
-}
-
-// Per-million-token USD rates for the model families the viewer knows about.
-// Token rates are volatile; rounded to current public list prices and used
-// only to render an "est." cost — falls back to "—" for unknown models.
-const MODEL_PRICES: Record<
-  string,
-  { input: number; cacheCreate: number; cacheRead: number; output: number }
-> = {
-  opus: { input: 15, cacheCreate: 18.75, cacheRead: 1.5, output: 75 },
-  sonnet: { input: 3, cacheCreate: 3.75, cacheRead: 0.3, output: 15 },
-  haiku: { input: 0.8, cacheCreate: 1.0, cacheRead: 0.08, output: 4 },
-};
-
-function modelFamily(model: string | null): keyof typeof MODEL_PRICES | null {
-  if (!model) return null;
-  const m = model.toLowerCase();
-  if (m.includes("opus")) return "opus";
-  if (m.includes("sonnet")) return "sonnet";
-  if (m.includes("haiku")) return "haiku";
-  return null;
-}
-
-function estCost(
-  tokens: { input: number; cacheCreate: number; cacheRead: number; output: number },
-  model: string | null,
-): string | null {
-  const fam = modelFamily(model);
-  if (!fam) return null;
-  const p = MODEL_PRICES[fam];
-  const usd =
-    (tokens.input * p.input +
-      tokens.cacheCreate * p.cacheCreate +
-      tokens.cacheRead * p.cacheRead +
-      tokens.output * p.output) /
-    1_000_000;
-  if (usd < 0.01) return `<$0.01`;
-  if (usd < 10) return `$${usd.toFixed(2)}`;
-  if (usd < 1000) return `$${usd.toFixed(1)}`;
-  return `$${Math.round(usd)}`;
 }
 
 function truncate(s: string, n: number): string {
@@ -114,11 +118,15 @@ function truncate(s: string, n: number): string {
 
 export function Outcome({ session, trace }: Props) {
   const { meta, stream } = session;
-  const files = deriveFiles(stream, meta.cwd);
+  const { streams: subStreams, loading: subLoading } =
+    useSubagentStreams(trace);
+
+  const files = useMemo(
+    () => deriveFiles([stream, ...subStreams], meta.cwd),
+    [stream, subStreams, meta.cwd],
+  );
+
   const summary = lastAssistantText(stream);
-  const fails = bashFailures(stream);
-  const asks = askCount(stream);
-  const cost = estCost(meta.tokens, meta.model);
   const linkedPr = trace.pr_url && trace.pr_number != null;
   const visibleFiles = files.slice(0, 6);
   const extraFiles = Math.max(0, files.length - visibleFiles.length);
@@ -154,8 +162,13 @@ export function Outcome({ session, trace }: Props) {
       </section>
 
       <section className="outcome-card">
-        <h4>Files touched · {files.length}</h4>
-        {files.length === 0 ? (
+        <h4>
+          Files touched · {files.length}
+          {subLoading && (
+            <span className="outcome-loading"> · loading subagents…</span>
+          )}
+        </h4>
+        {files.length === 0 && !subLoading ? (
           <div className="outcome-empty">No file writes recorded.</div>
         ) : (
           <ul className="outcome-files">
@@ -173,28 +186,6 @@ export function Outcome({ session, trace }: Props) {
               <li className="outcome-files-more">+ {extraFiles} more</li>
             )}
           </ul>
-        )}
-      </section>
-
-      <section className="outcome-card">
-        <h4>Asks &amp; cost</h4>
-        <div className="outcome-stat">
-          <div className="outcome-stat-value">{asks}</div>
-          <div className="outcome-stat-label">user questions surfaced</div>
-        </div>
-        <div className="outcome-stat outcome-stat--bordered">
-          <div className="outcome-stat-value">
-            {cost ?? fmtTokens(meta.tokens.output)}
-          </div>
-          <div className="outcome-stat-label">
-            {cost ? "est. token cost" : "output tokens"}
-          </div>
-        </div>
-        {fails > 0 && (
-          <div className="outcome-fails">
-            <span className="dot" />
-            {fails} bash failure{fails === 1 ? "" : "s"}
-          </div>
         )}
       </section>
     </div>
