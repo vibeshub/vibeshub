@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session, StreamEvent } from "./types";
 import type { TraceSummary } from "../../types";
 import { shortenPath } from "./format";
@@ -111,10 +111,7 @@ function lastAssistantText(stream: StreamEvent[]): string | null {
   return null;
 }
 
-function truncate(s: string, n: number): string {
-  if (s.length <= n) return s;
-  return s.slice(0, n - 1).trimEnd() + "…";
-}
+const FILES_COLLAPSED = 6;
 
 export function Outcome({ session, trace }: Props) {
   const { meta, stream } = session;
@@ -128,8 +125,27 @@ export function Outcome({ session, trace }: Props) {
 
   const summary = lastAssistantText(stream);
   const linkedPr = trace.pr_url && trace.pr_number != null;
-  const visibleFiles = files.slice(0, 6);
-  const extraFiles = Math.max(0, files.length - visibleFiles.length);
+
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryOverflow, setSummaryOverflow] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  // After render, check whether the line-clamp is actually hiding anything.
+  // If not, suppress the "Show more" toggle so it doesn't appear for short
+  // summaries that already fit.
+  useEffect(() => {
+    if (!summary) {
+      setSummaryOverflow(false);
+      return;
+    }
+    const el = summaryRef.current;
+    if (!el) return;
+    setSummaryOverflow(el.scrollHeight > el.clientHeight + 1);
+  }, [summary, subLoading]);
+
+  const [filesExpanded, setFilesExpanded] = useState(false);
+  const visibleFiles = filesExpanded ? files : files.slice(0, FILES_COLLAPSED);
+  const extraFiles = Math.max(0, files.length - FILES_COLLAPSED);
 
   return (
     <div className="outcome-grid">
@@ -140,7 +156,25 @@ export function Outcome({ session, trace }: Props) {
           {linkedPr ? "Linked PR" : "Standalone session"}
         </span>
         {summary ? (
-          <div className="outcome-summary">{truncate(summary, 260)}</div>
+          <>
+            <div
+              ref={summaryRef}
+              className={
+                "outcome-summary" + (summaryExpanded ? " expanded" : "")
+              }
+            >
+              {summary}
+            </div>
+            {summaryOverflow && (
+              <button
+                type="button"
+                className="outcome-toggle"
+                onClick={() => setSummaryExpanded((v) => !v)}
+              >
+                {summaryExpanded ? "Show less" : "Show more"}
+              </button>
+            )}
+          </>
         ) : (
           <div className="outcome-summary outcome-summary--empty">
             No closing message in this trace.
@@ -183,7 +217,16 @@ export function Outcome({ session, trace }: Props) {
               </li>
             ))}
             {extraFiles > 0 && (
-              <li className="outcome-files-more">+ {extraFiles} more</li>
+              <li>
+                <button
+                  type="button"
+                  className="outcome-files-more"
+                  onClick={() => setFilesExpanded((v) => !v)}
+                  aria-expanded={filesExpanded}
+                >
+                  {filesExpanded ? "Show fewer" : `+ ${extraFiles} more`}
+                </button>
+              </li>
             )}
           </ul>
         )}

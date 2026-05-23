@@ -109,12 +109,18 @@
   height: 14px;
 }
 
-/* ---------- jump strip (sticky prompt nav) ---------- */
+/* ---------- jump strip (sticky prompt nav) ----------
+   Mobile fallback; the desktop layout uses the side rail instead. */
 .vibeshub-viewer .jumpstrip {
   border-bottom: 1px solid var(--border-subtle);
   background: color-mix(in oklab, var(--bg) 92%, transparent);
   backdrop-filter: saturate(140%) blur(8px);
   -webkit-backdrop-filter: saturate(140%) blur(8px);
+}
+@media (min-width: 1080px) {
+  .vibeshub-viewer .jumpstrip {
+    display: none;
+  }
 }
 .vibeshub-viewer .jumpstrip-inner {
   max-width: var(--header-width);
@@ -190,6 +196,158 @@
 }
 .vibeshub-viewer .jumpchip.cur .n {
   color: var(--accent-strong);
+}
+
+/* ---------- prompt rail (desktop sidebar nav) ---------- */
+.vibeshub-viewer .viewer-body {
+  /* Below the hero, lay out the rail and thread as two columns. The rail's
+     own column width gates whether it appears (collapses to 0 at narrow
+     widths so the mobile JumpStrip takes over). */
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 32px;
+  max-width: calc(var(--content-width) + 220px + 32px + 64px);
+  margin: 0 auto;
+  padding: 0 32px;
+  align-items: start;
+}
+.vibeshub-viewer .viewer-main {
+  min-width: 0;
+}
+/* The thread and its toggle row already have auto-margins to center within
+   the page; inside the 2-col body they should hug the left of the main
+   column instead. The override is scoped to the desktop layout so the mobile
+   fallback (where .viewer-body collapses to a plain block) keeps centering. */
+@media (min-width: 1080px) {
+  .vibeshub-viewer .viewer-main .thread,
+  .vibeshub-viewer .viewer-main .thread-controls {
+    max-width: var(--content-width);
+    margin-left: 0;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+.vibeshub-viewer .promptrail {
+  position: sticky;
+  top: 64px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* Keep the rail within the viewport so long prompt lists scroll inside it
+     rather than running off-screen. */
+  max-height: calc(100vh - 88px);
+}
+.vibeshub-viewer .promptrail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+}
+.vibeshub-viewer .promptrail-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+.vibeshub-viewer .promptrail-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .promptrail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  /* Bleed the scrollbar gutter so items have a comfortable hit area. */
+  padding-right: 4px;
+}
+.vibeshub-viewer .promptrail-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px 10px 10px;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.vibeshub-viewer .promptrail-item:hover {
+  background: var(--bg-subtle);
+}
+.vibeshub-viewer .promptrail-item.cur {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.vibeshub-viewer .promptrail-n {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  padding-top: 1px;
+  text-align: right;
+}
+.vibeshub-viewer .promptrail-item.cur .promptrail-n {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.vibeshub-viewer .promptrail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.vibeshub-viewer .promptrail-preview {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text);
+  /* Clamp to 3 lines so the rail stays scannable for long prompts. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.vibeshub-viewer .promptrail-item.cur .promptrail-preview {
+  color: var(--text-strong);
+}
+.vibeshub-viewer .promptrail-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .promptrail-sep {
+  opacity: 0.6;
+}
+/* Hide the rail when there isn't room for the 2-col layout; the JumpStrip
+   in the header handles nav at this width. */
+@media (max-width: 1079px) {
+  .vibeshub-viewer .viewer-body {
+    display: block;
+    padding: 0;
+    max-width: none;
+  }
+  .vibeshub-viewer .promptrail {
+    display: none;
+  }
 }
 
 /* ---------- hero ---------- */
@@ -400,6 +558,26 @@
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vibeshub-viewer .outcome-summary.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+.vibeshub-viewer .outcome-toggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: -2px;
+  font: 11.5px var(--font-mono);
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+.vibeshub-viewer .outcome-toggle:hover {
+  text-decoration: underline;
 }
 .vibeshub-viewer .outcome-summary--empty {
   color: var(--text-faint);
@@ -435,10 +613,20 @@
   flex: none;
 }
 .vibeshub-viewer .outcome-pr .pr-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--text);
+  /* Allow long PR titles to wrap onto a second line so the end of the title
+     isn't lost to single-line ellipsis; cap at 2 lines to keep the card tidy. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.vibeshub-viewer .outcome-pr {
+  /* The PR row can now span two lines, so don't force it to a single line. */
+  align-items: flex-start;
 }
 .vibeshub-viewer .outcome-files {
   list-style: none;
@@ -484,10 +672,17 @@
   color: var(--tool-write);
 }
 .vibeshub-viewer .outcome-files-more {
-  list-style: none;
-  font: 11.5px var(--font-mono);
-  color: var(--text-faint);
+  background: none;
+  border: none;
+  padding: 0;
   margin-top: 2px;
+  font: 11.5px var(--font-mono);
+  color: var(--accent-strong);
+  cursor: pointer;
+  text-align: left;
+}
+.vibeshub-viewer .outcome-files-more:hover {
+  text-decoration: underline;
 }
 /* gap label in the timeline head */
 .vibeshub-viewer .timeline-gap-label {
@@ -727,33 +922,6 @@
   gap: 10px;
   align-items: center;
   white-space: nowrap;
-}
-.vibeshub-viewer .user-prompt-jump {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 5px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-faint);
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
-}
-.vibeshub-viewer .user-prompt-jump:hover {
-  background: var(--bg-subtle);
-  border-color: var(--border);
-  color: var(--text-strong);
-}
-.vibeshub-viewer .user-prompt-jump .iconbtn-icon {
-  width: 12px;
-  height: 12px;
 }
 .vibeshub-viewer .user-prompt-text {
   color: var(--text-strong);

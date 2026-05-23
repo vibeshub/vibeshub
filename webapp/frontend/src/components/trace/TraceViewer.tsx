@@ -4,6 +4,7 @@ import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
 import { ViewerTopbar } from "./ViewerTopbar";
 import { JumpStrip } from "./JumpStrip";
+import { PromptRail } from "./PromptRail";
 import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
@@ -55,20 +56,23 @@ export function TraceViewer({
           <a href={rawHref}>View raw JSONL ↗</a>
         </div>
       ) : (
-        <>
-          <ThreadControls
-            showSystemEvents={showSystemEvents}
-            setShowSystemEvents={setShowSystemEvents}
-            compact={compact}
-            setCompact={setCompact}
-          />
-          <Thread
-            session={session}
-            shortId={shortId}
-            showSystemEvents={showSystemEvents}
-            compact={compact}
-          />
-        </>
+        <div className="viewer-body">
+          <PromptRail session={session} />
+          <div className="viewer-main">
+            <ThreadControls
+              showSystemEvents={showSystemEvents}
+              setShowSystemEvents={setShowSystemEvents}
+              compact={compact}
+              setCompact={setCompact}
+            />
+            <Thread
+              session={session}
+              shortId={shortId}
+              showSystemEvents={showSystemEvents}
+              compact={compact}
+            />
+          </div>
+        </div>
       )}
       <footer className="viewer-footer">
         <span>session · {session.meta.sessionId ?? ""}</span>
