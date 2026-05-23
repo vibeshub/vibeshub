@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Session } from "./types";
 import type { TraceSummary } from "../../types";
+import { fmtTokens } from "./format";
 import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
@@ -109,6 +110,14 @@ function MetaLine({ session }: { session: Session }) {
   if (meta.version) items.push({ k: "cli", v: meta.version });
   if (meta.permissionMode)
     items.push({ k: "permissions", v: meta.permissionMode });
+  const t = meta.tokens;
+  const tokensTotal = t.input + t.cacheCreate + t.output + t.cacheRead;
+  if (tokensTotal > 0) {
+    items.push({
+      k: "tokens",
+      v: `${fmtTokens(tokensTotal)} (${fmtTokens(t.output)} out · ${fmtTokens(t.cacheRead)} cache)`,
+    });
+  }
   if (items.length === 0) return null;
   return (
     <div className="meta-wrap">

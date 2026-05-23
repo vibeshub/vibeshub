@@ -467,7 +467,7 @@ describe("TraceView", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders three outcome cards (Result, Files Touched, Tokens) and no standalone stats bar", async () => {
+  it("renders two outcome cards (Result, Files Touched) and surfaces tokens on the metaline", async () => {
     mockFetchSequence({
       trace_id: "id",
       short_id: SHORT_ID,
@@ -489,34 +489,28 @@ describe("TraceView", () => {
       expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
     );
 
-    // Three outcome cards now — Result, Files Touched, Tokens.
-    expect(container.querySelectorAll(".outcome-card")).toHaveLength(3);
+    // Two outcome cards now — Result and Files Touched. Tokens moved to MetaLine.
+    expect(container.querySelectorAll(".outcome-card")).toHaveLength(2);
 
-    // Standalone stats strip is gone.
+    // Neither the standalone stats strip nor the side-stack wrapper survives.
     expect(container.querySelector(".meta-strip")).toBeNull();
+    expect(container.querySelector(".outcome-side")).toBeNull();
 
     // Each stat label appears in the specific card it belongs to. Catches a
     // regression where the labels are present but land in the wrong card.
     const cards = Array.from(container.querySelectorAll(".outcome-card"));
-    const [resultCard, filesCard, tokensCard] = cards;
-    expect(resultCard.textContent).toMatch(/Duration/i);
+    const [resultCard, filesCard] = cards;
+    expect(resultCard.textContent).toMatch(/Active Time/i);
     expect(resultCard.textContent).toMatch(/Turns/i);
-    expect(filesCard.textContent).toMatch(/Tool calls/i);
-    expect(tokensCard.textContent).toMatch(/Tokens/i);
+    expect(resultCard.textContent).toMatch(/Tool calls/i);
+    expect(filesCard.textContent).toMatch(/Files touched/i);
 
-    // Files Touched and Tokens live inside the side-stack wrapper so the
-    // grid lays out as Result | (Files / Tokens).
-    const side = container.querySelector(".outcome-side");
-    expect(side).not.toBeNull();
-    expect(side!.contains(filesCard)).toBe(true);
-    expect(side!.contains(tokensCard)).toBe(true);
+    // No token bar visualization anywhere.
+    expect(container.querySelector(".outcome-token-seg")).toBeNull();
 
-    // Tokens card now carries a four-segment bar and a four-item legend.
-    expect(
-      tokensCard.querySelectorAll(".outcome-token-seg"),
-    ).toHaveLength(4);
-    expect(
-      tokensCard.querySelectorAll(".outcome-token-legend-item"),
-    ).toHaveLength(4);
+    // Tokens now appears as a kv pair on the metaline below the outcome grid.
+    const metaline = container.querySelector(".metaline");
+    expect(metaline).not.toBeNull();
+    expect(metaline!.textContent).toMatch(/tokens/i);
   });
 });
