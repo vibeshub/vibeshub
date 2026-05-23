@@ -2,8 +2,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
-import { TraceHeader } from "../TraceHeader";
 import { ViewerTopbar } from "./ViewerTopbar";
+import { JumpStrip } from "./JumpStrip";
 import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
@@ -46,9 +46,9 @@ export function TraceViewer({
           repoName={repoName}
           ownerControls={ownerControls}
         />
+        <JumpStrip session={session} />
       </div>
-      <TraceHeader trace={trace} />
-      <Hero session={session} />
+      <Hero session={session} trace={trace} rawHref={rawHref} />
       {empty ? (
         <div className="empty-state">
           This trace has no parseable events.{" "}

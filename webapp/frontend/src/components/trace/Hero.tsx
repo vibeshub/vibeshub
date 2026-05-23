@@ -1,14 +1,19 @@
 import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import type { Session } from "./types";
+import type { TraceSummary } from "../../types";
 import { fmtDuration, fmtDurationCompact, fmtTokens } from "./format";
 import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
+import { Outcome } from "./Outcome";
 
 interface Props {
   session: Session;
+  trace: TraceSummary;
+  rawHref: string;
 }
 
-function HeroEyebrow({ session }: Props) {
+function HeroEyebrow({ session, trace, rawHref }: Props) {
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
   const date = meta.startedAt
@@ -18,21 +23,85 @@ function HeroEyebrow({ session }: Props) {
         year: "numeric",
       })
     : "";
+  const repoParts = trace.repo_full_name?.split("/") ?? [];
+
   return (
     <div className="hero-eyebrow">
       <span className="dot" />
+      {repoParts.length === 2 && (
+        <>
+          <Link
+            to={`/${repoParts[0]}/${repoParts[1]}`}
+            className="hero-eyebrow-repo"
+          >
+            {trace.repo_full_name}
+          </Link>
+          <span>·</span>
+        </>
+      )}
+      <span>{trace.platform}</span>
+      <span>·</span>
       <span>SESSION · {id}</span>
       {date && (
         <>
           <span>·</span>
-          <span>{date}</span>
+          <span>{date.toUpperCase()}</span>
         </>
       )}
+      <span className="hero-eyebrow-spacer" />
+      <span className="hero-eyebrow-actions">
+        {trace.pr_url && (
+          <a href={trace.pr_url} target="_blank" rel="noreferrer">
+            View on GitHub ↗
+          </a>
+        )}
+        <a href={rawHref}>Raw JSONL</a>
+      </span>
     </div>
   );
 }
 
-function MetaStrip({ session }: Props) {
+function HeroBadges({ trace }: { trace: TraceSummary }) {
+  const sizeKb = Math.max(1, Math.round(trace.byte_size / 1024));
+  const sizeLabel =
+    sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
+  const uploadedAt = new Date(trace.created_at).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const hasPr = trace.pr_url && trace.pr_number != null;
+  return (
+    <div className="hero-badges">
+      {hasPr && (
+        <a
+          href={trace.pr_url!}
+          target="_blank"
+          rel="noreferrer"
+          className="hero-pr"
+        >
+          <span className="hero-pr-num">#{trace.pr_number}</span>
+          {trace.pr_title && (
+            <span className="hero-pr-title">{trace.pr_title}</span>
+          )}
+        </a>
+      )}
+      <span className="hero-tag">{trace.message_count} msgs</span>
+      <span className="hero-tag">{sizeLabel}</span>
+      {trace.is_private && (
+        <span className="hero-tag hero-tag--private">🔒 Private</span>
+      )}
+      <span className="hero-tag hero-tag--quiet">
+        uploaded {uploadedAt} by{" "}
+        <Link to={`/${trace.owner_login}`}>@{trace.owner_login}</Link>
+      </span>
+    </div>
+  );
+}
+
+function MetaStrip({ session }: { session: Session }) {
   const meta = session.meta;
   const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
   const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
@@ -76,7 +145,7 @@ function MetaStrip({ session }: Props) {
   );
 }
 
-function MetaLine({ session }: Props) {
+function MetaLine({ session }: { session: Session }) {
   const meta = session.meta;
   const items: Array<{ k: string; v: string }> = [];
   if (meta.model) items.push({ k: "model", v: meta.model });
@@ -103,7 +172,7 @@ function MetaLine({ session }: Props) {
   );
 }
 
-function ToolsChips({ session }: Props) {
+function ToolsChips({ session }: { session: Session }) {
   const counts = session.meta.toolCounts;
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) return null;
@@ -127,21 +196,17 @@ function ToolsChips({ session }: Props) {
   );
 }
 
-export function Hero({ session }: Props) {
+export function Hero({ session, trace, rawHref }: Props) {
   const meta = session.meta;
   return (
     <section>
       <div className="hero">
-        <HeroEyebrow session={session} />
+        <HeroEyebrow session={session} trace={trace} rawHref={rawHref} />
         <h1 className="hero-title">{meta.aiTitle || "Untitled session"}</h1>
-        {meta.firstPrompt && (
-          <div className="hero-prompt">
-            <span className="hero-prompt-tag">User</span>
-            <div className="hero-prompt-body">{meta.firstPrompt}</div>
-          </div>
-        )}
+        <HeroBadges trace={trace} />
       </div>
       <MetaStrip session={session} />
+      <Outcome session={session} trace={trace} />
       <MetaLine session={session} />
       <ToolsChips session={session} />
       <Timeline session={session} />
