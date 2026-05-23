@@ -487,12 +487,22 @@
   margin: 28px auto 0;
   padding: 0 32px;
   display: grid;
-  grid-template-columns: 1.1fr 1.4fr 0.9fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 12px;
+  align-items: stretch;
+}
+.vibeshub-viewer .outcome-side {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  min-width: 0;
 }
 @media (max-width: 720px) {
   .vibeshub-viewer .outcome-grid {
     grid-template-columns: 1fr;
+  }
+  .vibeshub-viewer .outcome-side {
+    grid-template-rows: auto auto;
   }
 }
 .vibeshub-viewer .outcome-card {
@@ -700,6 +710,66 @@
 }
 .vibeshub-viewer .outcome-files-more:hover {
   text-decoration: underline;
+}
+.vibeshub-viewer .outcome-token-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+.vibeshub-viewer .outcome-token-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-inset);
+}
+.vibeshub-viewer .outcome-token-seg {
+  display: block;
+  height: 100%;
+}
+.vibeshub-viewer .outcome-token-seg:first-child {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+.vibeshub-viewer .outcome-token-seg:last-child {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+.vibeshub-viewer .outcome-token-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+.vibeshub-viewer .outcome-token-legend-item {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font: 11.5px var(--font-mono);
+  min-width: 0;
+}
+.vibeshub-viewer .outcome-token-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.vibeshub-viewer .outcome-token-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vibeshub-viewer .outcome-token-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 /* gap label in the timeline head */
 .vibeshub-viewer .timeline-gap-label {
