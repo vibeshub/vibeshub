@@ -55,7 +55,7 @@
     monospace;
 
   --content-width: 760px;
-  --header-width: 980px;
+  --header-width: 1200px;
 
   /* Legacy aliases used by pre-existing chrome (TraceHeader, ErrorState, …). */
   --color-bg: var(--bg);
