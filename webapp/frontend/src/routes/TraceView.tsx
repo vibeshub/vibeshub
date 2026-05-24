@@ -6,6 +6,7 @@ import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { NotFound } from "./NotFound";
 import { PrivateTraceGate } from "../components/PrivateTraceGate";
+import { SeoHead } from "../components/SeoHead";
 import { TraceManageMenu } from "../components/TraceManageMenu";
 import { TraceViewer } from "../components/trace/TraceViewer";
 import { buildSession, parseJsonl } from "../components/trace/parser";
@@ -85,8 +86,33 @@ export function TraceView() {
     />
   ) : undefined;
 
+  // The canonical URL collapses the two ways to reach a trace
+  // (/t/:shortId vs /:owner/:repo/pull/:n/:shortId) onto the repo-attached
+  // form when there's a PR — otherwise the standalone /t URL.
+  const canonicalPath =
+    head.trace.repo_full_name && head.trace.pr_number != null
+      ? `/${head.trace.repo_full_name}/pull/${head.trace.pr_number}/${head.trace.short_id}`
+      : `/t/${head.trace.short_id}`;
+
+  const titleSubject =
+    head.trace.pr_title ??
+    (head.trace.repo_full_name && head.trace.pr_number != null
+      ? `${head.trace.repo_full_name} #${head.trace.pr_number}`
+      : `Trace ${head.trace.short_id}`);
+  const description =
+    `Claude Code session by @${head.trace.owner_login} · ` +
+    `${head.trace.message_count} messages` +
+    (head.trace.repo_full_name ? ` · ${head.trace.repo_full_name}` : "");
+
   return (
     <div className={styles.container}>
+      <SeoHead
+        title={titleSubject}
+        description={description}
+        path={canonicalPath}
+        ogType="article"
+        noindex={head.trace.is_private}
+      />
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (

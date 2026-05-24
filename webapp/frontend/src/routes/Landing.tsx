@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthWidget } from "../components/AuthWidget";
+import { SeoHead } from "../components/SeoHead";
 import { IconMoon, IconSun } from "../components/trace/icons";
 import { useTheme } from "../components/trace/theme";
 import { fetchRepoOverview } from "../api";
@@ -96,6 +97,12 @@ export function Landing() {
 
   return (
     <div className={`page-shell ${styles.shell}`}>
+      <SeoHead
+        title="vibeshub · share Claude Code sessions as replayable traces"
+        description="Vibeshub captures any Claude Code session and turns it into a shareable, replayable trace. Public & private viewer with GitHub-mirrored access and automatic secret redaction."
+        path="/"
+        bareTitle
+      />
       <header className="topbar">
         <div className="topbar-inner">
           <Link className="brand" to="/">

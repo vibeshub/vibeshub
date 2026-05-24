@@ -3,10 +3,63 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="stylesheet" href="/src/styles/tokens.css" />
     <link rel="stylesheet" href="/src/styles/globals.css" />
     <link rel="stylesheet" href="/src/styles/pages.css" />
-    <title>vibeshub</title>
+
+    <!-- Default metadata. Each route may override <title>, <meta name="description">,
+         <link rel="canonical">, and any og:/twitter: tags via SeoHead. React 19
+         hoists those tags into <head> at render time.
+
+         The SEO_HEAD_START/END markers are also a contract with the backend SPA
+         catch-all (app/api/spa_seo.py): for known trace URLs the server swaps
+         the block between these markers for trace-specific tags so social
+         scrapers (which don't run JS) see real link previews. Do not remove
+         or rename the markers without updating spa_seo.py. -->
+    <!--SEO_HEAD_START-->
+    <title>vibeshub · share Claude Code sessions as replayable traces</title>
+    <meta
+      name="description"
+      content="Vibeshub captures any Claude Code session and turns it into a shareable, replayable trace. Public &amp; private viewer with GitHub-mirrored access and automatic secret redaction."
+    />
+    <link rel="canonical" href="https://vibeshub.ai/" />
+
+    <meta property="og:site_name" content="vibeshub" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="vibeshub · share Claude Code sessions as replayable traces" />
+    <meta
+      property="og:description"
+      content="Don't just ship the diff — share the vibe. Capture and replay any Claude Code session."
+    />
+    <meta property="og:url" content="https://vibeshub.ai/" />
+    <meta property="og:image" content="https://vibeshub.ai/og-default.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="vibeshub · share Claude Code sessions as replayable traces" />
+    <meta
+      name="twitter:description"
+      content="Don't just ship the diff — share the vibe. Capture and replay any Claude Code session."
+    />
+    <meta name="twitter:image" content="https://vibeshub.ai/og-default.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "vibeshub",
+        "url": "https://vibeshub.ai",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux, Windows",
+        "description": "Capture any Claude Code session and turn it into a shareable, replayable trace. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <!--SEO_HEAD_END-->
+
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-0Z3X95Z064"></script>
     <script>
       window.dataLayer = window.dataLayer || [];

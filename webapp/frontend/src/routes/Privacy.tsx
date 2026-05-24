@@ -1,9 +1,15 @@
 import { PageTopbar } from "../components/PageTopbar";
+import { SeoHead } from "../components/SeoHead";
 import styles from "./Privacy.module.css";
 
 export function Privacy() {
   return (
     <div className="page-shell">
+      <SeoHead
+        title="Privacy policy"
+        description="How vibeshub handles Claude Code trace uploads: what we collect, who can see it, secret redaction on the client and server, and how to delete a trace."
+        path="/privacy"
+      />
       <PageTopbar crumbs={[{ label: "Privacy", current: true }]} />
 
       <main className={styles.privacy}>

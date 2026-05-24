@@ -4,6 +4,7 @@ import { fetchPrTraces } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
+import { SeoHead } from "../components/SeoHead";
 import styles from "./PrTracesList.module.css";
 
 export function PrTracesList() {
@@ -23,8 +24,15 @@ export function PrTracesList() {
   if (error) return <ErrorState message={error} />;
   if (traces === null) return <LoadingState label="Loading traces…" />;
 
+  const ref = `${params.owner}/${params.repo}#${params.number}`;
+
   return (
     <div className={styles.container}>
+      <SeoHead
+        title={`${ref} · Claude Code traces`}
+        description={`Claude Code sessions uploaded for pull request ${ref}.`}
+        path={`/${params.owner}/${params.repo}/pull/${params.number}`}
+      />
       <h1 className={styles.title}>
         <Link to={`/${params.owner}`} className={styles.crumb}>
           {params.owner}

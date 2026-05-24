@@ -10,6 +10,7 @@ import type {
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
+import { SeoHead } from "../components/SeoHead";
 import { TraceListRow } from "../components/TraceListRow";
 
 function compactCount(n: number): string {
@@ -68,8 +69,20 @@ export function RepoPage() {
   const githubUrl = `https://github.com/${owner}/${repo}`;
   const repoInitial = repo.charAt(0).toLowerCase();
 
+  const traceCount = data.stats.trace_count;
+  const description =
+    `${owner}/${repo} on vibeshub — ` +
+    (traceCount > 0
+      ? `${traceCount} Claude Code session${traceCount === 1 ? "" : "s"} from this repository.`
+      : "Claude Code sessions for this repository.");
+
   return (
     <div className="page-shell">
+      <SeoHead
+        title={`${owner}/${repo} · Claude Code traces`}
+        description={description}
+        path={`/${owner}/${repo}`}
+      />
       <PageTopbar
         crumbs={[
           { label: owner, to: `/${owner}` },

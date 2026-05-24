@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,9 +12,11 @@ from app.api import (
     github_stats as github_stats_api,
     health,
     ingest as ingest_api,
+    seo as seo_api,
     traces as traces_api,
     uploads as uploads_api,
 )
+from app.api.spa_seo import render_spa_html
 from app.deps import init_state
 from app.settings import get_settings
 
@@ -63,6 +65,10 @@ def create_app() -> FastAPI:
     app.include_router(auth_api.router)
     app.include_router(github_stats_api.router)
     app.include_router(github_picker_api.router)
+    # SEO routes (/robots.txt, /sitemap.xml) must be included before the SPA
+    # catch-all below — otherwise the catch-all swallows them and returns
+    # index.html instead of the XML/text response.
+    app.include_router(seo_api.router)
 
     frontend_dist = _frontend_dist_override or (
         Path(__file__).resolve().parent.parent / "frontend_dist"
@@ -77,8 +83,18 @@ def create_app() -> FastAPI:
         index_html = (frontend_dist / "index.html").read_text()
 
         @app.get("/{full_path:path}", response_class=HTMLResponse)
-        async def _spa(full_path: str) -> str:
-            return index_html
+        async def _spa(full_path: str, request: Request) -> HTMLResponse:
+            # For known trace URL shapes, swap the default <head> meta block
+            # for trace-specific tags so social scrapers (which don't run
+            # JS) get real link previews. Every other path falls through
+            # to the unmodified template — see app/api/spa_seo.py.
+            session_maker = request.app.state.session_maker
+            base_url = request.app.state.settings.public_base_url
+            async with session_maker() as db:
+                html = await render_spa_html(
+                    index_html, full_path, db, base_url
+                )
+            return HTMLResponse(html)
     else:
         @app.get("/", response_class=HTMLResponse)
         async def _root() -> str:
