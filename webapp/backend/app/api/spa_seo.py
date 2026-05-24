@@ -29,6 +29,9 @@ _TRACE_REPO_RE = re.compile(
 )
 _USER_RE = re.compile(r"^(?P<owner>[^/]+)$")
 _REPO_RE = re.compile(r"^(?P<owner>[^/]+)/(?P<repo>[^/]+)$")
+_PR_RE = re.compile(
+    r"^(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<n>\d+)$"
+)
 
 SEO_START = "<!--SEO_HEAD_START-->"
 SEO_END = "<!--SEO_HEAD_END-->"
@@ -103,6 +106,30 @@ async def _lookup_repo_stats(
     if count == 0:
         return None
     return count
+
+
+async def _lookup_pr_stats(
+    session: AsyncSession,
+    repo_full_name: str,
+    pr_number: int,
+) -> tuple[int, str | None] | None:
+    """Return (count, pr_title) for the public traces on (repo, PR).
+
+    pr_title is whichever non-null value comes first; if all rows have
+    null titles the second element is None. Returns None when count is 0.
+    """
+    result = await session.execute(
+        select(func.count(Trace.id), func.max(Trace.pr_title))
+        .where(Trace.repo_full_name == repo_full_name)
+        .where(Trace.pr_number == pr_number)
+        .where(Trace.is_private.is_(False))
+        .where(Trace.deleted_at.is_(None))
+    )
+    row = result.one()
+    count, pr_title = row[0], row[1]
+    if count == 0:
+        return None
+    return count, pr_title
 
 
 def _render_card_head(
@@ -209,6 +236,24 @@ def _render_repo_head(
     return _render_card_head(title, description, canonical, "website", base_url)
 
 
+def _render_pr_head(
+    repo_full_name: str,
+    pr_number: int,
+    pr_title: str | None,
+    count: int,
+    base_url: str,
+) -> str:
+    base = base_url.rstrip("/")
+    subject = pr_title if pr_title else f"PR #{pr_number}"
+    title = f"{repo_full_name}#{pr_number} · {subject} · vibeshub"
+    description = (
+        f"{count} Claude Code session"
+        f"{'' if count == 1 else 's'} for {repo_full_name}#{pr_number}."
+    )
+    canonical = f"{base}/{repo_full_name}/pull/{pr_number}"
+    return _render_card_head(title, description, canonical, "website", base_url)
+
+
 async def _try_trace(
     path: str, session: AsyncSession, base_url: str
 ) -> str | None:
@@ -266,6 +311,32 @@ async def _try_repo(
     return _render_repo_head(f"{owner}/{repo}", count, base_url)
 
 
+async def _try_pr_list(
+    path: str, session: AsyncSession, base_url: str
+) -> str | None:
+    m = _PR_RE.match(path)
+    if m is None:
+        return None
+    owner = m.group("owner")
+    repo = m.group("repo")
+    if not owner or not repo or owner in _RESERVED_OWNERS:
+        return None
+    try:
+        n = int(m.group("n"))
+    except ValueError:
+        return None
+    try:
+        stats = await _lookup_pr_stats(session, f"{owner}/{repo}", n)
+    except Exception:
+        return None
+    if stats is None:
+        return None
+    count, pr_title = stats
+    return _render_pr_head(
+        f"{owner}/{repo}", n, pr_title, count, base_url,
+    )
+
+
 def _splice(template: str, replacement: str) -> str:
     """Replace the contents between SEO_HEAD_START/END with `replacement`."""
     start = template.index(SEO_START)
@@ -283,9 +354,9 @@ def _splice(template: str, replacement: str) -> str:
 
 # Ordered handlers: each returns a rendered <head> block or None. The
 # first non-None wins. Order matters — longer/more-specific URL shapes
-# must come before greedier ones. Trace, repo, and user are wired; the
-# PR-list handler lands in the next task.
-_HANDLERS = (_try_trace, _try_repo, _try_user)
+# must come before greedier ones. All four route handlers are wired:
+# trace, PR-list, repo, user.
+_HANDLERS = (_try_trace, _try_pr_list, _try_repo, _try_user)
 
 
 async def render_spa_html(
