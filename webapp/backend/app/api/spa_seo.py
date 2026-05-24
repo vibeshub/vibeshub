@@ -28,6 +28,7 @@ _TRACE_REPO_RE = re.compile(
     r"^(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/\d+/(?P<short>[A-Za-z0-9_-]+)$"
 )
 _USER_RE = re.compile(r"^(?P<owner>[^/]+)$")
+_REPO_RE = re.compile(r"^(?P<owner>[^/]+)/(?P<repo>[^/]+)$")
 
 SEO_START = "<!--SEO_HEAD_START-->"
 SEO_END = "<!--SEO_HEAD_END-->"
@@ -79,6 +80,22 @@ async def _lookup_user_stats(
     result = await session.execute(
         select(func.count(Trace.id))
         .where(Trace.owner_login == owner)
+        .where(Trace.is_private.is_(False))
+        .where(Trace.deleted_at.is_(None))
+    )
+    count = result.scalar_one()
+    if count == 0:
+        return None
+    return count
+
+
+async def _lookup_repo_stats(
+    session: AsyncSession, repo_full_name: str
+) -> int | None:
+    """Return public trace count for `repo_full_name`, or None if zero."""
+    result = await session.execute(
+        select(func.count(Trace.id))
+        .where(Trace.repo_full_name == repo_full_name)
         .where(Trace.is_private.is_(False))
         .where(Trace.deleted_at.is_(None))
     )
@@ -179,6 +196,19 @@ def _render_user_head(owner: str, count: int, base_url: str) -> str:
     return _render_card_head(title, description, canonical, "profile", base_url)
 
 
+def _render_repo_head(
+    repo_full_name: str, count: int, base_url: str
+) -> str:
+    base = base_url.rstrip("/")
+    title = f"{repo_full_name} · Claude Code traces · vibeshub"
+    description = (
+        f"{count} Claude Code session"
+        f"{'' if count == 1 else 's'} on {repo_full_name}."
+    )
+    canonical = f"{base}/{repo_full_name}"
+    return _render_card_head(title, description, canonical, "website", base_url)
+
+
 async def _try_trace(
     path: str, session: AsyncSession, base_url: str
 ) -> str | None:
@@ -217,6 +247,25 @@ async def _try_user(
     return _render_user_head(owner, count, base_url)
 
 
+async def _try_repo(
+    path: str, session: AsyncSession, base_url: str
+) -> str | None:
+    m = _REPO_RE.match(path)
+    if m is None:
+        return None
+    owner = m.group("owner")
+    repo = m.group("repo")
+    if not owner or not repo or owner in _RESERVED_OWNERS:
+        return None
+    try:
+        count = await _lookup_repo_stats(session, f"{owner}/{repo}")
+    except Exception:
+        return None
+    if count is None:
+        return None
+    return _render_repo_head(f"{owner}/{repo}", count, base_url)
+
+
 def _splice(template: str, replacement: str) -> str:
     """Replace the contents between SEO_HEAD_START/END with `replacement`."""
     start = template.index(SEO_START)
@@ -236,7 +285,7 @@ def _splice(template: str, replacement: str) -> str:
 # first non-None wins. Order matters — longer/more-specific URL shapes
 # must come before greedier ones. Today only _try_trace is registered;
 # user/repo/PR-list handlers land in later tasks.
-_HANDLERS = (_try_trace, _try_user)
+_HANDLERS = (_try_trace, _try_repo, _try_user)
 
 
 async def render_spa_html(

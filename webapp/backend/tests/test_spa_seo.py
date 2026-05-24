@@ -312,3 +312,75 @@ class TestUserRouteSeo:
         async with SessionLocal() as session:
             result = await _try_user(slug, session, "https://vibeshub.test")
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Repo route: /<owner>/<repo>
+# ---------------------------------------------------------------------------
+
+class TestRepoRouteSeo:
+    @pytest.mark.asyncio
+    async def test_public_traces_inject_meta(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=7,
+            ))
+            session.add(_make_trace(
+                short_id=SHORT_OK_2,
+                owner_login="bob",
+                repo_full_name="alice/widget",
+                pr_number=8,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "alice/widget · Claude Code traces · vibeshub" in body
+        assert "2 Claude Code sessions on alice/widget" in body
+        assert 'href="https://vibeshub.test/alice/widget"' in body
+        assert 'property="og:type" content="website"' in body
+        assert "vibeshub · share Claude Code sessions" not in body
+
+    def test_unknown_repo_falls_through(self, spa_client):
+        resp = spa_client.get("/nobody/nope")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_private_only_repo_falls_through(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/secret",
+                pr_number=1,
+                is_private=True,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/secret")
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_singular_count_uses_session_not_sessions(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/solo",
+                pr_number=1,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/solo")
+        body = resp.text
+        assert "1 Claude Code session on alice/solo" in body
+        assert "1 Claude Code sessions on alice/solo" not in body
