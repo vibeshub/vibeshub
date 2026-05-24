@@ -27,6 +27,7 @@ _TRACE_STANDALONE_RE = re.compile(r"^t/([A-Za-z0-9_-]+)$")
 _TRACE_REPO_RE = re.compile(
     r"^(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/\d+/(?P<short>[A-Za-z0-9_-]+)$"
 )
+_USER_RE = re.compile(r"^(?P<owner>[^/]+)$")
 
 SEO_START = "<!--SEO_HEAD_START-->"
 SEO_END = "<!--SEO_HEAD_END-->"
@@ -69,6 +70,28 @@ async def _lookup_trace(session: AsyncSession, short_id: str) -> Trace | None:
         .where(Trace.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
+
+
+async def _lookup_user_stats(
+    session: AsyncSession, owner: str
+) -> tuple[int, str] | None:
+    """Return (public_trace_count, owner) for `owner`, or None if zero.
+
+    The owner is returned as-is so the caller can use the canonical
+    casing it was queried with (URLs are case-sensitive here).
+    """
+    from sqlalchemy import func
+
+    result = await session.execute(
+        select(func.count(Trace.id))
+        .where(Trace.owner_login == owner)
+        .where(Trace.is_private.is_(False))
+        .where(Trace.deleted_at.is_(None))
+    )
+    count = result.scalar_one()
+    if count == 0:
+        return None
+    return count, owner
 
 
 def _render_trace_head(trace: Trace, base_url: str) -> str:
@@ -132,6 +155,38 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
     )
 
 
+def _render_user_head(owner: str, count: int, base_url: str) -> str:
+    base = base_url.rstrip("/")
+    title = f"@{owner} · vibeshub"
+    description = (
+        f"{count} public Claude Code session"
+        f"{'' if count == 1 else 's'} from @{owner}."
+    )
+    canonical = f"{base}/{owner}"
+    image = f"{base}/og-default.png"
+
+    t = html_escape(title)
+    d = html_escape(description, quote=True)
+    c = html_escape(canonical, quote=True)
+    i = html_escape(image, quote=True)
+
+    return (
+        f"<title>{t}</title>\n"
+        f'    <meta name="description" content="{d}" />\n'
+        f'    <link rel="canonical" href="{c}" />\n'
+        '    <meta property="og:site_name" content="vibeshub" />\n'
+        '    <meta property="og:type" content="profile" />\n'
+        f'    <meta property="og:title" content="{t}" />\n'
+        f'    <meta property="og:description" content="{d}" />\n'
+        f'    <meta property="og:url" content="{c}" />\n'
+        f'    <meta property="og:image" content="{i}" />\n'
+        '    <meta name="twitter:card" content="summary_large_image" />\n'
+        f'    <meta name="twitter:title" content="{t}" />\n'
+        f'    <meta name="twitter:description" content="{d}" />\n'
+        f'    <meta name="twitter:image" content="{i}" />'
+    )
+
+
 async def _try_trace(
     path: str, session: AsyncSession, base_url: str
 ) -> str | None:
@@ -150,6 +205,25 @@ async def _try_trace(
     if trace is None:
         return None
     return _render_trace_head(trace, base_url)
+
+
+async def _try_user(
+    path: str, session: AsyncSession, base_url: str
+) -> str | None:
+    m = _USER_RE.match(path)
+    if m is None:
+        return None
+    owner = m.group("owner")
+    if not owner or owner in _RESERVED_OWNERS:
+        return None
+    try:
+        stats = await _lookup_user_stats(session, owner)
+    except Exception:
+        return None
+    if stats is None:
+        return None
+    count, owner_out = stats
+    return _render_user_head(owner_out, count, base_url)
 
 
 def _splice(template: str, replacement: str) -> str:
@@ -171,7 +245,7 @@ def _splice(template: str, replacement: str) -> str:
 # first non-None wins. Order matters — longer/more-specific URL shapes
 # must come before greedier ones. Today only _try_trace is registered;
 # user/repo/PR-list handlers land in later tasks.
-_HANDLERS = (_try_trace,)
+_HANDLERS = (_try_trace, _try_user)
 
 
 async def render_spa_html(

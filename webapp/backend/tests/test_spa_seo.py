@@ -231,3 +231,55 @@ async def test_deleted_trace_falls_back_to_default(spa_client):
     # Tombstoned traces don't get bespoke meta — the SPA will render
     # NotFound client-side, so the default landing meta is fine.
     assert "vibeshub · share Claude Code sessions" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# User route: /<owner>
+# ---------------------------------------------------------------------------
+
+class TestUserRouteSeo:
+    @pytest.mark.asyncio
+    async def test_public_traces_inject_meta(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(short_id=SHORT_OK, owner_login="alice"))
+            session.add(_make_trace(short_id=SHORT_OK_2, owner_login="alice"))
+            await session.commit()
+
+        resp = spa_client.get("/alice")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "@alice · vibeshub" in body
+        assert "2 public Claude Code sessions from @alice" in body
+        assert 'href="https://vibeshub.test/alice"' in body
+        assert 'property="og:type" content="profile"' in body
+        # Default landing title is gone.
+        assert "vibeshub · share Claude Code sessions" not in body
+
+    def test_zero_public_traces_falls_through(self, spa_client):
+        # No traces seeded → count is 0 → template unchanged.
+        resp = spa_client.get("/ghost")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_private_only_owner_falls_through(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK, owner_login="bob", is_private=True,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/bob")
+        # Public count is 0 → fall through.
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.parametrize(
+        "slug", ["upload", "privacy", "home", "t", "api"],
+    )
+    def test_reserved_owner_slugs_fall_through(self, spa_client, slug):
+        resp = spa_client.get(f"/{slug}")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
