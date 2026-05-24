@@ -106,6 +106,38 @@ def test_unknown_path_returns_default_template(spa_client):
     assert 'href="https://vibeshub.ai/"' in body
 
 
+def test_root_static_files_are_served_as_files(tmp_path, spa_client):
+    """Files at the root of frontend_dist (the Vite `public/` output) must
+    be returned as real files — not get swallowed by the SPA catch-all and
+    served as index.html. favicons and og-default.png live here."""
+    dist = spa_client.app.state.settings  # noqa: F841 (just touching state)
+    from app import main as main_module
+    dist_dir = main_module._frontend_dist_override
+    assert dist_dir is not None
+    (dist_dir / "favicon.svg").write_bytes(b"<svg/>")
+    (dist_dir / "og-default.png").write_bytes(b"\x89PNG\r\n")
+
+    r = spa_client.get("/favicon.svg")
+    assert r.status_code == 200
+    assert r.content == b"<svg/>"
+    assert r.headers["content-type"].startswith("image/svg")
+
+    r = spa_client.get("/og-default.png")
+    assert r.status_code == 200
+    assert r.content == b"\x89PNG\r\n"
+    assert r.headers["content-type"] == "image/png"
+
+
+def test_index_html_is_not_served_as_a_file(spa_client):
+    """A direct GET on /index.html still goes through SEO injection rather
+    than being returned as a raw file — so trace short-IDs that happened
+    to alias `index.html` still get bespoke meta, and the SEO contract
+    is preserved."""
+    resp = spa_client.get("/index.html")
+    assert resp.status_code == 200
+    assert "vibeshub · share Claude Code sessions" in resp.text
+
+
 def test_root_returns_default_template(spa_client):
     resp = spa_client.get("/")
     assert resp.status_code == 200
