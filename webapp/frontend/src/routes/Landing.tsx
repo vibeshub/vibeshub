@@ -17,8 +17,7 @@ const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 
 
 // The runnable install commands - single source of truth for both copy buttons.
 const INSTALL_STEPS = [
-  "git clone https://github.com/Bhavya6187/vibeshub.git",
-  "/plugin marketplace add ./vibeshub",
+  "/plugin marketplace add Bhavya6187/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
@@ -581,27 +580,17 @@ export function Landing() {
                   </span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 1 · clone &amp; register the marketplace
-                  </span>
-                  {"\n"}
-                  <span className={styles.prompt}>$</span>{" "}
-                  <span className={styles.cmd}>git clone</span>{" "}
-                  <span className={styles.arg}>
-                    https://github.com/Bhavya6187/vibeshub.git
+                    # 1 · add the marketplace + install in Claude Code
                   </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>./vibeshub</span>
-                  {"\n\n"}
-                  <span className={styles.commentLine}>
-                    # 2 · install the plugin inside Claude Code
-                  </span>
+                  <span className={styles.arg}>Bhavya6187/vibeshub</span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin install</span>{" "}
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 3 · that's it - next time Claude Code runs 'gh pr create'
+                    # 2 · that's it - next time Claude Code runs 'gh pr create'
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
