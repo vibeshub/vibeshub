@@ -153,9 +153,10 @@ export function Landing() {
                 share the <span className={styles.hl}>vibe</span>.
               </h1>
               <p className={styles.heroSub}>
-                Vibeshub captures any Claude Code session and turns it into a
-                shareable, replayable trace. Show teammates how you actually
-                shipped it, or revisit your own reasoning weeks later.
+                Vibeshub captures any Claude Code session, including the
+                subagents it spawns, and turns it into a shareable, replayable
+                trace. Show teammates how you actually shipped it, or revisit
+                your own reasoning weeks later.
               </p>
               <div className={styles.heroActions}>
                 <a
@@ -412,9 +413,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Delete anytime.</strong> Change your mind?
-                    Uploaders and repo admins can wipe any trace they posted
-                    in one click.
+                    <strong>Subagents included.</strong> When your session
+                    spawns subagents, every one of them is captured and
+                    replayable too, not just the top-level transcript.
                   </span>
                 </li>
               </ul>
@@ -642,15 +643,16 @@ function BrowseSection({ data }: BrowseSectionProps) {
           <span className={styles.dot} /> Browse public
         </div>
         <h2 className={styles.sectionTitle}>
-          What we&rsquo;re sharing on{" "}
+          vibeshub, built with{" "}
           <Link to={`/${BROWSE_FULL}`} className={styles.repoLink}>
-            {BROWSE_FULL}
+            vibeshub
           </Link>
           .
         </h2>
         <p className={styles.sectionLede}>
-          Each card is a real Claude Code session. Open one to see the
-          prompts, tool calls, and reasoning behind the PR.
+          Every PR here shipped with the Claude Code session that produced
+          it. Open a card to read the prompts, tool calls, and reasoning
+          behind the diff.
         </p>
 
         <div className={styles.statsStrip}>
