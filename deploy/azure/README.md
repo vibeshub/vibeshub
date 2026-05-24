@@ -88,6 +88,12 @@ DATABASE_URL="postgresql+psycopg://${PG_ADMIN}:${PG_PASSWORD}@${PG_HOST}:5432/${
 ACCOUNT_URL="https://${STORAGE}.blob.core.windows.net"
 PUBLIC_URL="https://${APP}.<region-suffix>.azurecontainerapps.io"   # fill in after first deploy
 
+SESSION_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
+TOKEN_ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')
+OAUTH_CLIENT_ID='<github-oauth-client-id>'
+OAUTH_CLIENT_SECRET='<github-oauth-client-secret>'
+GITHUB_FALLBACK_TOKEN='<server-pat>'   # any token; no scopes needed for public data
+
 az containerapp create \
   -n $APP -g $RG --environment $APP_ENV \
   --image $ACR.azurecr.io/vibeshub:latest \
@@ -100,13 +106,19 @@ az containerapp create \
     VIBESHUB_AZURE_BLOB_CONTAINER="$CONTAINER" \
     VIBESHUB_AZURE_STORAGE_ACCOUNT_URL="$ACCOUNT_URL" \
     AZURE_CLIENT_ID="$MI_CLIENT_ID" \
-    VIBESHUB_PUBLIC_BASE_URL="$PUBLIC_URL"
+    VIBESHUB_PUBLIC_BASE_URL="$PUBLIC_URL" \
+    VIBESHUB_GITHUB_OAUTH_CLIENT_ID="$OAUTH_CLIENT_ID" \
+    VIBESHUB_GITHUB_OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET" \
+    VIBESHUB_GITHUB_FALLBACK_TOKEN="$GITHUB_FALLBACK_TOKEN" \
+    VIBESHUB_SESSION_SECRET="$SESSION_SECRET" \
+    VIBESHUB_TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY"
 ```
 
 Notes:
 - `AZURE_CLIENT_ID` tells `DefaultAzureCredential` which user-assigned identity to use when multiple are bound.
 - The container's `CMD` runs `alembic upgrade head` before starting uvicorn, so the schema is created on first boot.
 - The image must be built with the `[azure]` extra — [./Dockerfile](./Dockerfile) does `pip install -e ".[azure]"` which pulls in `azure-storage-blob`, `azure-identity`, and `aiohttp` (used by azure-identity's async transport).
+- Register the GitHub OAuth app at <https://github.com/settings/developers> with the authorization callback URL set to `$PUBLIC_URL/api/auth/github/callback`. Update both the GitHub app and `VIBESHUB_PUBLIC_BASE_URL` after the first deploy returns a real FQDN.
 
 After the first deploy, grab the actual FQDN and update `VIBESHUB_PUBLIC_BASE_URL` so the trace URLs returned by `/api/ingest` are correct:
 
@@ -136,6 +148,11 @@ Then install the Claude Code plugin per [../../plugins/claude-code/README.md](..
 | `VIBESHUB_AZURE_STORAGE_CONNECTION_STRING` | Alternative auth (account key or Azurite); ignored if the account URL is set |
 | `AZURE_CLIENT_ID` | Client ID of the user-assigned MI when more than one is bound |
 | `VIBESHUB_PUBLIC_BASE_URL` | Origin used to build the `trace_url` returned by the API |
+| `VIBESHUB_GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | GitHub OAuth app credentials — required for the "Sign in with GitHub" flow; absent → `/api/auth/*` returns 503 |
+| `VIBESHUB_GITHUB_FALLBACK_TOKEN` | Server-side PAT used to read public GitHub data for anonymous viewers; no scopes needed |
+| `VIBESHUB_SESSION_SECRET` | Signs the short-lived OAuth state cookie (`python -c 'import secrets; print(secrets.token_urlsafe(48))'`) |
+| `VIBESHUB_TOKEN_ENCRYPTION_KEY` | Fernet key used to encrypt stored OAuth access tokens (`python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`); comma-separate `new,old` to rotate |
+| `VIBESHUB_COOKIE_SECURE` | Defaults to `true`; leave on for Azure |
 
 See [../../webapp/backend/README.md](../../webapp/backend/README.md) for the full list, including renderer + size limits.
 

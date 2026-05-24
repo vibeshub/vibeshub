@@ -1,16 +1,17 @@
 # vibeshub
 
-Host Claude Code conversation traces and link them to the pull requests they produced. When you run `gh pr create` inside Claude Code, the vibeshub plugin uploads the session's transcript and posts a comment on the PR linking to a public viewer page.
+Host Claude Code conversation traces and link them to the pull requests they produced. The Claude Code plugin uploads the session's transcript whenever you create or update a PR (or push the branch), and posts a comment on the PR linking to a public viewer page.
 
 ## How it works
 
-1. The Claude Code plugin's `PostToolUse` hook fires after any `Bash` invocation that contains `gh pr create`.
-2. The hook locates the session's `~/.claude/projects/.../*.jsonl` transcript and runs client-side redaction (AWS / GitHub / OpenAI / Anthropic keys, JWTs, env-style assignments, high-entropy tokens).
-3. It uploads to the backend with your `gh auth token` as identity.
-4. The backend stores the transcript blob, runs a second redaction pass, and returns a public URL.
-5. The plugin posts that URL as a comment on the PR.
-6. Visiting the URL loads the SPA, which fetches the raw JSONL from the backend and renders it as a single-page trace viewer (hero + collapsible tool cards + activity timeline + light/dark theme).
-7. Private-repository traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace, mirroring GitHub's own permissions. Viewers grant private access with an opt-in "Enable private repositories" login.
+1. The Claude Code plugin's `PostToolUse` hook fires after any `Bash` invocation. It looks for `gh pr create`, `gh pr edit`, or `git push` and, when one is detected, runs the share pipeline.
+2. The hook locates the session's `~/.claude/projects/.../*.jsonl` transcript (plus any subagent transcripts spawned in git worktrees) and runs client-side redaction (AWS / GitHub / OpenAI / Anthropic keys, JWTs, env-style assignments, high-entropy tokens).
+3. It uploads to the backend with your `gh auth token` as identity. TLS is verified against the OS trust store so uploads work on networks behind a TLS-intercepting proxy.
+4. The backend stores the transcript blob (main + per-subagent), runs a second redaction pass, and returns a public URL.
+5. The plugin posts that URL as a comment on the PR the first time; subsequent updates refresh the same trace.
+6. Visiting the URL loads the SPA and renders the JSONL as a trace viewer (hero + collapsible tool cards + prompt rail + activity timeline + light/dark theme + syntax-highlighted code/diffs).
+7. Private-repo traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace. Viewers grant private access with an opt-in "Enable private repositories" login.
+8. Web upload (`/upload`) and standalone (no-repo) traces are also supported — those uploads use a session cookie rather than a `gh` bearer token.
 
 Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-code/](plugins/claude-code/) — see [plugins/README.md](plugins/README.md).
 
@@ -19,18 +20,22 @@ Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-co
 ```
 vibeshub/
 ├── plugins/
-│   ├── claude-code/    # PostToolUse hook + /share-pr slash command;
+│   ├── claude-code/    # PostToolUse hook + /share-trace slash command;
 │   │                   # bundles the vibeshub_client library (redaction, upload, gh-comment)
 │   └── README.md       # how to add a new platform plugin
 ├── webapp/
-│   ├── backend/        # FastAPI + SQLAlchemy + alembic; serves SPA from frontend_dist/
+│   ├── backend/        # FastAPI + SQLAlchemy + Alembic; serves SPA from frontend_dist/
+│   │                   # GitHub OAuth, session cookies, repo-access gating, blob storage
 │   └── frontend/       # React + Vite SPA; build copies dist/ → backend/frontend_dist/
+│                       # Landing, /home, /upload, /privacy, /:owner, /:owner/:repo,
+│                       # /:owner/:repo/pull/:number, /t/:shortId trace viewer
+├── deploy/azure/       # Dockerfile + deploy.sh + Portal/CLI walkthroughs
 └── docs/superpowers/   # design spec + implementation plans
 ```
 
 Per-component docs:
-- [webapp/backend/README.md](webapp/backend/README.md) — env vars, local run, tests
-- [webapp/frontend/README.md](webapp/frontend/README.md) — dev server, build, tests
+- [webapp/backend/README.md](webapp/backend/README.md) — env vars, OAuth setup, local run, tests
+- [webapp/frontend/README.md](webapp/frontend/README.md) — routes, dev server, build, tests
 - [plugins/claude-code/README.md](plugins/claude-code/README.md) — install, hook config, slash command
 
 ## Local development
@@ -44,6 +49,8 @@ Per-component docs:
 cd webapp/frontend && npm install && npm run dev
 ```
 
+GitHub OAuth is optional locally — auth routes return `503 oauth_not_configured` until `VIBESHUB_GITHUB_OAUTH_CLIENT_ID`, `VIBESHUB_SESSION_SECRET`, and `VIBESHUB_TOKEN_ENCRYPTION_KEY` are set. See the backend README for the full list.
+
 ## Deploying
 
-- **Azure** — Container Apps + Postgres Flexible Server + Blob Storage with managed identity: see [deploy/azure/README.md](deploy/azure/README.md).
+- **Azure** — Container Apps + Postgres Flexible Server + Blob Storage with managed identity: see [deploy/azure/README.md](deploy/azure/README.md) (CLI) or [deploy/azure/README-portal.md](deploy/azure/README-portal.md) (Portal walkthrough).
