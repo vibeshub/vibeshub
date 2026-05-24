@@ -98,7 +98,7 @@ export function Landing() {
     <div className={`page-shell ${styles.shell}`}>
       <SeoHead
         title="vibeshub · share Claude Code sessions as replayable traces"
-        description="Vibeshub captures any Claude Code session and turns it into a shareable, replayable trace. Public & private viewer with GitHub-mirrored access and automatic secret redaction."
+        description="Your Claude Code sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
         path="/"
         bareTitle
       />
@@ -153,10 +153,9 @@ export function Landing() {
                 share the <span className={styles.hl}>vibe</span>.
               </h1>
               <p className={styles.heroSub}>
-                Vibeshub captures any Claude Code session, including the
-                subagents it spawns, and turns it into a shareable, replayable
-                trace. Show teammates how you actually shipped it, or revisit
-                your own reasoning weeks later.
+                Your Claude Code sessions, including every subagent they spawn,
+                become shareable, replayable traces. Show teammates how you
+                actually shipped it, or revisit your own reasoning weeks later.
               </p>
               <div className={styles.heroActions}>
                 <a
@@ -238,7 +237,7 @@ export function Landing() {
                     <div className={styles.heroWayHeading}>
                       <span className={styles.heroWayNum}>02 · Slash command</span>
                       <span className={styles.heroWayTitle}>
-                        Share with <code>/share-trace</code>
+                        Share any session with <code>/share-trace</code>
                       </span>
                     </div>
                     <span className={styles.heroWayChev} aria-hidden="true">
@@ -248,9 +247,9 @@ export function Landing() {
                   {openWay === 1 && (
                     <div className={styles.heroWayPanel}>
                       <p className={styles.heroWayDesc}>
-                        Share a single session on demand , a clever
-                        debug, a tough refactor, a moment you want a second
-                        pair of eyes on. Link back before the cursor moves;{" "}
+                        Share a single session on demand: a clever debug, a
+                        tough refactor, a moment you want a second pair of eyes
+                        on. Link back before the cursor moves;{" "}
                         <code>/share-trace delete</code> takes it down just as
                         fast.
                       </p>
@@ -290,7 +289,7 @@ export function Landing() {
                     <div className={styles.heroWayHeading}>
                       <span className={styles.heroWayNum}>03 · Web upload</span>
                       <span className={styles.heroWayTitle}>
-                        Drop a <code>.jsonl</code> on the web
+                        Drop your <code>.jsonl</code> on the web
                       </span>
                     </div>
                     <span className={styles.heroWayChev} aria-hidden="true">
@@ -300,9 +299,9 @@ export function Landing() {
                   {openWay === 2 && (
                     <div className={styles.heroWayPanel}>
                       <p className={styles.heroWayDesc}>
-                        Publish a trace from any browser , useful when
-                        the session lives on a teammate's laptop, or on a
-                        machine where you'd rather not install anything.
+                        Publish a trace from any browser. Useful when the
+                        session lives on a teammate's laptop, or on a machine
+                        where you'd rather not install anything.
                       </p>
                       <Link to="/upload" className={styles.dropzone}>
                         <strong>Drop transcript here</strong>
@@ -368,11 +367,11 @@ export function Landing() {
                 <span className={styles.dot} /> Show it off
               </div>
               <h2 className={styles.sectionTitle}>
-                A trace makes a good receipt.
+                Your work, finally legible.
               </h2>
               <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
-                Every trace gets a stable URL with a social card. Use one
-                anywhere you want the work to be legible to humans ,
+                Every trace you create gets a stable URL with a social card.
+                Use one anywhere you want your work to be legible to humans,
                 not just to your future self.
               </p>
 
@@ -393,8 +392,8 @@ export function Landing() {
                   </span>
                   <span>
                     <strong>Brag posts.</strong> A social preview with the
-                    title and tool mix , renders cleanly on X and
-                    LinkedIn. Better than a screenshot of your terminal.
+                    title and tool mix that renders cleanly on X and LinkedIn.
+                    Better than a screenshot of your terminal.
                   </span>
                 </li>
                 <li>
@@ -527,7 +526,7 @@ export function Landing() {
               <span className={styles.dot} /> Install
             </div>
             <h2 className={styles.sectionTitle}>
-              Install once. Every PR ships with a trace.
+              Install once. Every PR you ship comes with a trace.
             </h2>
             <p className={styles.sectionLede}>
               Install the plugin, sign in with GitHub, and the next PR you
@@ -543,7 +542,7 @@ export function Landing() {
                   <code>gh</code> CLI authenticated with{" "}
                   <code>gh auth login</code>, and <code>python3</code> 3.9+ on
                   your <code>PATH</code>. The hook uses only the Python
-                  standard library , nothing to <code>pip install</code>.
+                  standard library, nothing to <code>pip install</code>.
                 </p>
                 <div className={styles.installMeta}>
                   <span>
