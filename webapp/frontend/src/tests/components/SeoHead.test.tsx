@@ -62,6 +62,12 @@ describe("SeoHead", () => {
           el.getAttribute("content") === "stale description"),
     );
     expect(stale).toEqual([]);
+
+    // React's hoisted <title> must NOT be in the snapshot — it was rendered
+    // after the lazy-init captured the stale block. This pins the invariant
+    // that justifies the lazy-init approach over a plain useEffect.
+    const titles = Array.from(document.head.querySelectorAll("title"));
+    expect(titles.map((t) => t.textContent)).toContain("Fresh · vibeshub");
   });
 
   it("no-ops when the head has no SEO marker comments", () => {
@@ -85,5 +91,24 @@ describe("SeoHead", () => {
       (el) => el.tagName === "TITLE" && el.textContent === "stale",
     );
     expect(stale).toEqual([]);
+  });
+
+  it("does not throw on first unmount when SSR tags are present", () => {
+    // The original useEffect-only recipe crashed here: React 19's title
+    // hoist adopts the SSR <title> node, and the strip effect removed it
+    // out from under React's fiber tree, leading to a crash in
+    // commitDeletionEffectsOnFiber during unmount. This test would have
+    // caught that regression. If a future contributor "simplifies" the
+    // snapshot back into a plain useEffect, this test must fail.
+    seedHeadWithMarkers(
+      `<title>stale title</title>
+       <meta name="description" content="stale description" />`,
+    );
+
+    const { unmount } = render(
+      <SeoHead title="Fresh" description="Fresh description" />,
+    );
+
+    expect(() => unmount()).not.toThrow();
   });
 });
