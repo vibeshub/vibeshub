@@ -15,6 +15,7 @@ import type {
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
+import { SeoHead } from "../components/SeoHead";
 import { TraceListRow } from "../components/TraceListRow";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./UserPage.module.css";
@@ -222,8 +223,21 @@ export function UserPage() {
   const initial = owner.charAt(0).toUpperCase();
   const githubUrl = `https://github.com/${owner}`;
 
+  const traceCount = data.stats.trace_count;
+  const userDescription =
+    `@${owner} on vibeshub — ` +
+    (traceCount > 0
+      ? `${traceCount} public Claude Code session${traceCount === 1 ? "" : "s"}.`
+      : "Public Claude Code sessions and contributions.");
+
   return (
     <div className="page-shell">
+      <SeoHead
+        title={`@${owner}`}
+        description={userDescription}
+        path={`/${owner}`}
+        ogType="profile"
+      />
       <PageTopbar
         crumbs={[{ label: owner, to: `/${owner}`, current: true }]}
       />

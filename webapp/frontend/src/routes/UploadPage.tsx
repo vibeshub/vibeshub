@@ -6,6 +6,7 @@ import { LoadingState } from "../components/LoadingState";
 import { PageTopbar } from "../components/PageTopbar";
 import { RepoPrPicker } from "../components/RepoPrPicker";
 import type { PickerSelection } from "../components/RepoPrPicker";
+import { SeoHead } from "../components/SeoHead";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./UploadPage.module.css";
 
@@ -28,9 +29,19 @@ export function UploadPage() {
 
   if (loading) return <LoadingState label="Loading…" />;
 
+  const seo = (
+    <SeoHead
+      title="Upload a trace"
+      description="Upload a Claude Code session transcript and share the trace."
+      path="/upload"
+      noindex
+    />
+  );
+
   if (!user) {
     return (
       <div className="page-shell">
+        {seo}
         <PageTopbar crumbs={[{ label: "upload", current: true }]} />
         <main className={styles.page}>
           <div className={styles.signin}>
@@ -87,6 +98,7 @@ export function UploadPage() {
 
   return (
     <div className="page-shell">
+      {seo}
       <PageTopbar crumbs={[{ label: "upload", current: true }]} />
       <main className={styles.page}>
         <form className={styles.form} onSubmit={onSubmit}>
