@@ -1,13 +1,13 @@
 # vibeshub
 
-Host Claude Code conversation traces and link them to the pull requests they produced. The Claude Code plugin uploads the session's transcript whenever you create or update a PR (or push the branch), and posts a comment on the PR linking to a public viewer page.
+Host Claude Code conversation traces and link them to the pull requests they produced. The Claude Code plugin uploads the session's transcript whenever you create or update a PR (or push the branch), and posts a comment on the PR linking to the trace. Trace visibility mirrors the repository on GitHub: public stays public, private stays private and is gated on the viewer's GitHub access.
 
 ## How it works
 
 1. The Claude Code plugin's `PostToolUse` hook fires after any `Bash` invocation. It looks for `gh pr create`, `gh pr edit`, or `git push` and, when one is detected, runs the share pipeline.
 2. The hook locates the session's `~/.claude/projects/.../*.jsonl` transcript (plus any subagent transcripts spawned in git worktrees) and runs client-side redaction (AWS / GitHub / OpenAI / Anthropic keys, JWTs, env-style assignments, high-entropy tokens).
 3. It uploads to the backend with your `gh auth token` as identity. TLS is verified against the OS trust store so uploads work on networks behind a TLS-intercepting proxy.
-4. The backend stores the transcript blob (main + per-subagent), runs a second redaction pass, and returns a public URL.
+4. The backend stores the transcript blob (main + per-subagent), runs a second redaction pass, and returns the trace URL.
 5. The plugin posts that URL as a comment on the PR the first time; subsequent updates refresh the same trace.
 6. Visiting the URL loads the SPA and renders the JSONL as a trace viewer (hero + collapsible tool cards + prompt rail + activity timeline + light/dark theme + syntax-highlighted code/diffs).
 7. Private-repo traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace. Viewers grant private access with an opt-in "Enable private repositories" login.

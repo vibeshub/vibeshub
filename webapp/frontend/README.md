@@ -1,8 +1,8 @@
 # vibeshub frontend
 
-React 19 + Vite SPA. Serves the public trace viewer, the marketing/landing
-page, user + repo overview pages, GitHub sign-in, and the manual web upload
-form.
+React 19 + Vite SPA. Serves the trace viewer (public and private, with
+private gated on GitHub repo-read access), the marketing/landing page,
+user + repo overview pages, GitHub sign-in, and the manual web upload form.
 
 ## Routes
 

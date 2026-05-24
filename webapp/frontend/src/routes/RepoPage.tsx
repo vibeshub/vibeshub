@@ -285,8 +285,9 @@ export function RepoPage() {
                 }}
               >
                 <p style={{ margin: "0 0 10px" }}>
-                  Every trace on this repo is visible to anyone with the link.
-                  Sensitive content is automatically redacted before indexing.
+                  Trace visibility mirrors this repository on GitHub: traces
+                  are viewable by anyone who can see the repo. Sensitive
+                  content is automatically redacted before indexing.
                 </p>
               </div>
             </div>

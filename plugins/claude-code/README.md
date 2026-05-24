@@ -2,7 +2,8 @@
 
 Uploads your Claude Code conversation trace to vibeshub whenever you create or
 update a PR (or push the branch), and posts a comment on the PR linking to the
-public viewer.
+trace. Trace visibility mirrors the repository on GitHub: public repos stay
+public, private repos stay private and are gated on the viewer's GitHub access.
 
 ## Install
 
@@ -47,7 +48,7 @@ After every Bash tool call, a `PostToolUse` hook runs. If the command contained
 4. Uploads to vibeshub using your `gh auth token` for identity. TLS is verified
    against the OS trust store (Python 3.10+) so the upload works on networks
    behind a TLS-intercepting proxy whose root CA the OS already trusts.
-5. On the first upload for a PR, posts a `gh pr comment` linking to the public
+5. On the first upload for a PR, posts a `gh pr comment` linking to the
    trace. Subsequent updates refresh the same trace in place.
 
 Installing the plugin is consent for upload. To stop uploading, uninstall the
