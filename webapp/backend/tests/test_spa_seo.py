@@ -384,3 +384,14 @@ class TestRepoRouteSeo:
         body = resp.text
         assert "1 Claude Code session on alice/solo" in body
         assert "1 Claude Code sessions on alice/solo" not in body
+
+    @pytest.mark.parametrize(
+        "path", ["api/foo", "upload/foo", "home/foo", "t/foo"],
+    )
+    def test_reserved_owner_repo_paths_fall_through(self, spa_client, path):
+        """Two-segment paths whose owner is a reserved top-level slug must
+        not be claimed by the repo handler.
+        """
+        resp = spa_client.get(f"/{path}")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text

@@ -283,8 +283,8 @@ def _splice(template: str, replacement: str) -> str:
 
 # Ordered handlers: each returns a rendered <head> block or None. The
 # first non-None wins. Order matters — longer/more-specific URL shapes
-# must come before greedier ones. Today only _try_trace is registered;
-# user/repo/PR-list handlers land in later tasks.
+# must come before greedier ones. Trace, repo, and user are wired; the
+# PR-list handler lands in the next task.
 _HANDLERS = (_try_trace, _try_repo, _try_user)
 
 
