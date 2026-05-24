@@ -118,13 +118,20 @@ The portal no longer has a standalone "Container Apps Environments" create butto
   - CPU / memory: 0.5 vCPU / 1 Gi (fine for low traffic).
   - **Environment variables** — add each row using the values from [`.env.example`](./.env.example):
 
-    | Name                                 | Value                                                                              |
-    | ------------------------------------ | ---------------------------------------------------------------------------------- |
-    | `VIBESHUB_DATABASE_URL`              | `postgresql+psycopg://vibeshub:<password>@<pg-fqdn>:5432/vibeshub?sslmode=require` |
-    | `VIBESHUB_AZURE_BLOB_CONTAINER`      | `traces`                                                                           |
-    | `VIBESHUB_AZURE_STORAGE_ACCOUNT_URL` | the blob endpoint from step 4                                                      |
-    | `AZURE_CLIENT_ID`                    | the MI client ID from step 5                                                       |
-    | `VIBESHUB_PUBLIC_BASE_URL`           | leave as `https://placeholder` for now — we'll fix it in step 8                    |
+    | Name                                   | Value                                                                              |
+    | -------------------------------------- | ---------------------------------------------------------------------------------- |
+    | `VIBESHUB_DATABASE_URL`                | `postgresql+psycopg://vibeshub:<password>@<pg-fqdn>:5432/vibeshub?sslmode=require` |
+    | `VIBESHUB_AZURE_BLOB_CONTAINER`        | `traces`                                                                           |
+    | `VIBESHUB_AZURE_STORAGE_ACCOUNT_URL`   | the blob endpoint from step 4                                                      |
+    | `AZURE_CLIENT_ID`                      | the MI client ID from step 5                                                       |
+    | `VIBESHUB_PUBLIC_BASE_URL`             | leave as `https://placeholder` for now — we'll fix it in step 8                    |
+    | `VIBESHUB_GITHUB_OAUTH_CLIENT_ID`      | from your GitHub OAuth app (see below)                                             |
+    | `VIBESHUB_GITHUB_OAUTH_CLIENT_SECRET` | from your GitHub OAuth app                                                         |
+    | `VIBESHUB_GITHUB_FALLBACK_TOKEN`       | any GitHub PAT (no scopes needed) — used to read public data for anonymous viewers |
+    | `VIBESHUB_SESSION_SECRET`              | run `python -c 'import secrets; print(secrets.token_urlsafe(48))'`                 |
+    | `VIBESHUB_TOKEN_ENCRYPTION_KEY`        | run `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'` |
+
+    Register the GitHub OAuth app at <https://github.com/settings/developers>. Set the **Authorization callback URL** to `<your-future-app-fqdn>/api/auth/github/callback` — leave a placeholder for now and update both the app and `VIBESHUB_PUBLIC_BASE_URL` in step 8 once you know the real FQDN.
 
 4. **Ingress** tab:
   - Ingress: **Enabled**
@@ -139,6 +146,7 @@ The portal no longer has a standalone "Container Apps Environments" create butto
 1. Open the Container App → **Overview** → copy the **Application Url** (e.g. `https://vibeshub.kindwave-1234abcd.eastus.azurecontainerapps.io`).
 2. Left nav → **Containers** → **Edit and deploy** → click the container row → **Environment variables**.
 3. Edit `VIBESHUB_PUBLIC_BASE_URL` to the URL you just copied → **Save** → **Create** (this rolls a new revision).
+4. Back in <https://github.com/settings/developers>, edit your OAuth app's **Authorization callback URL** to `<that-app-url>/api/auth/github/callback`. Without this, `Sign in with GitHub` will fail with a redirect-mismatch error.
 
 ## 9. Verify
 

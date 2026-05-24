@@ -16,9 +16,12 @@ To add `<platform>`:
    - returns a stable `platform_id` string (this becomes the `platform` field
      on uploaded traces)
 3. Configure the platform's hook/event surface to invoke the shared
-   `run_share_pipeline()` when a PR is created. The Claude Code plugin uses a
-   `PostToolUse` hook on `Bash` matching `gh pr create`; other platforms will
-   have different surfaces.
+   `run_share_pipeline()` when a PR is created or updated. The Claude Code
+   plugin uses a `PostToolUse` hook on `Bash` that matches `gh pr create`,
+   `gh pr edit`, and `git push` (the latter two re-share the existing trace
+   for the current branch's open PR); other platforms will have different
+   surfaces. Triggers are classified in
+   [claude-code/vibeshub_client/share_trigger.py](claude-code/vibeshub_client/share_trigger.py).
 4. Add a slash command (or its platform equivalent) for manual share + delete.
 5. Document install + config in a `README.md` modeled on
    `plugins/claude-code/README.md`.
