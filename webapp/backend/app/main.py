@@ -84,10 +84,11 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}", response_class=HTMLResponse)
         async def _spa(full_path: str, request: Request) -> HTMLResponse:
-            # For known trace URL shapes, swap the default <head> meta block
-            # for trace-specific tags so social scrapers (which don't run
-            # JS) get real link previews. Every other path falls through
-            # to the unmodified template — see app/api/spa_seo.py.
+            # For known trace, user, repo, or PR-list URL shapes, swap the
+            # default <head> meta block for route-specific tags so social
+            # scrapers (which don't run JS) get real link previews. Every
+            # other path falls through to the unmodified template — see
+            # app/api/spa_seo.py.
             session_maker = request.app.state.session_maker
             base_url = request.app.state.settings.public_base_url
             async with session_maker() as db:

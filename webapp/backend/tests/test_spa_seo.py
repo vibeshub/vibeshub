@@ -231,3 +231,296 @@ async def test_deleted_trace_falls_back_to_default(spa_client):
     # Tombstoned traces don't get bespoke meta — the SPA will render
     # NotFound client-side, so the default landing meta is fine.
     assert "vibeshub · share Claude Code sessions" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# User route: /<owner>
+# ---------------------------------------------------------------------------
+
+class TestUserRouteSeo:
+    @pytest.mark.asyncio
+    async def test_public_traces_inject_meta(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(short_id=SHORT_OK, owner_login="alice"))
+            session.add(_make_trace(short_id=SHORT_OK_2, owner_login="alice"))
+            await session.commit()
+
+        resp = spa_client.get("/alice")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "@alice · vibeshub" in body
+        assert "2 public Claude Code sessions from @alice" in body
+        assert 'href="https://vibeshub.test/alice"' in body
+        assert 'property="og:type" content="profile"' in body
+        # Default landing title is gone.
+        assert "vibeshub · share Claude Code sessions" not in body
+
+    @pytest.mark.asyncio
+    async def test_singular_count_uses_session_not_sessions(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(short_id=SHORT_OK, owner_login="solo"))
+            await session.commit()
+
+        resp = spa_client.get("/solo")
+        body = resp.text
+        assert "1 public Claude Code session from @solo" in body
+        # Make sure the plural form didn't sneak in alongside.
+        assert "1 public Claude Code sessions from @solo" not in body
+
+    def test_zero_public_traces_falls_through(self, spa_client):
+        # No traces seeded → count is 0 → template unchanged.
+        resp = spa_client.get("/ghost")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_private_only_owner_falls_through(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK, owner_login="bob", is_private=True,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/bob")
+        # Public count is 0 → fall through.
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.parametrize(
+        "slug", ["upload", "privacy", "home", "t", "api"],
+    )
+    def test_reserved_owner_slugs_fall_through(self, spa_client, slug):
+        resp = spa_client.get(f"/{slug}")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("slug", ["sitemap.xml", "robots.txt"])
+    async def test_try_user_returns_none_for_seo_router_slugs(
+        self, spa_client, slug,
+    ):
+        """The seo router serves these before the SPA catch-all, but the
+        reserved-owner guard inside `_try_user` is defense-in-depth — make
+        sure the guard stays effective if router precedence ever changes.
+        """
+        from app.api.spa_seo import _try_user
+
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            result = await _try_user(slug, session, "https://vibeshub.test")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Repo route: /<owner>/<repo>
+# ---------------------------------------------------------------------------
+
+class TestRepoRouteSeo:
+    @pytest.mark.asyncio
+    async def test_public_traces_inject_meta(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=7,
+            ))
+            session.add(_make_trace(
+                short_id=SHORT_OK_2,
+                owner_login="bob",
+                repo_full_name="alice/widget",
+                pr_number=8,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "alice/widget · Claude Code traces · vibeshub" in body
+        assert "2 Claude Code sessions on alice/widget" in body
+        assert 'href="https://vibeshub.test/alice/widget"' in body
+        assert 'property="og:type" content="website"' in body
+        assert "vibeshub · share Claude Code sessions" not in body
+
+    def test_unknown_repo_falls_through(self, spa_client):
+        resp = spa_client.get("/nobody/nope")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_private_only_repo_falls_through(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/secret",
+                pr_number=1,
+                is_private=True,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/secret")
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_singular_count_uses_session_not_sessions(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/solo",
+                pr_number=1,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/solo")
+        body = resp.text
+        assert "1 Claude Code session on alice/solo" in body
+        assert "1 Claude Code sessions on alice/solo" not in body
+
+    @pytest.mark.parametrize(
+        "path", ["api/foo", "upload/foo", "home/foo", "t/foo"],
+    )
+    def test_reserved_owner_repo_paths_fall_through(self, spa_client, path):
+        """Two-segment paths whose owner is a reserved top-level slug must
+        not be claimed by the repo handler.
+        """
+        resp = spa_client.get(f"/{path}")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# PR-list route: /<owner>/<repo>/pull/<n>
+# ---------------------------------------------------------------------------
+
+class TestPrListRouteSeo:
+    @pytest.mark.asyncio
+    async def test_public_traces_with_pr_title(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=7,
+                pr_title="Tighten landing copy",
+            ))
+            session.add(_make_trace(
+                short_id=SHORT_OK_2,
+                owner_login="bob",
+                repo_full_name="alice/widget",
+                pr_number=7,
+                pr_title="Tighten landing copy",
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget/pull/7")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "alice/widget#7 · Tighten landing copy · vibeshub" in body
+        assert "2 Claude Code sessions for alice/widget#7" in body
+        assert 'href="https://vibeshub.test/alice/widget/pull/7"' in body
+
+    @pytest.mark.asyncio
+    async def test_public_traces_without_pr_title_falls_back(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=9,
+                pr_title=None,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget/pull/9")
+        body = resp.text
+        assert "alice/widget#9 · PR #9 · vibeshub" in body
+
+    @pytest.mark.asyncio
+    async def test_private_only_pr_falls_through(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=11,
+                pr_title="Secret",
+                is_private=True,
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget/pull/11")
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    async def test_singular_count_uses_session_not_sessions(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=13,
+                pr_title="Solo session",
+            ))
+            await session.commit()
+
+        resp = spa_client.get("/alice/widget/pull/13")
+        body = resp.text
+        assert "1 Claude Code session for alice/widget#13" in body
+        assert "1 Claude Code sessions for alice/widget#13" not in body
+
+    @pytest.mark.parametrize(
+        "path", ["api/foo/pull/1", "upload/foo/pull/1", "t/foo/pull/1"],
+    )
+    def test_reserved_owner_pr_paths_fall_through(self, spa_client, path):
+        """PR-list paths whose owner is a reserved top-level slug must not
+        be claimed by the PR-list handler.
+        """
+        resp = spa_client.get(f"/{path}")
+        assert resp.status_code == 200
+        assert "vibeshub · share Claude Code sessions" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Precedence
+# ---------------------------------------------------------------------------
+
+class TestSeoHandlerPrecedence:
+    @pytest.mark.asyncio
+    async def test_trace_url_is_handled_by_trace_path_not_pr_list(
+        self, spa_client,
+    ):
+        # /alice/widget/pull/7/<short> matches the trace shape AND would
+        # NOT match the PR-list regex (it has trailing /<short>), but
+        # this test pins the contract that trace handling takes
+        # precedence over any future shorter handler.
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(
+                short_id=SHORT_OK,
+                owner_login="alice",
+                repo_full_name="alice/widget",
+                pr_number=7,
+                pr_title="A trace title",
+            ))
+            await session.commit()
+
+        resp = spa_client.get(f"/alice/widget/pull/7/{SHORT_OK}")
+        body = resp.text
+        # Trace render is used — uses "Claude Code session by @alice".
+        assert "Claude Code session by @alice" in body
+        # PR-list render would say "Claude Code sessions for alice/widget#7".
+        assert "Claude Code sessions for alice/widget#7" not in body
