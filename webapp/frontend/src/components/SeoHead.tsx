@@ -7,6 +7,8 @@
 // pass `bareTitle` to opt out (use it for the landing page where the
 // brand is already in the title).
 
+import { useEffect, useState } from "react";
+
 const SITE_URL = "https://vibeshub.ai";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
@@ -31,6 +33,41 @@ export function SeoHead({
 }: SeoHeadProps) {
   const fullTitle = bareTitle ? title : `${title} · vibeshub`;
   const canonical = path ? `${SITE_URL}${path}` : undefined;
+
+  // Snapshot the stale SSR-injected nodes between the marker comments
+  // BEFORE React 19 commits this render's hoisted <title>/<meta>/<link>
+  // tags. Lazy useState initializer runs during render, which is before
+  // the commit phase that hoists tags — so the captured node list contains
+  // only the original SSR tags, not React's. Removing them later in
+  // useEffect therefore doesn't touch any node React's fiber tracks.
+  const [staleNodes] = useState<ChildNode[]>(() => {
+    if (typeof document === "undefined") return [];
+    const head = document.head;
+    const walker = document.createNodeIterator(head, NodeFilter.SHOW_COMMENT);
+    let start: Comment | null = null;
+    let end: Comment | null = null;
+    let node = walker.nextNode() as Comment | null;
+    while (node) {
+      if (node.data === "SEO_HEAD_START") start = node;
+      else if (node.data === "SEO_HEAD_END") {
+        end = node;
+        break;
+      }
+      node = walker.nextNode() as Comment | null;
+    }
+    if (!start || !end) return [];
+    const captured: ChildNode[] = [];
+    for (let n = start.nextSibling; n && n !== end; n = n.nextSibling) {
+      captured.push(n);
+    }
+    return captured;
+  });
+
+  useEffect(() => {
+    for (const n of staleNodes) {
+      if (n.parentNode) n.remove();
+    }
+  }, [staleNodes]);
 
   return (
     <>
