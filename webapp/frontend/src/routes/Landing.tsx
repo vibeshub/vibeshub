@@ -1,21 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthWidget } from "../components/AuthWidget";
 import { IconMoon, IconSun } from "../components/trace/icons";
 import { useTheme } from "../components/trace/theme";
+import { fetchRepoOverview } from "../api";
+import type { RepoOverview, TraceSummary } from "../types";
 import styles from "./Landing.module.css";
-import heroTraceLight from "../assets/hero-trace-light.png";
-import heroTraceDark from "../assets/hero-trace-dark.png";
 
 // Keep in sync with plugins/claude-code/.claude-plugin/plugin.json.
-const PLUGIN_VERSION = "0.2.0";
+const PLUGIN_VERSION = "0.3.0";
 const VERSION_LABEL = `v${PLUGIN_VERSION.split(".").slice(0, 2).join(".")}`;
 
 // What a new user needs on their machine before installing.
 const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 3.9+";
 
-// The runnable install commands — single source of truth for the hero block,
-// the #install block, and both copy buttons.
+// The runnable install commands — single source of truth for both copy buttons.
 const INSTALL_STEPS = [
   "git clone https://github.com/Bhavya6187/vibeshub.git",
   "/plugin marketplace add ./vibeshub",
@@ -23,13 +22,11 @@ const INSTALL_STEPS = [
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
 
-// The real Claude Code trace featured in the hero — PR #31's trace.
-// The screenshots in ../assets are hand-captured by scripts/capture-hero-trace.mjs;
-// re-capture them if the trace viewer's design changes.
-const HERO_TRACE_URL =
-  "https://vibeshub.ai/Bhavya6187/vibeshub/pull/31/66jxlxariq";
-const HERO_TRACE_LABEL =
-  "vibeshub.ai/Bhavya6187/vibeshub/pull/31/66jxlxariq";
+// The vibeshub repo that powers the Browse section.
+const BROWSE_OWNER = "Bhavya6187";
+const BROWSE_REPO = "vibeshub";
+const BROWSE_FULL = `${BROWSE_OWNER}/${BROWSE_REPO}`;
+const BROWSE_MAX = 6;
 
 function useCopy() {
   const [copied, setCopied] = useState<string | null>(null);
@@ -45,10 +42,57 @@ function useCopy() {
   return { copied, copy };
 }
 
+function compactCount(n: number): string {
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`;
+  }
+  if (n >= 1000) {
+    const k = n / 1000;
+    return `${k.toFixed(k >= 10 ? 0 : 1)}k`;
+  }
+  return String(n);
+}
+
+function relativeWhen(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diff = Math.max(0, Date.now() - then);
+  const m = Math.round(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  if (d === 1) return "yesterday";
+  if (d < 7) return `${d}d ago`;
+  const w = Math.round(d / 7);
+  if (w < 5) return `${w}w ago`;
+  const mo = Math.round(d / 30);
+  return `${mo}mo ago`;
+}
+
 export function Landing() {
   const { resolved, toggle } = useTheme();
   const { copied, copy } = useCopy();
-  const heroShot = resolved === "dark" ? heroTraceDark : heroTraceLight;
+  const [browse, setBrowse] = useState<RepoOverview | null>(null);
+  // Which hero tile is expanded. null = all collapsed; single-open accordion.
+  const [openWay, setOpenWay] = useState<number | null>(null);
+  const toggleWay = (i: number) => setOpenWay((cur) => (cur === i ? null : i));
+
+  // Pull the real public traces for the vibeshub repo to fill the Browse
+  // section. Errors are swallowed — the section degrades to skeletons.
+  useEffect(() => {
+    let alive = true;
+    fetchRepoOverview(BROWSE_OWNER, BROWSE_REPO)
+      .then((data) => {
+        if (alive) setBrowse(data);
+      })
+      .catch(() => {
+        /* keep skeleton */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div className={`page-shell ${styles.shell}`}>
@@ -59,12 +103,12 @@ export function Landing() {
             <span>vibeshub</span>
           </Link>
           <span className="brand-sep">/</span>
-          <span className={styles.tagline}>public viewer</span>
+          <span className={styles.tagline}>public &amp; private traces</span>
 
           <div className="topbar-spacer" />
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
-            <a href="#trace">Live trace</a>
+            <a href="#browse">Browse</a>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -95,208 +139,382 @@ export function Landing() {
             <div className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
                 <span className={styles.tag}>{VERSION_LABEL}</span>
-                <span>The vibe behind every diff</span>
+                <span>public &amp; private &middot; for Claude Code</span>
               </div>
               <h1 className={styles.heroH1}>
-                Every PR has<br />
-                a story. <span className={styles.hl}>Read it.</span>
+                Show off your
+                <br />
+                <span className={styles.hl}>vibe coding</span> sessions.
               </h1>
               <p className={styles.heroSub}>
-                A pull request shows you the diff. vibeshub shows you the Claude
-                Code session that produced it — replay how the feature was
-                actually built, tool by tool, edit by edit, retry by retry.
+                vibeshub captures any Claude Code session and turns it into a
+                shareable, replayable trace. Public on a public repo, private
+                on a private one &mdash; the way GitHub already says it should
+                be.
               </p>
               <div className={styles.heroActions}>
                 <a
                   className={`${styles.btn} ${styles.btnPrimary}`}
-                  href="#trace"
+                  href="#browse"
                 >
-                  See a live trace
+                  Browse public traces
                   <ArrowRight />
                 </a>
-                <Link
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  to="/privacy"
-                >
-                  Privacy &amp; redaction
-                </Link>
               </div>
-              <div className={styles.heroInstall}>
-                <div className={styles.heroInstallHead}>
-                  <span className={styles.heroInstallLabel}>install</span>
-                  <span className={styles.heroInstallSpacer} />
-                  <button
-                    type="button"
-                    className={`${styles.copyBtn} ${
-                      copied === "hero" ? styles.copied : ""
-                    }`}
-                    onClick={() => copy("hero", INSTALL_COPY)}
-                  >
-                    {copied === "hero" ? "copied" : "copy"}
-                  </button>
-                </div>
-                <pre className={styles.heroInstallBody}>
-                  <span className={styles.cmt}>
-                    # needs: {INSTALL_PREREQS}
-                  </span>
-                  {"\n\n"}
-                  <span className={styles.cmt}># 1 · clone the repo</span>
-                  {"\n"}
-                  <span className={styles.prompt}>$ </span>
-                  {INSTALL_STEPS[0]}
-                  {"\n\n"}
-                  <span className={styles.cmt}>
-                    # 2 · inside Claude Code — register, then install
-                  </span>
-                  {"\n"}
-                  {INSTALL_STEPS[1]}
-                  {"\n"}
-                  {INSTALL_STEPS[2]}
-                  {"\n\n"}
-                  <span className={styles.cmt}>
-                    # from now on, Claude Code's PRs auto-attach a trace ✓
-                  </span>
-                </pre>
+              <div className={styles.heroCmd}>
+                <span className={styles.cmtFaint}>$</span>
+                <span>/plugin install vibeshub@vibeshub</span>
+                <button
+                  type="button"
+                  className={`${styles.copyChip} ${
+                    copied === "hero" ? styles.copied : ""
+                  }`}
+                  onClick={() => copy("hero", INSTALL_COPY)}
+                  aria-label="Copy install commands"
+                >
+                  {copied === "hero" ? "copied" : "copy"}
+                </button>
               </div>
             </div>
 
-            {/* right: how it works, as a compact vertical timeline */}
+            {/* right: pick the workflow that fits — compact 3-tile preview */}
             <div className={styles.heroVisual}>
               <div className={styles.eyebrow}>
-                <span className={styles.dot} /> How it works
+                <span className={styles.dot} /> Pick the workflow that fits
               </div>
-              <ol className={styles.heroFlow}>
-                <li className={styles.heroFlowStep}>
-                  <span className={styles.heroFlowMark}>
-                    <IconTerminal />
-                  </span>
-                  <div>
-                    <span className={styles.heroFlowNum}>01 · Capture</span>
-                    <p className={styles.heroFlowText}>
-                      Claude Code opens a PR — vibeshub grabs the session
-                      behind it, straight from your machine.
-                    </p>
-                  </div>
+              <ul className={styles.heroWays}>
+                <li className={openWay === 0 ? styles.heroWayItemOpen : undefined}>
+                  <button
+                    type="button"
+                    className={styles.heroWay}
+                    onClick={() => toggleWay(0)}
+                    aria-expanded={openWay === 0}
+                  >
+                    <span className={styles.heroWayMark}>
+                      <IconPrSvg />
+                    </span>
+                    <div className={styles.heroWayHeading}>
+                      <span className={styles.heroWayNum}>01 · PR Hook</span>
+                      <span className={styles.heroWayTitle}>
+                        Auto-attach on <code>gh pr create</code>
+                      </span>
+                    </div>
+                    <span className={styles.heroWayChev} aria-hidden="true">
+                      <IconChevronDown />
+                    </span>
+                  </button>
+                  {openWay === 0 && (
+                    <div className={styles.heroWayPanel}>
+                      <p className={styles.heroWayDesc}>
+                        A <code>PostToolUse</code> hook spots{" "}
+                        <code>gh pr create</code>, finds the matching transcript,
+                        redacts it, uploads, and drops one bot comment on the PR.
+                      </p>
+                      <div className={styles.mini}>
+                        <div className={styles.miniHead}>
+                          claude-code &middot; PostToolUse
+                        </div>
+                        <pre className={styles.miniBody}>
+                          <span className={styles.miniPr}>$ </span>
+                          <span className={styles.miniCmd}>gh pr create</span>{" "}
+                          <span className={styles.miniArg}>--fill</span>
+                          {"\n"}
+                          <span className={styles.miniPriv}>
+                            {"  → vibeshub: redacted · uploaded"}
+                          </span>
+                          {"\n"}
+                          <span className={styles.miniOk}>
+                            {"  → vibeshub: commented on #482 ✓"}
+                          </span>
+                        </pre>
+                      </div>
+                    </div>
+                  )}
                 </li>
-                <li className={styles.heroFlowStep}>
-                  <span className={styles.heroFlowMark}>
-                    <IconShield />
-                  </span>
-                  <div>
-                    <span className={styles.heroFlowNum}>02 · Redact</span>
-                    <p className={styles.heroFlowText}>
-                      API keys, tokens, and passwords are scrubbed twice —
-                      before upload and again before storage.
-                    </p>
-                  </div>
+                <li className={openWay === 1 ? styles.heroWayItemOpen : undefined}>
+                  <button
+                    type="button"
+                    className={styles.heroWay}
+                    onClick={() => toggleWay(1)}
+                    aria-expanded={openWay === 1}
+                  >
+                    <span className={styles.heroWayMark}>
+                      <IconTerminal />
+                    </span>
+                    <div className={styles.heroWayHeading}>
+                      <span className={styles.heroWayNum}>02 · Slash command</span>
+                      <span className={styles.heroWayTitle}>
+                        Share with <code>/share-trace</code>
+                      </span>
+                    </div>
+                    <span className={styles.heroWayChev} aria-hidden="true">
+                      <IconChevronDown />
+                    </span>
+                  </button>
+                  {openWay === 1 && (
+                    <div className={styles.heroWayPanel}>
+                      <p className={styles.heroWayDesc}>
+                        Inside Claude Code, run <code>/share-trace</code>. Pick
+                        the visibility, optionally attach it to a repo or PR.
+                        You get a link back before the cursor moves &mdash; and
+                        a matching <code>/share-trace delete</code> when you
+                        change your mind.
+                      </p>
+                      <div className={styles.mini}>
+                        <div className={styles.miniHead}>
+                          claude-code &middot; slash command
+                        </div>
+                        <pre className={styles.miniBody}>
+                          <span className={styles.miniCmd}>&gt; /share-trace</span>
+                          {"\n"}
+                          <span className={styles.miniPriv}>
+                            {"  → attach to PR? acme/marketing-site#214"}
+                          </span>
+                          {"\n"}
+                          <span className={styles.miniPriv}>
+                            {"  → visibility? mirrors github (private)"}
+                          </span>
+                          {"\n"}
+                          <span className={styles.miniOk}>
+                            {"  → vibeshub.ai/acme/…/8m2plq ✓"}
+                          </span>
+                        </pre>
+                      </div>
+                    </div>
+                  )}
                 </li>
-                <li className={styles.heroFlowStep}>
-                  <span className={styles.heroFlowMark}>
-                    <IconGlobe />
-                  </span>
-                  <div>
-                    <span className={styles.heroFlowNum}>03 · Share</span>
-                    <p className={styles.heroFlowText}>
-                      A link to the full trace lands on the PR as one comment —
-                      as public or private as the repo.
-                    </p>
-                  </div>
+                <li className={openWay === 2 ? styles.heroWayItemOpen : undefined}>
+                  <button
+                    type="button"
+                    className={styles.heroWay}
+                    onClick={() => toggleWay(2)}
+                    aria-expanded={openWay === 2}
+                  >
+                    <span className={styles.heroWayMark}>
+                      <IconUpload />
+                    </span>
+                    <div className={styles.heroWayHeading}>
+                      <span className={styles.heroWayNum}>03 · Web upload</span>
+                      <span className={styles.heroWayTitle}>
+                        Drop a <code>.jsonl</code> on the web
+                      </span>
+                    </div>
+                    <span className={styles.heroWayChev} aria-hidden="true">
+                      <IconChevronDown />
+                    </span>
+                  </button>
+                  {openWay === 2 && (
+                    <div className={styles.heroWayPanel}>
+                      <p className={styles.heroWayDesc}>
+                        No CLI, no plugin. Sign in with GitHub, drag the
+                        transcript file in, preview the redactions, publish.
+                        Useful when the session lives on a different machine.
+                      </p>
+                      <Link to="/upload" className={styles.dropzone}>
+                        <strong>Drop transcript here</strong>
+                        <br />
+                        <span className={styles.dropzoneDim}>
+                          .jsonl &middot; .json
+                        </span>
+                        <br />
+                        <span className={styles.dropzoneFile}>
+                          ↑ or click to choose a file
+                        </span>
+                      </Link>
+                    </div>
+                  )}
                 </li>
-              </ol>
+              </ul>
             </div>
           </div>
         </section>
 
-        {/* ====================== see a live trace ====================== */}
-        <section className={styles.how} id="trace">
-          <div className={styles.container}>
-            <div className={styles.eyebrow}>
-              <span className={styles.dot} /> See it
-            </div>
-            <h2 className={styles.sectionTitle}>
-              A real PR, and the trace behind it.
-            </h2>
-            <p className={styles.sectionLede}>
-              Click the trace below and walk through a real Claude Code
-              session, exactly as a teammate would see it.
-            </p>
+        {/* ====================== mirror diagram: privacy mirrors github ====================== */}
+        <section className={styles.mirrorSection}>
+          <div className={`${styles.container} ${styles.mirrorGrid}`}>
+            <div>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> Privacy &amp; permissions
+              </div>
+              <h2 className={styles.sectionTitle}>
+                Your GitHub permissions, mirrored exactly.
+              </h2>
+              <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
+                Every trace inherits visibility and collaborators from the
+                repo it&rsquo;s attached to. If you can&rsquo;t see the repo,
+                you can&rsquo;t see the trace. We don&rsquo;t store a
+                roster &mdash; we ask GitHub on every load.
+              </p>
 
-            {/* a real PR comment + a screenshot of the trace it links to */}
-            <div className={styles.traceShowcase}>
-              <div className={styles.ghComment}>
-                <div className={styles.ghHead}>
-                  <img
-                    className={styles.ghAvatar}
-                    src="https://github.com/Bhavya6187.png?size=64"
-                    alt=""
-                    width={22}
-                    height={22}
-                  />
-                  <span className={styles.ghUser}>Bhavya6187</span>
-                  <span className={styles.ghMeta}>commented on PR #31</span>
-                </div>
-                <div className={styles.ghBody}>
-                  Claude Code trace for this PR:{" "}
-                  <a className={styles.ghLink} href={HERO_TRACE_URL}>
-                    {HERO_TRACE_LABEL}
-                  </a>
-                  <br />
-                  <span style={{ color: "var(--text-muted)" }}>
-                    Uploaded by the PR author.
+              <ul className={styles.mirrorPoints}>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Visibility tracks the repo.</strong> Public repo
+                    &rarr; public trace. Private repo &rarr; private trace.
+                    Flip the repo on GitHub and the trace flips with it the
+                    next time someone loads it.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Collaborators carry over.</strong> Anyone with
+                    read access to the repo can read the trace. Outside
+                    collaborators too. No invitations, no separate ACL.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Manual traces follow the same rule.</strong> Pick
+                    a repo when you upload and you inherit its access list.
+                    Pick none and it&rsquo;s yours alone, toggleable later.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>No re-auth.</strong> Sign in with GitHub once. We
+                    hold a short-lived OAuth token and ask permission
+                    questions live &mdash; never a stale snapshot.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className={styles.mirrorStack}>
+              <div className={styles.mirrorCard}>
+                <div className={styles.mirrorCardHead}>
+                  <span className={`${styles.srcMark} ${styles.srcGh}`}>
+                    <IconGithub />
+                  </span>
+                  <span className={styles.srcName}>acme/payments-api</span>
+                  <span className={styles.srcType}>github repo</span>
+                  <span
+                    className={`${styles.pvBadge} ${styles.pvPrivate}`}
+                    style={{ marginLeft: "auto" }}
+                  >
+                    <IconLock />
+                    private
                   </span>
                 </div>
-              </div>
-
-              <div className={styles.heroArrow} aria-hidden="true">
-                <svg
-                  viewBox="0 0 18 36"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 2v30" strokeDasharray="2 3" />
-                  <path d="M3 27l6 6 6-6" />
-                </svg>
-              </div>
-
-              <a className={styles.traceCard} href={HERO_TRACE_URL}>
-                <span className={styles.tracePin}>live trace</span>
-                <div className={styles.traceHead}>
-                  <div className={styles.dots}>
-                    <span />
-                    <span />
-                    <span />
+                <div className={styles.mirrorRows}>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>visibility·</span>{" "}
+                      <span className={styles.mirrorVal}>private</span>
+                    </span>
                   </div>
-                  <div className={styles.urlChip}>{HERO_TRACE_LABEL}</div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>members·</span>{" "}
+                      <span className={styles.mirrorVal}>8 (1 admin)</span>
+                    </span>
+                  </div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>outside·</span>{" "}
+                      <span className={styles.mirrorVal}>2 collaborators</span>
+                    </span>
+                  </div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>teams·</span>{" "}
+                      <span className={styles.mirrorVal}>@acme/payments</span>
+                    </span>
+                  </div>
                 </div>
-                <img
-                  className={styles.traceShot}
-                  src={heroShot}
-                  alt="vibeshub trace viewer showing the Claude Code session that built pull request #31"
-                />
-              </a>
+              </div>
+
+              <div className={styles.mirrorArrow}>
+                <span className={styles.mirrorArrowLabel}>
+                  <IconChevronDown />
+                  mirrors
+                </span>
+              </div>
+
+              <div className={styles.mirrorCard}>
+                <div className={styles.mirrorCardHead}>
+                  <span className={`${styles.srcMark} ${styles.srcVh}`}>v</span>
+                  <span className={styles.srcName}>
+                    acme/payments-api / traces
+                  </span>
+                  <span className={styles.srcType}>vibeshub</span>
+                  <span
+                    className={`${styles.pvBadge} ${styles.pvPrivate}`}
+                    style={{ marginLeft: "auto" }}
+                  >
+                    <IconLock />
+                    private
+                  </span>
+                </div>
+                <div className={styles.mirrorRows}>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>visibility·</span>{" "}
+                      <span className={styles.mirrorVal}>
+                        private (inherited)
+                      </span>
+                    </span>
+                  </div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>readers·</span>{" "}
+                      <span className={styles.mirrorVal}>8 (same set)</span>
+                    </span>
+                  </div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>admins·</span>{" "}
+                      <span className={styles.mirrorVal}>repo write+</span>
+                    </span>
+                  </div>
+                  <div className={styles.mirrorRow}>
+                    <span className={styles.mirrorDot} />
+                    <span>
+                      <span className={styles.mirrorKey}>checked·</span>{" "}
+                      <span className={styles.mirrorVal}>live, every load</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ====================== privacy ====================== */}
+        {/* ====================== browse ====================== */}
+        <BrowseSection data={browse} />
+
+        {/* ====================== privacy / redaction ====================== */}
         <section className={styles.privacy} id="privacy">
           <div className={`${styles.container} ${styles.privacyGrid}`}>
             <div>
               <div className={styles.eyebrow}>
-                <span className={styles.dot} /> Privacy &amp; redaction
+                <span className={styles.dot} /> Redaction
               </div>
               <h2 className={styles.sectionTitle}>
-                Only as public as your repo. Your secrets, never.
+                Two passes, then a preview.
               </h2>
               <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
-                A trace inherits its repo's visibility — public repos make
-                public traces, private repos make traces only people with repo
-                access can open. Either way, secrets are scrubbed before upload
-                and again before storage, and you can delete any trace you've
-                posted at any time.
+                Permissions decide who can read a trace. Redaction decides
+                what&rsquo;s in it. Both run on every upload &mdash; public,
+                private, manual, whatever.
               </p>
 
               <ul className={styles.privacyPoints}>
@@ -305,9 +523,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Visibility follows your repo.</strong> A trace from
-                    a public repo is public; a trace from a private repo opens
-                    only for people with access to that repo.
+                    <strong>Pattern-based stripping</strong> for AWS, GitHub,
+                    OpenAI, and Anthropic keys, JWTs, plus high-entropy tokens
+                    and <code>KEY=value</code> shapes.
                   </span>
                 </li>
                 <li>
@@ -315,9 +533,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Secrets get stripped out.</strong> API keys, access
-                    tokens, and passwords — from GitHub, AWS, OpenAI, Anthropic
-                    and more — are caught and removed before anything is shared.
+                    <strong>Double pass.</strong> Once on your machine before
+                    upload, once on the server before storage. If one pass
+                    misses, the other catches it.
                   </span>
                 </li>
                 <li>
@@ -325,9 +543,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Checked twice.</strong> Once on your machine before
-                    upload, once on our server before storage. If one pass
-                    misses something, the other catches it.
+                    <strong>No new account.</strong> vibeshub signs you in
+                    with your existing GitHub login &mdash; nothing extra to
+                    create, no second password to manage.
                   </span>
                 </li>
                 <li>
@@ -335,19 +553,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>No new account.</strong> vibeshub signs you in with
-                    your existing GitHub login — nothing extra to create, no
-                    second password to manage.
-                  </span>
-                </li>
-                <li>
-                  <span className={styles.ppMark}>
-                    <IconCheck />
-                  </span>
-                  <span>
-                    <strong>Undo anytime.</strong> Change your mind about a
-                    trace? Take it down with{" "}
-                    <code>/share-trace delete &lt;pr-url | /t/&lt;id&gt; url | short-id&gt;</code> — and only the
+                    <strong>One-click revoke</strong> on any trace you
+                    uploaded with{" "}
+                    <code>/share-trace delete</code> &mdash; and only the
                     person who posted it can.
                   </span>
                 </li>
@@ -393,7 +601,7 @@ export function Landing() {
                   {"\n  AWS_SECRET="}
                   <span className={styles.strike}>aQF/9qZxV7…</span>
                   <span className={styles.okChip}>[redacted:aws]</span>
-                  {'\n  USER_AGENT=vibeshub/0.1"\n'}
+                  {'\n  USER_AGENT=vibeshub/0.3"\n'}
                   <span className={styles.dim}>{"}"}</span>
                   {"\n\n"}
                   <span className={styles.comment}>
@@ -406,13 +614,129 @@ export function Landing() {
           </div>
         </section>
 
+        {/* ====================== show it off ====================== */}
+        <section className={styles.showoff} id="showoff">
+          <div className={`${styles.container} ${styles.showoffGrid}`}>
+            <div className={styles.shareCard}>
+              <div className={styles.shareHead}>
+                <div className={styles.dots}>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span className={styles.shareTitle}>Share this trace</span>
+                <span style={{ marginLeft: "auto" }}>
+                  <span className={`${styles.pvBadge} ${styles.pvPublic}`}>
+                    <IconGlobeMini />
+                    public
+                  </span>
+                </span>
+              </div>
+
+              <div className={styles.shareUrlBar}>
+                <div className={styles.shareUrl}>
+                  <span className={styles.shareUrlHost}>vibeshub.ai/</span>
+                  {BROWSE_FULL}/pull/31/&hellip;
+                </div>
+                <button
+                  type="button"
+                  className={styles.copyPill}
+                  onClick={() =>
+                    copy(
+                      "share",
+                      `https://vibeshub.ai/${BROWSE_FULL}/pull/31`,
+                    )
+                  }
+                >
+                  {copied === "share" ? "copied" : "copy"}
+                </button>
+              </div>
+
+              <div className={styles.shareChannels}>
+                <button type="button">
+                  <IconX />
+                  Post on X
+                </button>
+                <button type="button">
+                  <IconLinkedIn />
+                  LinkedIn
+                </button>
+                <button type="button">
+                  <IconComment />
+                  Drop in PR
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> Show it off
+              </div>
+              <h2 className={styles.sectionTitle}>
+                A trace makes a good receipt.
+              </h2>
+              <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
+                Every trace gets a stable URL with a social card. Use one
+                anywhere you want the work to be legible to humans &mdash;
+                not just to your future self.
+              </p>
+
+              <ul className={styles.showoffUses}>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Receipts on a PR.</strong> The plugin drops the
+                    link as a single bot comment when Claude Code opens a PR.
+                    Reviewers see the actual run, not just the diff.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Brag posts.</strong> A social preview with the
+                    title and tool mix &mdash; renders cleanly on X and
+                    LinkedIn. Better than a screenshot of your terminal.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>On your profile.</strong> Every trace you upload
+                    shows up at{" "}
+                    <code>vibeshub.ai/@you</code>, alongside the repos
+                    you&rsquo;ve contributed to.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
+                    <strong>Delete anytime.</strong> Change your mind?
+                    Uploaders and repo admins can wipe any trace they posted
+                    in one click.
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
         {/* ====================== install ====================== */}
         <section className={styles.install} id="install">
           <div className={styles.container}>
             <div className={styles.eyebrow}>
               <span className={styles.dot} /> Install
             </div>
-            <h2 className={styles.sectionTitle}>Two minutes, one marketplace.</h2>
+            <h2 className={styles.sectionTitle}>
+              Two minutes, one marketplace.
+            </h2>
             <p className={styles.sectionLede}>
               Drop the plugin into Claude Code, keep using your existing{" "}
               <code>gh</code> auth, and the next time Claude Code opens a PR
@@ -424,15 +748,15 @@ export function Landing() {
                 <h2>Get the Claude Code plugin</h2>
                 <p>
                   The plugin wires a <code>PostToolUse</code> hook plus a{" "}
-                  <code>/share-pr</code> slash command for manual uploads and
-                  deletions. Installing the plugin is consent for upload.
+                  <code>/share-trace</code> slash command for manual uploads
+                  and deletions. Installing the plugin is consent for upload.
                 </p>
                 <p className={styles.installPrereq}>
                   <strong>Before you start:</strong> Claude Code, the{" "}
                   <code>gh</code> CLI authenticated with{" "}
                   <code>gh auth login</code>, and <code>python3</code> 3.9+ on
-                  your <code>PATH</code>. The hook uses only the Python standard
-                  library — nothing to <code>pip install</code>.
+                  your <code>PATH</code>. The hook uses only the Python
+                  standard library &mdash; nothing to <code>pip install</code>.
                 </p>
                 <div className={styles.installMeta}>
                   <span>
@@ -510,11 +834,11 @@ export function Landing() {
         <footer className={styles.footer}>
           <div className={`${styles.container} ${styles.footerInner}`}>
             <div className={styles.blurb}>
-              vibeshub · public viewer for Claude Code traces
+              vibeshub · public &amp; private viewer for Claude Code traces
             </div>
             <div className={styles.footerLinks}>
               <a href="https://github.com/Bhavya6187/vibeshub">GitHub</a>
-              <a href="#trace">Live trace</a>
+              <a href="#browse">Browse</a>
               <Link to="/privacy">Privacy</Link>
               <a href="#install">Install</a>
             </div>
@@ -525,7 +849,249 @@ export function Landing() {
   );
 }
 
-/* ---------- inline icons (kept local so the marketing page is self-contained) ---------- */
+/* ---------- browse section (uses real vibeshub repo data) ---------- */
+
+interface BrowseSectionProps {
+  data: RepoOverview | null;
+}
+
+function BrowseSection({ data }: BrowseSectionProps) {
+  const traces = data?.traces?.slice(0, BROWSE_MAX) ?? [];
+  const contributors = data?.contributors?.slice(0, 5) ?? [];
+
+  return (
+    <section className={styles.feed} id="browse">
+      <div className={styles.container}>
+        <div className={styles.eyebrow}>
+          <span className={styles.dot} /> Browse public
+        </div>
+        <h2 className={styles.sectionTitle}>
+          What we&rsquo;re sharing on{" "}
+          <Link to={`/${BROWSE_FULL}`} className={styles.repoLink}>
+            {BROWSE_FULL}
+          </Link>
+          .
+        </h2>
+        <p className={styles.sectionLede}>
+          Only public traces show here. Private ones live behind the same
+          login GitHub already has &mdash; you won&rsquo;t see them unless you
+          can see the repo.
+        </p>
+
+        <div className={styles.statsStrip}>
+          <StatCell
+            label="Public traces"
+            value={data ? compactCount(data.stats.trace_count) : "—"}
+            sub={
+              data && data.stats.last_trace_at
+                ? `latest ${relativeWhen(data.stats.last_trace_at)}`
+                : "loading"
+            }
+          />
+          <StatCell
+            label="PRs covered"
+            value={data ? compactCount(data.stats.pr_count) : "—"}
+            sub="with a trace attached"
+          />
+          <StatCell
+            label="Messages"
+            value={data ? compactCount(data.stats.message_count) : "—"}
+            sub="across all sessions"
+          />
+          <StatCell
+            label="Contributors"
+            value={data ? compactCount(data.stats.contributor_count) : "—"}
+            sub="who shared a trace"
+          />
+        </div>
+
+        <div className={styles.feedGrid}>
+          <div className={styles.traceList}>
+            {traces.length === 0 && (
+              <div className={styles.traceListEmpty}>
+                {data ? "No public traces yet." : "Loading public traces…"}
+              </div>
+            )}
+            {traces.map((t) => (
+              <BrowseRow key={t.short_id} trace={t} />
+            ))}
+            {data && data.stats.trace_count > traces.length && (
+              <Link to={`/${BROWSE_FULL}`} className={styles.traceListMore}>
+                See all {compactCount(data.stats.trace_count)} traces →
+              </Link>
+            )}
+          </div>
+
+          <aside className={styles.feedSide}>
+            <div className={styles.sideCard}>
+              <div className={styles.sideCardHead}>
+                <h4>Top uploaders</h4>
+                <span className={styles.ct}>{BROWSE_FULL}</span>
+              </div>
+              <div className={styles.sideCardBody}>
+                {contributors.length === 0 && (
+                  <div className={styles.sideEmpty}>
+                    {data ? "No uploads yet." : "Loading…"}
+                  </div>
+                )}
+                {contributors.map((c, i) => (
+                  <Link
+                    key={c.login}
+                    to={`/${c.login}`}
+                    className={styles.contribRow}
+                  >
+                    <ContribAvatar login={c.login} idx={i} />
+                    <span className={styles.contribName}>@{c.login}</span>
+                    <span className={styles.contribCount}>
+                      {c.trace_count}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.sideCard}>
+              <div className={styles.sideCardHead}>
+                <h4>Platforms</h4>
+                <span className={styles.ct}>supported</span>
+              </div>
+              <div className={styles.sideCardBody}>
+                <div className={styles.contribRow}>
+                  <span
+                    className={styles.contribAvatar}
+                    style={{ background: "oklch(0.66 0.13 50)" }}
+                  >
+                    cc
+                  </span>
+                  <span className={styles.contribName}>claude-code</span>
+                  <span className={styles.contribCountTag}>active</span>
+                </div>
+                <div
+                  className={`${styles.contribRow} ${styles.contribRowDim}`}
+                >
+                  <span
+                    className={styles.contribAvatar}
+                    style={{ background: "var(--text-faint)" }}
+                  >
+                    cx
+                  </span>
+                  <span className={styles.contribName}>codex</span>
+                  <span className={styles.contribCountTag}>contribute</span>
+                </div>
+                <div
+                  className={`${styles.contribRow} ${styles.contribRowDim}`}
+                >
+                  <span
+                    className={styles.contribAvatar}
+                    style={{ background: "var(--text-faint)" }}
+                  >
+                    cu
+                  </span>
+                  <span className={styles.contribName}>cursor</span>
+                  <span className={styles.contribCountTag}>contribute</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StatCell({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div className={styles.statCell}>
+      <div className={styles.statLabel}>{label}</div>
+      <div className={styles.statValue}>{value}</div>
+      <div className={styles.statSub}>{sub}</div>
+    </div>
+  );
+}
+
+function BrowseRow({ trace }: { trace: TraceSummary }) {
+  const sizeKb = Math.max(1, Math.round(trace.byte_size / 1024));
+  return (
+    <Link
+      className={styles.traceRow}
+      to={
+        trace.repo_full_name && trace.pr_number != null
+          ? `/${trace.repo_full_name}/pull/${trace.pr_number}/${trace.short_id}`
+          : `/t/${trace.short_id}`
+      }
+    >
+      <span className={`${styles.traceIcon} ${styles.iconBash}`}>
+        <IconTerminal />
+      </span>
+      <div className={styles.traceRowBody}>
+        <div className={styles.traceRowTop}>
+          {trace.repo_full_name && (
+            <span className={`${styles.ref} ${styles.refRepo}`}>
+              {trace.repo_full_name}
+            </span>
+          )}
+          {trace.pr_number != null ? (
+            <span className={styles.ref}>#{trace.pr_number}</span>
+          ) : (
+            <span className={`${styles.ref} ${styles.refManual}`}>manual</span>
+          )}
+          <span className={styles.tTitle}>
+            {trace.pr_title ??
+              (trace.pr_number != null
+                ? `PR #${trace.pr_number}`
+                : `Trace ${trace.short_id}`)}
+          </span>
+        </div>
+        <div className={styles.tMeta}>
+          <span className={`${styles.tag} ${styles.tagBash}`}>
+            <span className={styles.tagDot} />
+            {trace.platform}
+          </span>
+          <span className={styles.sep}>·</span>
+          <span>{trace.message_count} msgs</span>
+          <span className={styles.sep}>·</span>
+          <span>{sizeKb} KB</span>
+          <span className={styles.sep}>·</span>
+          <span className={styles.uploader}>
+            <span className={styles.av} />@{trace.owner_login}
+          </span>
+        </div>
+      </div>
+      <div className={styles.traceRowRight}>
+        <span>{relativeWhen(trace.created_at)}</span>
+        <span>{trace.short_id}</span>
+      </div>
+    </Link>
+  );
+}
+
+function ContribAvatar({ login, idx }: { login: string; idx: number }) {
+  const gradients = [
+    "linear-gradient(135deg,oklch(0.62 0.10 235),oklch(0.55 0.13 290))",
+    "linear-gradient(135deg,oklch(0.60 0.10 150),oklch(0.62 0.13 75))",
+    "linear-gradient(135deg,oklch(0.66 0.13 50),oklch(0.55 0.10 290))",
+    "linear-gradient(135deg,oklch(0.58 0.13 290),oklch(0.62 0.13 340))",
+    "linear-gradient(135deg,oklch(0.62 0.13 340),oklch(0.62 0.10 200))",
+  ];
+  return (
+    <span
+      className={styles.contribAvatar}
+      style={{ background: gradients[idx % gradients.length] }}
+    >
+      {login.charAt(0).toLowerCase()}
+    </span>
+  );
+}
+
+/* ---------- inline icons ---------- */
 
 function ArrowRight() {
   return (
@@ -539,6 +1105,54 @@ function ArrowRight() {
     >
       <path d="M5 12h14" />
       <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m5 12 5 5 9-11" />
+    </svg>
+  );
+}
+
+function IconLock() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+function IconUpload() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
   );
 }
@@ -559,7 +1173,7 @@ function IconTerminal() {
   );
 }
 
-function IconShield() {
+function IconPrSvg() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -569,19 +1183,21 @@ function IconShield() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <path d="M13 6h3a2 2 0 0 1 2 2v7" />
+      <line x1="6" y1="9" x2="6" y2="21" />
     </svg>
   );
 }
 
-function IconGlobe() {
+function IconGlobeMini() {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={2.2}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -592,7 +1208,15 @@ function IconGlobe() {
   );
 }
 
-function IconCheck() {
+function IconGithub() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.02c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39s1.97.13 2.89.39c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.68.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
+    </svg>
+  );
+}
+
+function IconChevronDown() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -602,7 +1226,38 @@ function IconCheck() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="m5 12 5 5 9-11" />
+      <path d="M7 10l5 5 5-5" />
+    </svg>
+  );
+}
+
+function IconX() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+function IconLinkedIn() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67h-3.55V9h3.4v1.56h.05c.47-.9 1.63-1.85 3.35-1.85 3.58 0 4.24 2.36 4.24 5.42v6.32zM5.34 7.43A2.06 2.06 0 1 1 5.34 3.3a2.06 2.06 0 0 1 0 4.13zm1.78 13.02H3.56V9h3.56z" />
+    </svg>
+  );
+}
+
+function IconComment() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
