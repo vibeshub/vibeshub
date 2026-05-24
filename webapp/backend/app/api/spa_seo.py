@@ -31,6 +31,18 @@ _TRACE_REPO_RE = re.compile(
 SEO_START = "<!--SEO_HEAD_START-->"
 SEO_END = "<!--SEO_HEAD_END-->"
 
+# Top-level route slugs that look like `/<owner>` but aren't user pages.
+# Kept here so adding a new top-level frontend route is one-line update.
+_RESERVED_OWNERS = frozenset({
+    "upload",
+    "privacy",
+    "home",
+    "t",
+    "api",
+    "sitemap.xml",
+    "robots.txt",
+})
+
 
 def extract_trace_short_id(path: str) -> str | None:
     """Return the trace short_id encoded in `path`, or None if not a trace URL.
