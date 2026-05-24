@@ -1,10 +1,10 @@
 """Server-side meta tag injection for the SPA catch-all.
 
-When a request matches a public trace URL, we swap the default <head>
-metadata block in index.html for trace-specific tags. This is the only
-way to get link previews on Slack/X/LinkedIn/Discord and similar tools,
-since those scrapers don't execute JavaScript and would otherwise see
-only the generic landing-page meta.
+When a request matches a public trace, user, repo, or PR-list URL we
+swap the default <head> metadata block in index.html for route-specific
+tags. This is the only way to get link previews on Slack/X/LinkedIn/
+Discord and similar tools, since those scrapers don't execute JavaScript
+and would otherwise see only the generic landing-page meta.
 
 The contract with the frontend is the SEO_HEAD_START/END comment pair
 in webapp/frontend/index.html — keep both in sync.
