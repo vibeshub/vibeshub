@@ -120,36 +120,28 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
     )
 
 
-async def render_spa_html(
-    template: str,
-    request_path: str,
-    session: AsyncSession,
-    base_url: str,
-) -> str:
-    """Return index.html, optionally with trace-specific meta tags injected.
+async def _try_trace(
+    path: str, session: AsyncSession, base_url: str
+) -> str | None:
+    """Render trace-specific <head> if `path` matches a trace URL.
 
-    Falls through to the unmodified template for:
-      - non-trace URLs
-      - templates without the SEO markers (older builds)
-      - missing or malformed short_ids
-      - DB lookup errors (we never want SEO to take the page down)
+    Returns None when the path isn't a trace URL, the trace isn't found,
+    or the DB raises. Callers fall through to the unmodified template.
     """
-    if SEO_START not in template or SEO_END not in template:
-        return template
-
-    short_id = extract_trace_short_id(request_path)
+    short_id = extract_trace_short_id(path)
     if short_id is None:
-        return template
-
+        return None
     try:
         trace = await _lookup_trace(session, short_id)
     except Exception:
-        return template
-
+        return None
     if trace is None:
-        return template
+        return None
+    return _render_trace_head(trace, base_url)
 
-    replacement = _render_trace_head(trace, base_url)
+
+def _splice(template: str, replacement: str) -> str:
+    """Replace the contents between SEO_HEAD_START/END with `replacement`."""
     start = template.index(SEO_START)
     end = template.index(SEO_END) + len(SEO_END)
     return (
@@ -161,3 +153,32 @@ async def render_spa_html(
         + SEO_END
         + template[end:]
     )
+
+
+# Ordered handlers: each returns a rendered <head> block or None. The
+# first non-None wins. Order matters — longer/more-specific URL shapes
+# must come before greedier ones. Today only _try_trace is registered;
+# user/repo/PR-list handlers land in later tasks.
+_HANDLERS = (_try_trace,)
+
+
+async def render_spa_html(
+    template: str,
+    request_path: str,
+    session: AsyncSession,
+    base_url: str,
+) -> str:
+    """Return index.html, optionally with route-specific meta tags injected.
+
+    Falls through to the unmodified template for:
+      - templates without the SEO markers (older builds)
+      - URLs no handler claims
+      - missing/invalid IDs and DB errors (handlers swallow internally)
+    """
+    if SEO_START not in template or SEO_END not in template:
+        return template
+    for handler in _HANDLERS:
+        replacement = await handler(request_path, session, base_url)
+        if replacement is not None:
+            return _splice(template, replacement)
+    return template
