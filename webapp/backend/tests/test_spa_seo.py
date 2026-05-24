@@ -257,6 +257,19 @@ class TestUserRouteSeo:
         # Default landing title is gone.
         assert "vibeshub · share Claude Code sessions" not in body
 
+    @pytest.mark.asyncio
+    async def test_singular_count_uses_session_not_sessions(self, spa_client):
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(short_id=SHORT_OK, owner_login="solo"))
+            await session.commit()
+
+        resp = spa_client.get("/solo")
+        body = resp.text
+        assert "1 public Claude Code session from @solo" in body
+        # Make sure the plural form didn't sneak in alongside.
+        assert "1 public Claude Code sessions from @solo" not in body
+
     def test_zero_public_traces_falls_through(self, spa_client):
         # No traces seeded → count is 0 → template unchanged.
         resp = spa_client.get("/ghost")
@@ -283,3 +296,19 @@ class TestUserRouteSeo:
         resp = spa_client.get(f"/{slug}")
         assert resp.status_code == 200
         assert "vibeshub · share Claude Code sessions" in resp.text
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("slug", ["sitemap.xml", "robots.txt"])
+    async def test_try_user_returns_none_for_seo_router_slugs(
+        self, spa_client, slug,
+    ):
+        """The seo router serves these before the SPA catch-all, but the
+        reserved-owner guard inside `_try_user` is defense-in-depth — make
+        sure the guard stays effective if router precedence ever changes.
+        """
+        from app.api.spa_seo import _try_user
+
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            result = await _try_user(slug, session, "https://vibeshub.test")
+        assert result is None

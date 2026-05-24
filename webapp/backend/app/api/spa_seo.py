@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from html import escape as html_escape
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.short_id import looks_like_short_id
@@ -74,14 +74,8 @@ async def _lookup_trace(session: AsyncSession, short_id: str) -> Trace | None:
 
 async def _lookup_user_stats(
     session: AsyncSession, owner: str
-) -> tuple[int, str] | None:
-    """Return (public_trace_count, owner) for `owner`, or None if zero.
-
-    The owner is returned as-is so the caller can use the canonical
-    casing it was queried with (URLs are case-sensitive here).
-    """
-    from sqlalchemy import func
-
+) -> int | None:
+    """Return the public trace count for `owner`, or None if zero."""
     result = await session.execute(
         select(func.count(Trace.id))
         .where(Trace.owner_login == owner)
@@ -91,11 +85,51 @@ async def _lookup_user_stats(
     count = result.scalar_one()
     if count == 0:
         return None
-    return count, owner
+    return count
+
+
+def _render_card_head(
+    title: str,
+    description: str,
+    canonical: str,
+    og_type: str,
+    base_url: str,
+) -> str:
+    """Render the full <title>/<meta>/<link> block for an SSR card.
+
+    All four card renderers (trace public branch, user, repo, PR-list)
+    emit the same shape: title, description, canonical link, full OG set
+    (site_name, type, title, description, url, image), and full Twitter
+    card (card, title, description, image). Only the title, description,
+    canonical, and og:type vary by route.
+    """
+    base = base_url.rstrip("/")
+    image = f"{base}/og-default.png"
+
+    t = html_escape(title)
+    d = html_escape(description, quote=True)
+    c = html_escape(canonical, quote=True)
+    i = html_escape(image, quote=True)
+    ot = html_escape(og_type, quote=True)
+
+    return (
+        f"<title>{t}</title>\n"
+        f'    <meta name="description" content="{d}" />\n'
+        f'    <link rel="canonical" href="{c}" />\n'
+        '    <meta property="og:site_name" content="vibeshub" />\n'
+        f'    <meta property="og:type" content="{ot}" />\n'
+        f'    <meta property="og:title" content="{t}" />\n'
+        f'    <meta property="og:description" content="{d}" />\n'
+        f'    <meta property="og:url" content="{c}" />\n'
+        f'    <meta property="og:image" content="{i}" />\n'
+        '    <meta name="twitter:card" content="summary_large_image" />\n'
+        f'    <meta name="twitter:title" content="{t}" />\n'
+        f'    <meta name="twitter:description" content="{d}" />\n'
+        f'    <meta name="twitter:image" content="{i}" />'
+    )
 
 
 def _render_trace_head(trace: Trace, base_url: str) -> str:
-    base = base_url.rstrip("/")
     short_id = trace.short_id
 
     # Private traces: emit nothing beyond noindex. The PR title, repo
@@ -108,6 +142,7 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
             '    <meta name="robots" content="noindex,nofollow" />'
         )
 
+    base = base_url.rstrip("/")
     if trace.repo_full_name and trace.pr_number is not None:
         canonical_path = (
             f"/{trace.repo_full_name}/pull/{trace.pr_number}/{short_id}"
@@ -131,60 +166,17 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
         desc_parts.append(trace.repo_full_name)
     description = " · ".join(desc_parts)
 
-    image = f"{base}/og-default.png"
-
-    t = html_escape(title)
-    d = html_escape(description, quote=True)
-    c = html_escape(canonical, quote=True)
-    i = html_escape(image, quote=True)
-
-    return (
-        f"<title>{t}</title>\n"
-        f'    <meta name="description" content="{d}" />\n'
-        f'    <link rel="canonical" href="{c}" />\n'
-        '    <meta property="og:site_name" content="vibeshub" />\n'
-        '    <meta property="og:type" content="article" />\n'
-        f'    <meta property="og:title" content="{t}" />\n'
-        f'    <meta property="og:description" content="{d}" />\n'
-        f'    <meta property="og:url" content="{c}" />\n'
-        f'    <meta property="og:image" content="{i}" />\n'
-        '    <meta name="twitter:card" content="summary_large_image" />\n'
-        f'    <meta name="twitter:title" content="{t}" />\n'
-        f'    <meta name="twitter:description" content="{d}" />\n'
-        f'    <meta name="twitter:image" content="{i}" />'
-    )
+    return _render_card_head(title, description, canonical, "article", base_url)
 
 
 def _render_user_head(owner: str, count: int, base_url: str) -> str:
-    base = base_url.rstrip("/")
     title = f"@{owner} · vibeshub"
     description = (
         f"{count} public Claude Code session"
         f"{'' if count == 1 else 's'} from @{owner}."
     )
-    canonical = f"{base}/{owner}"
-    image = f"{base}/og-default.png"
-
-    t = html_escape(title)
-    d = html_escape(description, quote=True)
-    c = html_escape(canonical, quote=True)
-    i = html_escape(image, quote=True)
-
-    return (
-        f"<title>{t}</title>\n"
-        f'    <meta name="description" content="{d}" />\n'
-        f'    <link rel="canonical" href="{c}" />\n'
-        '    <meta property="og:site_name" content="vibeshub" />\n'
-        '    <meta property="og:type" content="profile" />\n'
-        f'    <meta property="og:title" content="{t}" />\n'
-        f'    <meta property="og:description" content="{d}" />\n'
-        f'    <meta property="og:url" content="{c}" />\n'
-        f'    <meta property="og:image" content="{i}" />\n'
-        '    <meta name="twitter:card" content="summary_large_image" />\n'
-        f'    <meta name="twitter:title" content="{t}" />\n'
-        f'    <meta name="twitter:description" content="{d}" />\n'
-        f'    <meta name="twitter:image" content="{i}" />'
-    )
+    canonical = f"{base_url.rstrip('/')}/{owner}"
+    return _render_card_head(title, description, canonical, "profile", base_url)
 
 
 async def _try_trace(
@@ -217,13 +209,12 @@ async def _try_user(
     if not owner or owner in _RESERVED_OWNERS:
         return None
     try:
-        stats = await _lookup_user_stats(session, owner)
+        count = await _lookup_user_stats(session, owner)
     except Exception:
         return None
-    if stats is None:
+    if count is None:
         return None
-    count, owner_out = stats
-    return _render_user_head(owner_out, count, base_url)
+    return _render_user_head(owner, count, base_url)
 
 
 def _splice(template: str, replacement: str) -> str:
