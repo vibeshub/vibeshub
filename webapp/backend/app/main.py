@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -81,9 +81,28 @@ def create_app() -> FastAPI:
                 name="spa-assets",
             )
         index_html = (frontend_dist / "index.html").read_text()
+        dist_root = frontend_dist.resolve()
 
-        @app.get("/{full_path:path}", response_class=HTMLResponse)
-        async def _spa(full_path: str, request: Request) -> HTMLResponse:
+        @app.get("/{full_path:path}")
+        async def _spa(full_path: str, request: Request) -> Response:
+            # Vite's `public/` dir lands files at the root of dist/ — e.g.
+            # /favicon.svg, /og-default.png. Serve those as real files
+            # before the SPA catch-all swallows the request and returns
+            # index.html. index.html itself is rendered through the SEO
+            # path below, never as a FileResponse.
+            if full_path:
+                candidate = frontend_dist / full_path
+                try:
+                    resolved = candidate.resolve()
+                    if (
+                        candidate.is_file()
+                        and resolved.is_relative_to(dist_root)
+                        and resolved.name != "index.html"
+                    ):
+                        return FileResponse(resolved)
+                except (OSError, ValueError):
+                    pass
+
             # For known trace, user, repo, or PR-list URL shapes, swap the
             # default <head> meta block for route-specific tags so social
             # scrapers (which don't run JS) get real link previews. Every
