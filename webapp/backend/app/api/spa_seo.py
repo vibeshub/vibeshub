@@ -115,8 +115,10 @@ async def _lookup_pr_stats(
 ) -> tuple[int, str | None] | None:
     """Return (count, pr_title) for the public traces on (repo, PR).
 
-    pr_title is whichever non-null value comes first; if all rows have
-    null titles the second element is None. Returns None when count is 0.
+    pr_title is `MAX(pr_title)` across matching rows — when every row
+    agrees on the title (the common case) this is just that title; if
+    titles disagree it's the lex-greatest non-null; if all rows have
+    NULL it's None. Returns None when count is 0.
     """
     result = await session.execute(
         select(func.count(Trace.id), func.max(Trace.pr_title))
