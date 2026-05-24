@@ -6,18 +6,16 @@ public viewer.
 
 ## Install
 
-Clone the vibeshub repo, register it as a local plugin marketplace, and install:
+Inside Claude Code, add the vibeshub marketplace and install the plugin:
 
-```bash
-git clone https://github.com/Bhavya6187/vibeshub.git ~/code/vibeshub
-
-# Inside Claude Code:
-/plugin marketplace add ~/code/vibeshub
+```
+/plugin marketplace add Bhavya6187/vibeshub
 /plugin install vibeshub@vibeshub
 ```
 
-The marketplace manifest at [.claude-plugin/marketplace.json](../../.claude-plugin/marketplace.json) points
-Claude Code at this directory.
+Claude Code resolves the `<owner>/<repo>` shorthand against GitHub and reads
+[.claude-plugin/marketplace.json](../../.claude-plugin/marketplace.json) from
+the repo — no clone required.
 
 You'll also need:
 - `gh` CLI, installed and authenticated (`gh auth login`) — your GitHub login

@@ -176,8 +176,7 @@ function buildHeatmap(days: GithubContributionDay[]): HeatModel {
  * ------------------------------------------------------------------ */
 
 const INSTALL_COPY = [
-  "git clone https://github.com/Bhavya6187/vibeshub.git",
-  "/plugin marketplace add ./vibeshub",
+  "/plugin marketplace add Bhavya6187/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ].join("\n");
 
@@ -560,7 +559,7 @@ function Onboarding() {
           <li className={styles.step}>
             <span className={styles.stepNum}>1</span>
             <span className={styles.stepText}>
-              <strong>Clone &amp; register</strong> the vibeshub marketplace.
+              <strong>Add the marketplace</strong> with one slash command.
             </span>
           </li>
           <li className={styles.step}>
@@ -595,18 +594,14 @@ function Onboarding() {
           </button>
         </div>
         <pre className={styles.code}>
-          <span className={styles.cmt}># 1 · clone the repo</span>
-          {"\n"}
-          <span className={styles.prompt}>$ </span>git clone{" "}
-          <span className={styles.arg}>
-            https://github.com/Bhavya6187/vibeshub.git
-          </span>
-          {"\n\n"}
           <span className={styles.cmt}>
-            # 2 · register + install in Claude Code
+            # 1 · add the marketplace in Claude Code
           </span>
           {"\n"}
-          /plugin marketplace add <span className={styles.arg}>./vibeshub</span>
+          /plugin marketplace add{" "}
+          <span className={styles.arg}>Bhavya6187/vibeshub</span>
+          {"\n\n"}
+          <span className={styles.cmt}># 2 · install the plugin</span>
           {"\n"}
           /plugin install <span className={styles.arg}>vibeshub@vibeshub</span>
           {"\n\n"}
