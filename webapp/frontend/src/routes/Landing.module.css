@@ -234,58 +234,53 @@
   text-wrap: pretty;
 }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+/* hero install code block - the primary CTA */
+.heroInstall {
+  margin-top: 4px;
+  max-width: 480px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-2, 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05));
 }
-.btn {
-  display: inline-flex;
+.heroInstallHead {
+  display: flex;
   align-items: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 9px;
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid transparent;
-  text-decoration: none;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    transform 80ms ease,
-    color 120ms ease;
-}
-.btn:active {
-  transform: translateY(1px);
-}
-.btn:hover {
-  text-decoration: none;
-}
-.btnPrimary {
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  border-color: var(--text-strong);
-}
-.btnPrimary:hover {
-  background: oklch(from var(--text-strong) calc(l + 0.08) c h);
-  border-color: oklch(from var(--text-strong) calc(l + 0.08) c h);
-  color: var(--bg-elevated);
-}
-.btnGhost {
-  background: var(--bg-elevated);
-  color: var(--text);
-  border-color: var(--border);
-}
-.btnGhost:hover {
+  padding: 8px 12px;
   background: var(--bg-subtle);
-  border-color: var(--border-strong);
-  color: var(--text);
+  border-bottom: 1px solid var(--border-subtle);
 }
-.btn svg {
-  width: 14px;
-  height: 14px;
+.heroInstallLabel {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.heroInstallBody {
+  margin: 0;
+  padding: 14px 16px;
+  font: 500 13px var(--font-mono);
+  line-height: 1.7;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
+.heroInstallNote {
+  padding: 8px 16px 12px;
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+.heroInstallNote code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
 }
 
 /* hero install one-liner pill */

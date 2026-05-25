@@ -157,14 +157,34 @@ export function Landing() {
                 become shareable, replayable traces. Show teammates how you
                 actually shipped it, or revisit your own reasoning weeks later.
               </p>
-              <div className={styles.heroActions}>
-                <a
-                  className={`${styles.btn} ${styles.btnPrimary}`}
-                  href="#install"
-                >
-                  Install now
-                  <ArrowRight />
-                </a>
+              <div className={styles.heroInstall}>
+                <div className={styles.heroInstallHead}>
+                  <span className={styles.heroInstallLabel}>
+                    install in claude code
+                  </span>
+                  <span className={styles.spacer} />
+                  <button
+                    type="button"
+                    className={`${styles.codeCopy} ${
+                      copied === "hero-install" ? styles.copied : ""
+                    }`}
+                    onClick={() => copy("hero-install", INSTALL_COPY)}
+                  >
+                    {copied === "hero-install" ? "copied" : "copy"}
+                  </button>
+                </div>
+                <pre className={styles.heroInstallBody}>
+                  <span className={styles.prompt}>&gt;</span>{" "}
+                  <span className={styles.cmd}>/plugin marketplace add</span>{" "}
+                  <span className={styles.arg}>vibeshub/vibeshub</span>
+                  {"\n"}
+                  <span className={styles.prompt}>&gt;</span>{" "}
+                  <span className={styles.cmd}>/plugin install</span>{" "}
+                  <span className={styles.arg}>vibeshub@vibeshub</span>
+                </pre>
+                <div className={styles.heroInstallNote}>
+                  requires <code>gh auth login</code> on your machine
+                </div>
               </div>
             </div>
 
@@ -868,22 +888,6 @@ function ContribAvatar({ login, idx }: { login: string; idx: number }) {
 }
 
 /* ---------- inline icons ---------- */
-
-function ArrowRight() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
-  );
-}
 
 function IconCheck() {
   return (
