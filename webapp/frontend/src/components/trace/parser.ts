@@ -270,6 +270,7 @@ export function buildSession(records: AnyRec[]): Session {
   // ${msgId}|${blockIdx}|${blockType}.
   const stream: StreamEvent[] = [];
   const emitted = new Set<string>();
+  const emittedPrLinks = new Set<string>();
 
   for (const r of records) {
     if (r.type === "assistant" && r.message) {
@@ -404,6 +405,11 @@ export function buildSession(records: AnyRec[]): Session {
     }
 
     if (r.type === "pr-link") {
+      const key =
+        getStr(r, "prUrl") ??
+        `${getStr(r, "prRepository") ?? ""}#${r.prNumber ?? ""}`;
+      if (emittedPrLinks.has(key)) continue;
+      emittedPrLinks.add(key);
       stream.push({
         kind: "pr_link",
         payload: r as unknown as PrLinkRecord,
