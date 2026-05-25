@@ -10,7 +10,7 @@ public, private repos stay private and are gated on the viewer's GitHub access.
 Inside Claude Code, add the vibeshub marketplace and install the plugin:
 
 ```
-/plugin marketplace add Bhavya6187/vibeshub
+/plugin marketplace add vibeshub/vibeshub
 /plugin install vibeshub@vibeshub
 ```
 

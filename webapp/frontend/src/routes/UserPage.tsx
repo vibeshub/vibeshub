@@ -176,7 +176,7 @@ function buildHeatmap(days: GithubContributionDay[]): HeatModel {
  * ------------------------------------------------------------------ */
 
 const INSTALL_COPY = [
-  "/plugin marketplace add Bhavya6187/vibeshub",
+  "/plugin marketplace add vibeshub/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ].join("\n");
 
@@ -599,7 +599,7 @@ function Onboarding() {
           </span>
           {"\n"}
           /plugin marketplace add{" "}
-          <span className={styles.arg}>Bhavya6187/vibeshub</span>
+          <span className={styles.arg}>vibeshub/vibeshub</span>
           {"\n\n"}
           <span className={styles.cmt}># 2 · install the plugin</span>
           {"\n"}

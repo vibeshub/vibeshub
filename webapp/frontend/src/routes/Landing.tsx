@@ -17,13 +17,13 @@ const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 
 
 // The runnable install commands - single source of truth for both copy buttons.
 const INSTALL_STEPS = [
-  "/plugin marketplace add Bhavya6187/vibeshub",
+  "/plugin marketplace add vibeshub/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
 
 // The vibeshub repo that powers the Browse section.
-const BROWSE_OWNER = "Bhavya6187";
+const BROWSE_OWNER = "vibeshub";
 const BROWSE_REPO = "vibeshub";
 const BROWSE_FULL = `${BROWSE_OWNER}/${BROWSE_REPO}`;
 const BROWSE_MAX = 6;
@@ -584,7 +584,7 @@ export function Landing() {
                   </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>Bhavya6187/vibeshub</span>
+                  <span className={styles.arg}>vibeshub/vibeshub</span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin install</span>{" "}
                   <span className={styles.arg}>vibeshub@vibeshub</span>
@@ -613,7 +613,7 @@ export function Landing() {
               vibeshub · public &amp; private viewer for Claude Code traces
             </div>
             <div className={styles.footerLinks}>
-              <a href="https://github.com/Bhavya6187/vibeshub">GitHub</a>
+              <a href="https://github.com/vibeshub/vibeshub">GitHub</a>
               <a href="#browse">Browse</a>
               <Link to="/privacy">Privacy</Link>
               <a href="#install">Install</a>
