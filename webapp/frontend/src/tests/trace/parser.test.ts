@@ -140,6 +140,60 @@ describe("buildSession", () => {
   });
 });
 
+describe("buildSession with repeated pr-link records", () => {
+  // Claude Code can re-emit the same pr-link record (e.g., on session resume),
+  // and PrCard renders one card per pr_link event. Dedupe by URL so the trace
+  // shows a single "Pull request opened" card per distinct PR.
+  const fixture = [
+    JSON.stringify({
+      type: "pr-link",
+      prNumber: 65,
+      prUrl: "https://github.com/Bhavya6187/vibeshub/pull/65",
+      prRepository: "Bhavya6187/vibeshub",
+      timestamp: "2026-05-17T17:40:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "pr-link",
+      prNumber: 65,
+      prUrl: "https://github.com/Bhavya6187/vibeshub/pull/65",
+      prRepository: "Bhavya6187/vibeshub",
+      timestamp: "2026-05-17T17:41:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "pr-link",
+      prNumber: 66,
+      prUrl: "https://github.com/Bhavya6187/vibeshub/pull/66",
+      prRepository: "Bhavya6187/vibeshub",
+      timestamp: "2026-05-17T17:42:00.000Z",
+      sessionId: "s1",
+    }),
+    JSON.stringify({
+      type: "pr-link",
+      prNumber: 65,
+      prUrl: "https://github.com/Bhavya6187/vibeshub/pull/65",
+      prRepository: "Bhavya6187/vibeshub",
+      timestamp: "2026-05-17T17:43:00.000Z",
+      sessionId: "s1",
+    }),
+  ].join("\n");
+
+  it("emits one pr_link event per distinct PR URL", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const prLinks = session.stream.filter((e) => e.kind === "pr_link");
+    expect(prLinks.length).toBe(2);
+    const urls = prLinks.map(
+      (e) =>
+        (e as { payload: { prUrl: string } }).payload.prUrl,
+    );
+    expect(urls).toEqual([
+      "https://github.com/Bhavya6187/vibeshub/pull/65",
+      "https://github.com/Bhavya6187/vibeshub/pull/66",
+    ]);
+  });
+});
+
 describe("buildSession with array-content user messages (IDE format)", () => {
   // Newer Claude Code (e.g. claude-vscode) wraps the first user prompt in an
   // array of content items, prepending system wrappers like <ide_opened_file>.
