@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mkdirSync } from "node:fs";
 
-const TRACE_URL = "https://vibeshub.ai/Bhavya6187/vibeshub/pull/31/66jxlxariq";
+const TRACE_URL = "https://vibeshub.ai/vibeshub/vibeshub/pull/31/66jxlxariq";
 
 // Viewport sized to frame the trace viewer's content with minimal gutter.
 // Bump these if a capture looks cramped or is cut off awkwardly.
