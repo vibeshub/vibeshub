@@ -76,7 +76,7 @@ async def run_share_pipeline(
         try:
             post_pr_comment(
                 pr_url=options.pr_url,
-                body=build_comment_body(result.trace_url),
+                body=build_comment_body(result.trace_url, options.pr_url),
             )
         except RuntimeError as e:
             return RunResult(
