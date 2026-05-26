@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import re
 import subprocess
 
+_TRACE_SHORT_RE = re.compile(r"^(?P<base>https?://[^/]+)/t/(?P<sid>[A-Za-z0-9_-]+)$")
+_PR_URL_RE = re.compile(
+    r"^https?://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<n>\d+)/?$"
+)
 
-def build_comment_body(trace_url: str) -> str:
+
+def _pr_style_trace_url(trace_url: str, pr_url: str) -> str:
+    """Rewrite a /t/<sid> server URL into the descriptive /<owner>/<repo>/pull/<n>/<sid>
+    form for display in PR comments. Returns trace_url unchanged if either input
+    doesn't match the expected shape."""
+    t = _TRACE_SHORT_RE.match(trace_url)
+    p = _PR_URL_RE.match(pr_url)
+    if not t or not p:
+        return trace_url
+    return f"{t['base']}/{p['owner']}/{p['repo']}/pull/{p['n']}/{t['sid']}"
+
+
+def build_comment_body(trace_url: str, pr_url: str) -> str:
     return (
-        f"Claude Code trace for this PR: {trace_url}\n\n"
+        f"Claude Code trace for this PR: {_pr_style_trace_url(trace_url, pr_url)}\n\n"
         "Uploaded by the PR author."
     )
 

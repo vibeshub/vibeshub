@@ -6,11 +6,31 @@ import pytest
 from vibeshub_client.post_comment import build_comment_body, post_pr_comment
 
 
-def test_build_comment_body_includes_url():
-    body = build_comment_body("https://vibeshub.test/alice/repo/pull/3/abc")
+def test_build_comment_body_rewrites_short_url_to_pr_style():
+    body = build_comment_body(
+        "https://vibeshub.test/t/abc",
+        "https://github.com/alice/repo/pull/3",
+    )
     assert "https://vibeshub.test/alice/repo/pull/3/abc" in body
+    assert "/t/abc" not in body
     assert "Uploaded by the PR author." in body
     assert "public by default" not in body.lower()
+
+
+def test_build_comment_body_passes_through_unrecognized_trace_url():
+    body = build_comment_body(
+        "https://vibeshub.test/something-else",
+        "https://github.com/alice/repo/pull/3",
+    )
+    assert "https://vibeshub.test/something-else" in body
+
+
+def test_build_comment_body_passes_through_unrecognized_pr_url():
+    body = build_comment_body(
+        "https://vibeshub.test/t/abc",
+        "https://example.com/not-a-pr",
+    )
+    assert "https://vibeshub.test/t/abc" in body
 
 
 def test_post_pr_comment_invokes_gh(monkeypatch):
