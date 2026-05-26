@@ -1,7 +1,7 @@
 {
   "name": "vibeshub",
   "description": "Upload Claude Code conversation traces to vibeshub when a PR is created",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "vibeshub",
     "email": "noreply@vibeshub.ai"
