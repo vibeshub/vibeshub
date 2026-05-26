@@ -9,7 +9,7 @@ import type { RepoOverview, TraceSummary } from "../types";
 import styles from "./Landing.module.css";
 
 // Keep in sync with plugins/claude-code/.claude-plugin/plugin.json.
-const PLUGIN_VERSION = "0.3.0";
+const PLUGIN_VERSION = "0.3.1";
 const VERSION_LABEL = `v${PLUGIN_VERSION.split(".").slice(0, 2).join(".")}`;
 
 // What a new user needs on their machine before installing.
