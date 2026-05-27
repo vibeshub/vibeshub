@@ -1,5 +1,7 @@
 # vibeshub
 
+Deployed at [vibeshub.ai](https://vibeshub.ai).
+
 Host Claude Code conversation traces and link them to the pull requests they produced. The Claude Code plugin uploads the session's transcript whenever you create or update a PR (or push the branch), and posts a comment on the PR linking to the trace. Trace visibility mirrors the repository on GitHub: public stays public, private stays private and is gated on the viewer's GitHub access.
 
 ## How it works
