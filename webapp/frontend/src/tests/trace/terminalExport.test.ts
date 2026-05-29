@@ -182,3 +182,39 @@ describe("buildSession reads terminal-meta", () => {
     expect(session.meta.modelLabel).toBeNull();
   });
 });
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const fixturesDir = dirname(fileURLToPath(import.meta.url));
+const REAL = readFileSync(
+  join(fixturesDir, "../fixtures/sample-terminal-export.txt"),
+  "utf-8",
+);
+
+describe("real export round-trips through buildSession", () => {
+  const { jsonl, recovered } = terminalExportToJsonl(REAL);
+  const session = buildSession(parseJsonl(jsonl));
+
+  it("recovers content", () => {
+    expect(recovered).toBe(true);
+    expect(session.meta.userPromptCount).toBeGreaterThan(0);
+    expect(session.meta.toolCallCount).toBeGreaterThan(0);
+    expect(session.meta.assistantTextCount).toBeGreaterThan(0);
+  });
+
+  it("marks provenance and leaves unrecoverable metadata empty", () => {
+    expect(session.meta.sourceFormat).toBe("terminal");
+    expect(session.meta.modelLabel).toBe("Opus 4.8");
+    const t = session.meta.tokens;
+    expect(t.input + t.output + t.cacheRead + t.cacheCreate).toBe(0);
+    expect(session.meta.assistantThinkMs).toBe(0); // no timestamps to derive from
+  });
+
+  it("counts the real tools (Skill, Bash, Update, Write)", () => {
+    expect(Object.keys(session.meta.toolCounts)).toEqual(
+      expect.arrayContaining(["Skill", "Bash", "Update", "Write"]),
+    );
+  });
+});

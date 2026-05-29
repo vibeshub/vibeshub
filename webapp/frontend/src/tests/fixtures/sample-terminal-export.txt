@@ -1,0 +1,1486 @@
+ ▐▛███▜▌   Claude Code v2.1.156
+▝▜█████▛▘  Opus 4.8 · Claude Max
+  ▘▘ ▝▝    ~/git/vibeshub
+
+   Opus 4.8 is here! Now defaults to high effort · /effort xhigh for your hardest tasks
+
+❯ /resume 
+  ⎿  Resume cancelled
+
+❯ '/Users/bhavya/Pictures/Photos                                                
+  Library.photoslibrary/resources/derivatives/2/203269A6-2758-4ED3-8A71-17A880F 
+  5B04A_1_105_c.jpeg''/Users/bhavya/Pictures/Photos                             
+  Library.photoslibrary/resources/derivatives/7/792639D7-DDC4-4882-AF42-16699EB 
+  D9436_1_105_c.jpeg''/Users/bhavya/Pictures/Photos                             
+  Library.photoslibrary/resources/derivatives/3/3DDB2DAD-4F03-4054-A081-B98077C 
+  96FE3_1_105_c.jpeg''/Users/bhavya/Pictures/Photos                             
+  Library.photoslibrary/resources/derivatives/9/9A420FDD-0699-4331-8AF4-5FDFBC6 
+  D25F0_1_105_c.jpeg''/Users/bhavya/Pictures/Photos Library.photoslibrary/resou 
+  rces/derivatives/6/69CCFEB7-AA64-4865-B8B9-34F7FB93F35D_1_105_c.jpeg' here    
+  are some screenshots from using the app on mobile. The width is overflowing   
+  enabling horizontal scroll, and the grids seems too crowded. Even the header  
+  is too crowded. Can you fix this? Feel free to remove some information in the 
+  mobile view if that helps                                                     
+
+⏺ I'll look at the screenshots and pull up the frontend-design skill, since this
+  is a mobile layout fix.
+
+⏺ Skill(frontend-design:frontend-design)
+  ⎿  Successfully loaded skill
+
+  Read 5 files (ctrl+o to expand)
+
+⏺ Now I understand the problems clearly. Let me catalog what the screenshots
+  show:
+
+  1. Header (PageTopbar) — logo + "git for your vibes" tagline wrapping
+  one-word-per-line + "Sign in with GitHub" + theme toggle, all crammed; causes
+  overflow.
+  2. Trace card grid (Explore) — card titles wrapping one-word-per-line, hash
+  codes bleeding behind text, cards extending past the viewport (horizontal
+  scroll).
+  3. Viewer topbar — breadcrumb vibeshub / vibeshub / vibeshub / trace/6e9...
+  and the PROMPTS chip row overflow horizontally.
+  4. Footer text clipped on the left from the same overflow.
+
+  The git status shows you've already started on exactly these files. Let me see
+  the current state before changing anything.
+
+⏺ Bash(git diff --stat && echo "=== DIFF ===" && git diff)
+  ⎿  === DIFF ===
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ The git diff is empty — the working tree currently matches HEAD, so those
+  status entries are stale (likely reverted). Let me confirm current state and
+  look at the Landing page (which has the "git for your vibes" tagline header)
+  plus the CSS files that control the topbar and grid.
+
+⏺ Bash(git status && echo "=== untracked e2e ===" && ls -la webapp/frontend/e2e/
+      2>/dev/null)
+  ⎿  On branch main
+     Your branch is up to date with 'origin/main'.
+     … +8 lines (ctrl+o to expand)
+
+⏺ Bash(cd /Users/bhavya/git/vibeshub/webapp/frontend && echo "=== routes ===" &&
+      ls src/routes && echo "=== components ===" && ls src/components && echo
+      "=== styles ==…)
+  ⎿  === routes ===
+     Home.tsx
+     Landing.module.css
+     … +33 lines (ctrl+o to expand)
+
+⏺ Working tree is clean (the status snapshot was stale; prior changes and the
+  mobile e2e specs were reverted). Starting fresh. Let me read the key files.
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Now let me read the viewer styles, global/token styles, the auth widget, and
+  the repo/user pages plus the prompts nav (screenshot 5).
+
+  Read 4 files (ctrl+o to expand)
+
+⏺ Let me look at the viewer's JumpStrip (the PROMPTS row in screenshot 5), the
+  repo/user pages, and the trace list row to complete the picture.
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ Let me read the JumpStrip and the trace viewer's header/footer markup to
+  finish mapping screenshot 5.
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ Bash(sed -n '1,40p' package.json && echo "=== playwright cfg ===" && cat
+      e2e/playwright.config.ts)
+  ⎿  {
+       "name": "vibeshub-frontend",
+       "version": "0.3.1",
+     … +50 lines (ctrl+o to expand)
+
+⏺ I now have the complete picture. Let me map the root causes before editing:
+
+  Horizontal overflow (screenshots 4, 5): the topbars are display:flex rows
+  whose children (Sign in with GitHub button, breadcrumb links) are
+  white-space:nowrap and don't shrink, plus 32px side padding. On a phone the
+  row is wider than the viewport, and nothing clips it, so the whole page
+  scrolls sideways. There's no global overflow-x guard either.
+
+  Crowded Landing header (screenshot 1): the "git for your vibes" tagline is a
+  flex item with no nowrap, so it gets squeezed and wraps one word per line.
+
+  Crowded Browse grid (screenshot 3): .traceRow is auto 1fr auto; the right
+  column holds the short_id hash with white-space:nowrap, forcing it wide,
+  squeezing the title's 1fr to min-content so it wraps one word per line and the
+  hash visually collides. Landing.module.css has no mobile rule for this row.
+
+  Viewer topbar (screenshot 5): breadcrumb vibeshub / vibeshub / vibeshub / 
+  trace/… + Share text + theme don't fit; footer's long session UUID is nowrap.
+
+  The plan: (1) add a global overflow-x guard, (2) make all three topbars
+  mobile-friendly (smaller padding, shorter auth CTA, icon-only Share, drop the
+  redundant owner crumb + tagline), (3) reflow .traceRow on mobile and drop the
+  redundant hash. Let me make the edits.
+
+⏺ Update(webapp/frontend/src/styles/globals.css)
+  ⎿  Added 3 lines
+       8  body {
+       9    margin: 0;
+      10    padding: 0;
+      11 +  /* Guard against any single wide element forcing a sideways s
+         +croll on mobile.                                               
+      12 +     Set on html only so sticky topbars keep working against th
+         +e viewport. */                                                 
+      13 +  overflow-x: hidden;                                          
+      14    background: var(--bg);
+      15    color: var(--text);
+      16    font-family: var(--font-sans);
+⏺ I should target only html for the overflow guard (putting it on body too can
+  make body a scroll container and interfere with sticky). Let me correct that.
+
+⏺ Update(webapp/frontend/src/styles/globals.css)
+  ⎿  Added 6 lines, removed 3 lines
+       4    box-sizing: border-box;
+       5  }
+       6  
+       7 +/* Guard against any single wide element forcing a sideways scr
+         +oll on mobile.                                                 
+       8 +   Scoped to html (not body) so the sticky topbars keep stickin
+         +g to the viewport. */                                          
+       9 +html {                                                         
+      10 +  overflow-x: hidden;                                          
+      11 +}                                                              
+      12 +                                                               
+      13  html,
+      14  body {
+      15    margin: 0;
+      16    padding: 0;
+      11 -  /* Guard against any single wide element forcing a sideways s
+         -croll on mobile.                                               
+      12 -     Set on html only so sticky topbars keep working against th
+         -e viewport. */                                                 
+      13 -  overflow-x: hidden;                                          
+      17    background: var(--bg);
+      18    color: var(--text);
+      19    font-family: var(--font-sans);
+
+⏺ Now the .auth-extra rule at the end of globals.css, and the AuthWidget change:
+
+⏺ Update(webapp/frontend/src/styles/globals.css)
+  ⎿  Added 8 lines
+      72    background: var(--accent-soft);
+      73    color: var(--text-strong);
+      74  }
+      75 +                                                               
+      76 +/* Trim the "Sign in with GitHub" CTA to "Sign in" on small scr
+         +eens so the                                                    
+      77 +   topbar fits without overflowing. */                         
+      78 +@media (max-width: 640px) {                                    
+      79 +  .auth-extra {                                                
+      80 +    display: none;                                             
+      81 +  }                                                            
+      82 +}                                                              
+
+⏺ Update(webapp/frontend/src/components/AuthWidget.tsx)
+  ⎿  Added 1 line, removed 1 line
+      14          className="iconbtn primary"
+      15          href={`/api/auth/github/login?next=${next}`}
+      16        >
+      17 -        Sign in with GitHub                                    
+      17 +        Sign in<span className="auth-extra"> with GitHub</span>
+      18        </a>
+      19      );
+      20    }
+
+⏺ Now the Landing header tagline (TSX class + CSS hide) plus the Browse-grid
+  mobile reflow:
+
+⏺ Update(webapp/frontend/src/routes/Landing.tsx)
+  ⎿  Added 1 line, removed 1 line
+      108              <span className="brand-mark">v</span>
+      109              <span>vibeshub</span>
+      110            </Link>
+      111 -          <span className="brand-sep">/</span>                
+      111 +          <span className={`brand-sep ${styles.taglineSep}`}>/
+          +</span>                                                       
+      112            <span className={styles.tagline}>git for your vibes<
+           /span>
+      113  
+      114            <div className="topbar-spacer" />
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 33 lines
+      2002    .navLinks {
+      2003      display: none;
+      2004    }
+      2005 +  /* The "git for your vibes" tagline (and its leading slash)
+           + gets squeezed and                                           
+      2006 +     wraps one word per line in the narrow header; drop it on
+           + phones. */                                                  
+      2007 +  .taglineSep,                                               
+      2008 +  .tagline {                                                 
+      2009 +    display: none;                                           
+      2010 +  }                                                          
+      2011 +  /* Browse cards: the date + short-id right column forces th
+           +e title's 1fr track                                          
+      2012 +     to min-content (one word per line). Stack the date below
+           + the body instead                                            
+      2013 +     and drop the redundant short id. */                     
+      2014 +  .traceRow {                                                
+      2015 +    grid-template-columns: auto 1fr;                         
+      2016 +    gap: 12px;                                               
+      2017 +    padding: 14px 16px;                                      
+      2018 +  }                                                          
+      2019 +  .traceRowRight {                                           
+      2020 +    grid-column: 1 / -1;                                     
+      2021 +    flex-direction: row;                                     
+      2022 +    align-items: center;                                     
+      2023 +    gap: 10px;                                               
+      2024 +    margin-left: 40px;                                       
+      2025 +  }                                                          
+      2026 +  .traceRowRight span:last-child {                           
+      2027 +    display: none;                                           
+      2028 +  }                                                          
+      2029 +  /* Tighten the tall section rhythm so the page isn't all sc
+           +rolling on mobile. */                                        
+      2030 +  .feed,                                                     
+      2031 +  .showoff,                                                  
+      2032 +  .privacy {                                                 
+      2033 +    padding: 56px 0;                                         
+      2034 +  }                                                          
+      2035 +  .install {                                                 
+      2036 +    padding: 56px 0 72px;                                    
+      2037 +  }                                                          
+      2038  }
+
+⏺ Now the pages.css mobile block (RepoPage / UserPage topbar + content), and the
+  viewer.css mobile block:
+
+⏺ Update(webapp/frontend/src/styles/pages.css)
+  ⎿  Added 28 lines
+      661      justify-content: space-between;
+      662    }
+      663  }
+      664 +                                                              
+      665 +@media (max-width: 640px) {                                   
+      666 +  /* Tighten the topbar so the brand + breadcrumb + auth CTA f
+          +it one row. */                                                
+      667 +  .page-shell .topbar-inner {                                 
+      668 +    padding: 12px 16px;                                       
+      669 +    gap: 10px;                                                
+      670 +  }                                                           
+      671 +  .page-shell .page {                                         
+      672 +    padding: 32px 16px 96px;                                  
+      673 +  }                                                           
+      674 +  .page-shell .footer {                                       
+      675 +    padding: 0 16px 48px;                                     
+      676 +  }                                                           
+      677 +  .page-shell .entity-title {                                 
+      678 +    font-size: 24px;                                          
+      679 +  }                                                           
+      680 +  /* Let the tab row scroll sideways on its own rather than wi
+          +dening the page. */                                           
+      681 +  .page-shell .tabs {                                         
+      682 +    overflow-x: auto;                                         
+      683 +    scrollbar-width: none;                                    
+      684 +  }                                                           
+      685 +  .page-shell .tabs::-webkit-scrollbar {                      
+      686 +    display: none;                                            
+      687 +  }                                                           
+      688 +  .page-shell .tab {                                          
+      689 +    white-space: nowrap;                                      
+      690 +  }                                                           
+      691 +}                                                             
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 55 lines
+      1889  .vibeshub-viewer .tool-group-body .tool-card {
+      1890    padding-left: 14px;
+      1891  }
+      1892 +                                                             
+      1893 +/* ---------- mobile ---------- */                           
+      1894 +@media (max-width: 640px) {                                  
+      1895 +  /* Topbar: trim padding, drop the redundant owner crumb, tr
+           +uncate the trace                                             
+      1896 +     id, and collapse the Share button to its icon so the row
+           + fits. */                                                    
+      1897 +  .vibeshub-viewer .topbar-inner {                           
+      1898 +    padding: 12px 16px;                                      
+      1899 +    gap: 10px;                                               
+      1900 +  }                                                          
+      1901 +  .vibeshub-viewer .viewer-crumb-owner {                     
+      1902 +    display: none;                                           
+      1903 +  }                                                          
+      1904 +  .vibeshub-viewer .brand-trace {                            
+      1905 +    display: inline-block;                                   
+      1906 +    max-width: 120px;                                        
+      1907 +    overflow: hidden;                                        
+      1908 +    text-overflow: ellipsis;                                 
+      1909 +    white-space: nowrap;                                     
+      1910 +    vertical-align: bottom;                                  
+      1911 +  }                                                          
+      1912 +  .vibeshub-viewer .share-label {                            
+      1913 +    display: none;                                           
+      1914 +  }                                                          
+      1915 +  /* Pull every full-width region in to a 16px gutter. */    
+      1916 +  .vibeshub-viewer .hero {                                   
+      1917 +    padding: 28px 16px 20px;                                 
+      1918 +  }                                                          
+      1919 +  .vibeshub-viewer .hero-title {                             
+      1920 +    font-size: 30px;                                         
+      1921 +  }                                                          
+      1922 +  .vibeshub-viewer .outcome-grid,                            
+      1923 +  .vibeshub-viewer .meta-wrap,                               
+      1924 +  .vibeshub-viewer .tools-chips,                             
+      1925 +  .vibeshub-viewer .timeline-wrap {                          
+      1926 +    padding-left: 16px;                                      
+      1927 +    padding-right: 16px;                                     
+      1928 +  }                                                          
+      1929 +  .vibeshub-viewer .jumpstrip-inner {                        
+      1930 +    padding: 8px 16px;                                       
+      1931 +  }                                                          
+      1932 +  .vibeshub-viewer .thread,                                  
+      1933 +  .vibeshub-viewer .thread-controls {                        
+      1934 +    padding-left: 16px;                                      
+      1935 +    padding-right: 16px;                                     
+      1936 +  }                                                          
+      1937 +  /* Let the long session id wrap instead of forcing the foot
+           +er wider. */                                                 
+      1938 +  .vibeshub-viewer .viewer-footer {                          
+      1939 +    padding: 0 16px;                                         
+      1940 +    white-space: normal;                                     
+      1941 +  }                                                          
+      1942 +  .vibeshub-viewer .viewer-footer span:first-child {         
+      1943 +    min-width: 0;                                            
+      1944 +    overflow-wrap: anywhere;                                 
+      1945 +  }                                                          
+      1946 +}                                                            
+
+⏺ Now the ViewerTopbar TSX — add the viewer-crumb-owner class to the owner crumb
+  and the share-label class to the Share text:
+
+⏺ Update(webapp/frontend/src/components/trace/ViewerTopbar.tsx)
+  ⎿  Added 5 lines, removed 2 lines
+      38          </Link>
+      39          {repoOwner && (
+      40            <>
+      41 -            <span className="brand-sep">/</span>               
+      42 -            <Link className="topbar-link" to={`/${repoOwner}`}>
+      41 +            <span className="brand-sep viewer-crumb-owner">/</s
+         +pan>                                                           
+      42 +            <Link                                              
+      43 +              className="topbar-link viewer-crumb-owner"       
+      44 +              to={`/${repoOwner}`}                             
+      45 +            >                                                  
+      46                {repoOwner}
+      47              </Link>
+      48            </>
+
+⏺ Update(webapp/frontend/src/components/trace/ViewerTopbar.tsx)
+  ⎿  Added 1 line, removed 1 line
+      70              aria-label="Copy share link"
+      71            >
+      72              <IconLink />
+      73 -            <span>Share</span>                                 
+      73 +            <span className="share-label">Share</span>         
+      74            </button>
+      75            <button
+      76              className="iconbtn"
+
+⏺ Now let me verify. First a typecheck, and let me see how the existing e2e test
+  loads a trace (so I can screenshot the viewer at mobile width too):
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Bash(npx tsc -b 2>&1 | head -30; echo "exit: $?")
+  ⎿  exit: 0
+
+⏺ Typecheck passes. Let me check the API endpoint patterns so I can mock them in
+  a mobile-viewport verification spec.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ I have the endpoints. Let me write a mobile-viewport verification spec that
+  mocks the API, asserts there's no horizontal overflow, and captures
+  screenshots of the three views.
+
+⏺ Write(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Wrote 127 lines to webapp/frontend/e2e/mobile-verify.spec.ts
+       1 import { test, expect } from "@playwright/test";
+       2 import { readFileSync } from "node:fs";
+       3 import { fileURLToPath } from "node:url";
+       4 import { dirname, join } from "node:path";
+       5 
+       6 const __dirname = dirname(fileURLToPath(import.meta.url));
+       7 const SAMPLE = readFileSync(
+       8   join(__dirname, "../src/tests/fixtures/sample-session.jsonl"),
+       9   "utf-8",
+      10 );
+     … +131 lines (ctrl+o to expand)
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | tail -40; echo "exit: $?")
+  ⎿      test-results/mobile-verify-landing-has-no-horizontal-overflow-on-m
+     obile/trace.zip
+         Usage:
+     … +38 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ The guard prevents the scrollbar, but scrollWidth reveals real >viewport
+  elements still being clipped — I need to find and fix the actual culprits, not
+  just clip them. My offender detection flagged elements inside the
+  horizontally-scrollable jumpstrip (false positives). Let me improve the
+  diagnostic to ignore elements inside overflow-x:auto/scroll containers and
+  sort by width, then re-run.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)  ⎿  Added 22 lines, removed 11 lines
+       84  async function expectNoHScroll(page: import("@playwright/test"
+           ).Page) {
+       85    const overflow = await page.evaluate(() => {
+       86      const de = document.documentElement;
+       87 -    return {                                                  
+       88 -      scrollW: de.scrollWidth,                                
+       89 -      clientW: de.clientWidth,                                
+       90 -      // Any element wider than the viewport is a culprit.    
+       91 -      widest: Array.from(document.querySelectorAll("body *")) 
+       92 -        .filter((el) => (el as HTMLElement).getBoundingClientR
+          -ect().right > de.clientWidth + 1)                             
+       93 -        .slice(0, 5)                                          
+       94 -        .map((el) => {                                        
+       95 -          const e = el as HTMLElement;                        
+       96 -          return `${e.tagName.toLowerCase()}.${(e.className ||
+          - "").toString().slice(0, 40)} -> ${Math.round(e.getBoundingCli
+          -entRect().right)}`;                                           
+       97 -        }),                                                   
+       87 +    const cw = de.clientWidth;                                
+       88 +    // An element only forces page-level overflow if it (and n
+          +one of its                                                    
+       89 +    // ancestors) lives inside a horizontally scrollable/clipp
+          +ing box.                                                      
+       90 +    const inScroller = (el: Element) => {                     
+       91 +      let p = el.parentElement;                               
+       92 +      while (p && p !== document.body) {                      
+       93 +        const ox = getComputedStyle(p).overflowX;             
+       94 +        if (ox === "auto" || ox === "scroll" || ox === "hidden
+          +" || ox === "clip")                                           
+       95 +          return true;                                        
+       96 +        p = p.parentElement;                                  
+       97 +      }                                                       
+       98 +      return false;                                           
+       99      };
+      100 +    const widest = Array.from(document.querySelectorAll("body 
+          +*"))                                                          
+      101 +      .map((el) => ({ el: el as HTMLElement, r: (el as HTMLEle
+          +ment).getBoundingClientRect() }))                             
+      102 +      .filter((x) => x.r.right > cw + 1 && !inScroller(x.el)) 
+      103 +      .sort((a, b) => b.r.right - a.r.right)                  
+      104 +      .slice(0, 6)                                            
+      105 +      .map(                                                   
+      106 +        (x) =>                                                
+      107 +          `${x.el.tagName.toLowerCase()}.${(x.el.className || 
+          +"").toString().slice(0, 36)} -> ${Math.round(x.r.right)}`,    
+      108 +      );                                                      
+      109 +    return { scrollW: de.scrollWidth, clientW: cw, widest };  
+      110    });
+      111    expect(
+      112      overflow.scrollW,
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "offenders|passed|failed|Received|Expected|✓|✘|›" | head -40;
+      echo "exit: $?")
+  ⎿    ✘  1 e2e/mobile-verify.spec.ts:117:1 › landing has no horizontal ove
+     rflow on mobile (2.0s)
+       ✓  2 e2e/mobile-verify.spec.ts:124:1 › repo page has no horizontal o
+     … +17 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Real offenders now. Trace viewer: the whole .thread/.viewer-body chain is
+  pinned to exactly 760px (--content-width), which means a wide unbreakable
+  descendant is forcing the flex chain to its max-width and min-width:auto is
+  propagating it up. Landing: a 423px element (32px over). Let me find the leaf
+  culprits and inspect the fixture's widest lines.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 13 lines, removed 5 lines
+      100      const widest = Array.from(document.querySelectorAll("body 
+           *"))
+      101        .map((el) => ({ el: el as HTMLElement, r: (el as HTMLEle
+           ment).getBoundingClientRect() }))
+      102        .filter((x) => x.r.right > cw + 1 && !inScroller(x.el))
+      103 -      .sort((a, b) => b.r.right - a.r.right)                  
+      104 -      .slice(0, 6)                                            
+      105 -      .map(                                                   
+      103 +      // Leaf-ish: no element child also overflows (so we repo
+          +rt the source).                                               
+      104 +      .filter(                                                
+      105          (x) =>
+      107 -          `${x.el.tagName.toLowerCase()}.${(x.el.className || 
+          -"").toString().slice(0, 36)} -> ${Math.round(x.r.right)}`,    
+      108 -      );                                                      
+      106 +          !Array.from(x.el.children).some(                    
+      107 +            (c) => c.getBoundingClientRect().right > cw + 1,  
+      108 +          ),                                                  
+      109 +      )                                                       
+      110 +      .sort((a, b) => b.r.width - a.r.width)                  
+      111 +      .slice(0, 6)                                            
+      112 +      .map((x) => {                                           
+      113 +        const ws = getComputedStyle(x.el).whiteSpace;         
+      114 +        const txt = (x.el.textContent || "").trim().slice(0, 4
+          +0);                                                           
+      115 +        return `${x.el.tagName.toLowerCase()}.${(x.el.classNam
+          +e || "").toString().slice(0, 30)} w=${Math.round(x.r.width)} w
+          +s=${ws} "${txt}"`;                                            
+      116 +      });                                                     
+      117      return { scrollW: de.scrollWidth, clientW: cw, widest };
+      118    });
+      119    expect(
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "offenders" | head -10; echo "---- widest fixture lines ----";
+      awk '{ print l…)
+  ⎿      Error: horizontal overflow; offenders: ["h2._sectionTitle_6w61b_82
+      w=403 ws=normal \"Your GitHub permissions. Your secrets, s\"","p. w=4
+     03 ws=normal \"Read the full privacy policy →\"","span._comment_6w61b_
+     … +12 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Now the root causes are clear:
+
+  - Trace viewer: no real wide content — the offenders (turn-sep,
+  thread-controls) are just empty/short elements stretched to 760px. The
+  .viewer-body flex item has the default min-width:auto, so it refuses to shrink
+  below .thread's max-width:760 and overflows the 391px viewport. Fix:
+  min-width:0 on .viewer-body.
+  - Landing: the .redact secret-preview <pre> has long unbreakable tokens
+  (ANTHROPIC_API_KEY=sk-ant-…) under white-space:pre-wrap (which doesn't break
+  long words), inflating the single-column privacy grid to 423px. Fix:
+  overflow-wrap:anywhere so those tokens wrap.
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 3 lines
+      344      display: block;
+      345      padding: 0;
+      346      max-width: none;
+      347 +    /* As a flex item of .vibeshub-viewer it would otherwise r
+          +efuse to shrink                                               
+      348 +       below .thread's max-width (760px) and overflow narrow v
+          +iewports. */                                                  
+      349 +    min-width: 0;                                             
+      350    }
+      351    .vibeshub-viewer .promptrail {
+      352      display: none;
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 3 lines
+      1445  .redact pre {
+      1446    margin: 0;
+      1447    white-space: pre-wrap;
+      1448 +  /* Break long secret tokens (e.g. sk-ant-…) so they don't b
+           +low out the                                                  
+      1449 +     single-column privacy grid on mobile. */                
+      1450 +  overflow-wrap: anywhere;                                   
+      1451    font-family: inherit;
+      1452    font-size: inherit;
+      1453    line-height: inherit;
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "offenders|passed|failed|✓|✘" | head -20; echo "exit: $?")
+  ⎿    ✘  1 e2e/mobile-verify.spec.ts:125:1 › landing has no horizontal ove
+     rflow on mobile (2.0s)
+       ✓  2 e2e/mobile-verify.spec.ts:132:1 › repo page has no horizontal o
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ min-width:0 on viewer-body didn't change it — so the 760 isn't coming from
+  where I thought. Let me check what wraps .vibeshub-viewer (e.g. #root styling)
+  and instrument the actual width chain.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ No #root styling exists. Let me instrument the actual width chain for the
+  trace page to see where 760 originates.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 13 lines
+      141    await expect(
+      142      page.getByRole("heading", { name: "Add startup credential 
+           smoke-check" }),
+      143    ).toBeVisible();
+      144 +  const chain = await page.evaluate(() => {                   
+      145 +    let el: HTMLElement | null = document.querySelector(".thre
+          +ad-controls");                                                
+      146 +    const out: string[] = [];                                 
+      147 +    while (el && el !== document.body) {                      
+      148 +      const cs = getComputedStyle(el);                        
+      149 +      out.push(                                               
+      150 +        `${el.tagName.toLowerCase()}.${(el.className || "").to
+          +String().slice(0, 24)} ow=${el.offsetWidth} disp=${cs.display}
+          + minW=${cs.minWidth} maxW=${cs.maxWidth} ox=${cs.overflowX}`, 
+      151 +      );                                                      
+      152 +      el = el.parentElement;                                  
+      153 +    }                                                         
+      154 +    return out;                                               
+      155 +  });                                                         
+      156 +  console.log("CHAIN:\n" + chain.join("\n"));                 
+      157    await page.screenshot({ path: "/tmp/vh-trace.png", fullPage:
+            true });
+      158    await expectNoHScroll(page);
+      159  });
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify -g
+      "trace viewer" 2>&1 | grep -A12 "CHAIN:"; echo "exit: $?")
+  ⎿  CHAIN:
+     div.thread-controls ow=760 disp=flex minW=0px maxW=760px ox=visible
+     div.viewer-main ow=760 disp=block minW=0px maxW=none ox=visible
+     … +15 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ .vibeshub-viewer is correctly 390px but its child .viewer-body is 760px — and
+  there's a _container_ (CSS-module) flex wrapper I haven't seen. Let me inspect
+  TraceView's wrapper.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Found both mechanisms:
+
+  1. Trace viewer: .vibeshub-viewer is a column flex with default
+  align-items:stretch. When .viewer-body's max-content hits .thread's
+  max-width:760, the flex line cross-size inflates to 760 and stretches every
+  section to 760, overflowing the 390px viewport. Fix: cap the direct children
+  to max-width:100% so the line can't inflate.
+  2. Landing: .redactPath (~/.claude/projects/…jsonl) is nowrap +
+  overflow:hidden but, as a flex child with min-width:auto, its min-content is
+  the full path (~280px), inflating the privacy grid column. Fix: min-width:0 so
+  the ellipsis actually engages.
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 8 lines
+      351    .vibeshub-viewer .promptrail {
+      352      display: none;
+      353    }
+      354 +  /* .vibeshub-viewer is a column flex with align-items: stret
+          +ch. Once a section                                            
+      355 +     (the thread, capped at --content-width 760px) reports a 7
+          +60px max-content,                                             
+      356 +     the flex line cross-size inflates to 760 and stretches ev
+          +ery section to it,                                            
+      357 +     overflowing the viewport. Cap direct children so the line
+          + can't inflate. */                                            
+      358 +  .vibeshub-viewer > * {                                      
+      359 +    min-width: 0;                                             
+      360 +    max-width: 100%;                                          
+      361 +  }                                                           
+      362  }
+      363  
+      364  /* ---------- hero ---------- */
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 3 lines
+      1441    overflow: hidden;
+      1442    text-overflow: ellipsis;
+      1443    white-space: nowrap;
+      1444 +  /* Flex child: without this its min-content is the full pat
+           +h, which inflates                                            
+      1445 +     the single-column privacy grid past the viewport on mobi
+           +le. */                                                       
+      1446 +  min-width: 0;                                              
+      1447  }
+      1448  .redact pre {
+      1449    margin: 0;
+
+⏺ Now let me remove the debug instrumentation from the trace test and re-run all
+  three:
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Removed 13 lines
+      141    await expect(
+      142      page.getByRole("heading", { name: "Add startup credential 
+           smoke-check" }),
+      143    ).toBeVisible();
+      144 -  const chain = await page.evaluate(() => {                   
+      145 -    let el: HTMLElement | null = document.querySelector(".thre
+          -ad-controls");                                                
+      146 -    const out: string[] = [];                                 
+      147 -    while (el && el !== document.body) {                      
+      148 -      const cs = getComputedStyle(el);                        
+      149 -      out.push(                                               
+      150 -        `${el.tagName.toLowerCase()}.${(el.className || "").to
+          -String().slice(0, 24)} ow=${el.offsetWidth} disp=${cs.display}
+          - minW=${cs.minWidth} maxW=${cs.maxWidth} ox=${cs.overflowX}`, 
+      151 -      );                                                      
+      152 -      el = el.parentElement;                                  
+      153 -    }                                                         
+      154 -    return out;                                               
+      155 -  });                                                         
+      156 -  console.log("CHAIN:\n" + chain.join("\n"));                 
+      144    await page.screenshot({ path: "/tmp/vh-trace.png", fullPage:
+            true });
+      145    await expectNoHScroll(page);
+      146  });
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "offenders|passed|failed|✓|✘" | head -20; echo "exit: $?")
+  ⎿    ✘  1 e2e/mobile-verify.spec.ts:125:1 › landing has no horizontal ove
+     rflow on mobile (2.3s)
+       ✓  2 e2e/mobile-verify.spec.ts:132:1 › repo page has no horizontal o
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+⏺ Identical numbers — so neither last fix took effect. For the trace viewer, my
+  .vibeshub-viewer > * rule (specificity 0,1,0) lost to the existing
+  .vibeshub-viewer .viewer-body { max-width: none } (0,2,0). The correct fix is
+  to cap the elements that actually carry max-width: var(--content-width) (the
+  thread/controls/footer) to 100% on mobile — that removes the 760px max-content
+  that inflates the flex line. For Landing, my redactPath guess was wrong; let
+  me also upgrade the diagnostic to pinpoint true overflow sources (scrollWidth 
+  > clientWidth).
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 9 lines, removed 6 lines
+      351    .vibeshub-viewer .promptrail {
+      352      display: none;
+      353    }
+      354 -  /* .vibeshub-viewer is a column flex with align-items: stret
+          -ch. Once a section                                            
+      355 -     (the thread, capped at --content-width 760px) reports a 7
+          -60px max-content,                                             
+      356 -     the flex line cross-size inflates to 760 and stretches ev
+          -ery section to it,                                            
+      357 -     overflowing the viewport. Cap direct children so the line
+          - can't inflate. */                                            
+      358 -  .vibeshub-viewer > * {                                      
+      359 -    min-width: 0;                                             
+      354 +  /* .vibeshub-viewer is a column flex with align-items: stret
+          +ch. The thread                                                
+      355 +     (and its sibling rows) carry max-width: var(--content-wid
+          +th) = 760px; a long                                           
+      356 +     prompt line gives them a 760px max-content, which inflate
+          +s the flex line                                               
+      357 +     cross-size and stretches every section to 760px, overflow
+          +ing the viewport.                                             
+      358 +     On mobile the single column should just be full width, so
+          + cap at 100%. */                                              
+      359 +  .vibeshub-viewer .thread,                                   
+      360 +  .vibeshub-viewer .thread-controls,                          
+      361 +  .vibeshub-viewer .viewer-footer,                            
+      362 +  .vibeshub-viewer .empty-state {                             
+      363      max-width: 100%;
+      364    }
+      365  }
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 12 lines, removed 1 line
+      114          const txt = (x.el.textContent || "").trim().slice(0, 4
+           0);
+      115          return `${x.el.tagName.toLowerCase()}.${(x.el.classNam
+           e || "").toString().slice(0, 30)} w=${Math.round(x.r.width)} w
+           s=${ws} "${txt}"`;
+      116        });
+      117 -    return { scrollW: de.scrollWidth, clientW: cw, widest };  
+      117 +    // True sources: elements whose own content overflows them
+          + (and not inside                                              
+      118 +    // a scroller) — these set the page width, vs children tha
+          +t merely fill it.                                             
+      119 +    const sources = Array.from(document.querySelectorAll("body
+          + *"))                                                         
+      120 +      .map((el) => el as HTMLElement)                         
+      121 +      .filter((el) => el.scrollWidth > el.clientWidth + 1 && !
+          +inScroller(el))                                               
+      122 +      .sort((a, b) => b.scrollWidth - a.scrollWidth)          
+      123 +      .slice(0, 6)                                            
+      124 +      .map(                                                   
+      125 +        (el) =>                                               
+      126 +          `${el.tagName.toLowerCase()}.${(el.className || "").
+          +toString().slice(0, 30)} sw=${el.scrollWidth} cw=${el.clientWi
+          +dth} ws=${getComputedStyle(el).whiteSpace}`,                  
+      127 +      );                                                      
+      128 +    return { scrollW: de.scrollWidth, clientW: cw, widest, sou
+          +rces };                                                       
+      129    });
+      130    expect(
+      131      overflow.scrollW,
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 1 line, removed 1 line
+      129    });
+      130    expect(
+      131      overflow.scrollW,
+      132 -    `horizontal overflow; offenders: ${JSON.stringify(overflow
+          -.widest)}`,                                                   
+      132 +    `horizontal overflow; sources: ${JSON.stringify(overflow.s
+          +ources)}; offenders: ${JSON.stringify(overflow.widest)}`,     
+      133    ).toBeLessThanOrEqual(overflow.clientW + 1);
+      134  }
+      135  
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "sources|passed|failed|✓|✘" | head -20; echo "exit: $?")
+  ⎿    ✘  1 e2e/mobile-verify.spec.ts:136:1 › landing has no horizontal ove
+     rflow on mobile (3.3s)
+       ✓  2 e2e/mobile-verify.spec.ts:143:1 › repo page has no horizontal o
+     … +25 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Now I understand both deeply:
+
+  - Trace: max-width:100% is a percentage — it's ignored during intrinsic
+  (max-content) sizing, so the flex line still inflates to 760. I need a
+  definite cross-size. Setting width:100% on the direct children (which resolves
+  against the definite 390px .vibeshub-viewer) pins each child to 390 and stops
+  the line inflation. The wide code blocks already have their own
+  overflow-x:auto to scroll internally.
+  - Landing: real source is the .privacy section (421px); my redact guesses
+  haven't moved it. Let me apply the trace fix and instrument the privacy grid
+  to find the true driver.
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 10 lines, removed 10 lines
+      351    .vibeshub-viewer .promptrail {
+      352      display: none;
+      353    }
+      354 -  /* .vibeshub-viewer is a column flex with align-items: stret
+          -ch. The thread                                                
+      355 -     (and its sibling rows) carry max-width: var(--content-wid
+          -th) = 760px; a long                                           
+      356 -     prompt line gives them a 760px max-content, which inflate
+          -s the flex line                                               
+      357 -     cross-size and stretches every section to 760px, overflow
+          -ing the viewport.                                             
+      358 -     On mobile the single column should just be full width, so
+          - cap at 100%. */                                              
+      359 -  .vibeshub-viewer .thread,                                   
+      360 -  .vibeshub-viewer .thread-controls,                          
+      361 -  .vibeshub-viewer .viewer-footer,                            
+      362 -  .vibeshub-viewer .empty-state {                             
+      363 -    max-width: 100%;                                          
+      354 +  /* .vibeshub-viewer is a column flex with align-items: stret
+          +ch. The thread (and                                           
+      355 +     its siblings) carry max-width: var(--content-width) = 760
+          +px and hold wide                                              
+      356 +     content (long prompt lines, code blocks), so their max-co
+          +ntent is 760px.                                               
+      357 +     That inflates the flex line cross-size and stretches ever
+          +y section to 760px,                                           
+      358 +     overflowing the viewport. A percentage max-width is ignor
+          +ed during intrinsic                                           
+      359 +     sizing, so pin each direct child to a definite 100% (of t
+          +he 390px viewer)                                              
+      360 +     instead — wide content still scrolls inside its own overf
+          +low-x:auto box. */                                            
+      361 +  .vibeshub-viewer > * {                                      
+      362 +    width: 100%;                                              
+      363 +    min-width: 0;                                             
+      364    }
+      365  }
+      366  
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 14 lines
+      147    await expectNoHScroll(page);
+      148  });
+      149  
+      150 +test("DEBUG privacy grid", async ({ page }) => {              
+      151 +  await page.goto("/");                                       
+      152 +  await page.waitForLoadState("networkidle");                 
+      153 +  const dump = await page.evaluate(() => {                    
+      154 +    const grid = document.querySelector('[class*="privacyGrid"
+          +]');                                                          
+      155 +    if (!grid) return ["no grid"];                            
+      156 +    return Array.from(grid.children).map((c) => {             
+      157 +      const e = c as HTMLElement;                             
+      158 +      return `${e.tagName}.${(e.className || "").toString().sl
+          +ice(0, 22)} ow=${e.offsetWidth} sw=${e.scrollWidth}`;         
+      159 +    });                                                       
+      160 +  });                                                         
+      161 +  console.log("PRIVACY:\n" + dump.join("\n"));                
+      162 +});                                                           
+      163 +                                                              
+      164  test("trace viewer has no horizontal overflow on mobile", asyn
+           c ({ page }) => {
+      165    await page.goto("/alice/repo/pull/3/abc1234567");
+      166    await expect(
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify 2>&1
+      | grep -E "PRIVACY|Table|TR|DIV|PRE|sw=|sources|✓|✘" | head -25; echo
+      "exit: $?")
+  ⎿    ✘  1 e2e/mobile-verify.spec.ts:136:1 › landing has no horizontal ove
+     rflow on mobile (2.3s)
+       ✓  2 e2e/mobile-verify.spec.ts:143:1 › repo page has no horizontal o
+     … +28 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Good progress: the trace viewer dropped 760→648. Remaining trace source is the
+  outcome panel — .outcome-path file paths (white-space:nowrap, 555px) aren't
+  shrinking, plus a long inline code token. For Landing, both privacy grid items
+  measure 401 with no internal overflow, so it's a grid min-content blowout.
+  Let me measure the true min-content of each to pinpoint it, and dump the
+  outcome-path ancestor chain.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 19 lines, removed 2 lines
+      151    await page.goto("/");
+      152    await page.waitForLoadState("networkidle");
+      153    const dump = await page.evaluate(() => {
+      154 +    const minContent = (e: HTMLElement) => {                  
+      155 +      const prev = e.style.width;                             
+      156 +      e.style.width = "1px";                                  
+      157 +      const sw = e.scrollWidth;                               
+      158 +      e.style.width = prev;                                   
+      159 +      return sw;                                              
+      160 +    };                                                        
+      161      const grid = document.querySelector('[class*="privacyGrid"
+           ]');
+      162      if (!grid) return ["no grid"];
+      156 -    return Array.from(grid.children).map((c) => {             
+      163 +    const out: string[] = [];                                 
+      164 +    Array.from(grid.children).forEach((c) => {                
+      165        const e = c as HTMLElement;
+      158 -      return `${e.tagName}.${(e.className || "").toString().sl
+          -ice(0, 22)} ow=${e.offsetWidth} sw=${e.scrollWidth}`;         
+      166 +      out.push(`ITEM ${e.tagName}.${(e.className || "").toStri
+          +ng().slice(0, 18)} ow=${e.offsetWidth} minc=${minContent(e)}`)
+          +;                                                             
+      167 +      // Find the descendant with the largest min-content.    
+      168 +      Array.from(e.querySelectorAll("*"))                     
+      169 +        .map((d) => ({ d: d as HTMLElement, mc: minContent(d a
+          +s HTMLElement) }))                                            
+      170 +        .sort((a, b) => b.mc - a.mc)                          
+      171 +        .slice(0, 2)                                          
+      172 +        .forEach((x) =>                                       
+      173 +          out.push(`   ${x.d.tagName}.${(x.d.className || "").
+          +toString().slice(0, 18)} minc=${x.mc} ws=${getComputedStyle(x.
+          +d).whiteSpace} "${(x.d.textContent || "").trim().slice(0, 24)}
+          +"`),                                                          
+      174 +        );                                                    
+      175      });
+      176 +    return out;                                               
+      177    });
+      178    console.log("PRIVACY:\n" + dump.join("\n"));
+      179  });
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify -g
+      "DEBUG privacy" 2>&1 | grep -A14 "PRIVACY:"; echo "exit: $?")
+  ⎿  PRIVACY:
+     ITEM DIV. ow=401 minc=139
+        H2._sectionTitle_1g3d minc=139 ws=normal "Your GitHub permissions."
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ Both privacy grid items have tiny min-content (139, 90) — so privacy can
+  shrink and is not the real driver. The installCard/shareCard in sources have
+  overflow:hidden (they clip, don't push the page). My sources detector wrongly
+  includes self-clipping elements. Let me require the element's own overflow-x
+  to be visible to find the genuine driver.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 6 lines, removed 1 line
+      118      // a scroller) — these set the page width, vs children tha
+           t merely fill it.
+      119      const sources = Array.from(document.querySelectorAll("body
+            *"))
+      120        .map((el) => el as HTMLElement)
+      121 -      .filter((el) => el.scrollWidth > el.clientWidth + 1 && !
+          -inScroller(el))                                               
+      121 +      .filter(                                                
+      122 +        (el) =>                                               
+      123 +          el.scrollWidth > el.clientWidth + 1 &&              
+      124 +          getComputedStyle(el).overflowX === "visible" &&     
+      125 +          !inScroller(el),                                    
+      126 +      )                                                       
+      127        .sort((a, b) => b.scrollWidth - a.scrollWidth)
+      128        .slice(0, 6)
+      129        .map(
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify -g
+      "horizontal overflow" 2>&1 | grep -E "sources" | head; echo "exit: $?")
+  ⎿      Error: horizontal overflow; sources: ["div. sw=421 cw=390 ws=norma
+     l","div.page-shell _shell_1g3d9_4 sw=421 cw=390 ws=normal","main. sw=4
+     21 cw=390 ws=normal","section._privacy_1g3d9_1352 sw=421 cw=390 ws=nor
+     … +21 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Deepest real Landing source is .privacyGrid itself (421px). Both pages have a
+  layout-sizing blowout I can't pin by reasoning. Let me do a whole-page
+  min-content scan to find the genuinely unbreakable elements on both pages.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Added 13 lines, removed 22 lines
+      152    await expectNoHScroll(page);
+      153  });
+      154  
+      155 -test("DEBUG privacy grid", async ({ page }) => {              
+      155 +test("DEBUG min-content scan", async ({ page }) => {          
+      156    await page.goto("/");
+      157    await page.waitForLoadState("networkidle");
+      158    const dump = await page.evaluate(() => {
+      159 -    const minContent = (e: HTMLElement) => {                  
+      160 -      const prev = e.style.width;                             
+      161 -      e.style.width = "1px";                                  
+      162 -      const sw = e.scrollWidth;                               
+      163 -      e.style.width = prev;                                   
+      164 -      return sw;                                              
+      165 -    };                                                        
+      166 -    const grid = document.querySelector('[class*="privacyGrid"
+          -]');                                                          
+      167 -    if (!grid) return ["no grid"];                            
+      159 +    const cw = document.documentElement.clientWidth;          
+      160      const out: string[] = [];
+      169 -    Array.from(grid.children).forEach((c) => {                
+      161 +    Array.from(document.querySelectorAll("body *")).forEach((c
+          +) => {                                                        
+      162        const e = c as HTMLElement;
+      171 -      out.push(`ITEM ${e.tagName}.${(e.className || "").toStri
+          -ng().slice(0, 18)} ow=${e.offsetWidth} minc=${minContent(e)}`)
+          -;                                                             
+      172 -      // Find the descendant with the largest min-content.    
+      173 -      Array.from(e.querySelectorAll("*"))                     
+      174 -        .map((d) => ({ d: d as HTMLElement, mc: minContent(d a
+          -s HTMLElement) }))                                            
+      175 -        .sort((a, b) => b.mc - a.mc)                          
+      176 -        .slice(0, 2)                                          
+      177 -        .forEach((x) =>                                       
+      178 -          out.push(`   ${x.d.tagName}.${(x.d.className || "").
+          -toString().slice(0, 18)} minc=${x.mc} ws=${getComputedStyle(x.
+          -d).whiteSpace} "${(x.d.textContent || "").trim().slice(0, 24)}
+          -"`),                                                          
+      179 -        );                                                    
+      163 +      // Leaf-ish only, to find true unbreakable sources.     
+      164 +      if (e.children.length > 0) return;                      
+      165 +      const r = e.getBoundingClientRect();                    
+      166 +      if (r.width <= cw - 30) return;                         
+      167 +      const cs = getComputedStyle(e);                         
+      168 +      out.push(                                               
+      169 +        `${e.tagName}.${(e.className || "").toString().slice(0
+          +, 20)} w=${Math.round(r.width)} ws=${cs.whiteSpace} owr=${cs.o
+          +verflowWrap} "${(e.textContent || "").trim().slice(0, 30)}"`, 
+      170 +      );                                                      
+      171      });
+      181 -    return out;                                               
+      172 +    return out.length ? out : ["none"];                       
+      173    });
+      183 -  console.log("PRIVACY:\n" + dump.join("\n"));                
+      174 +  console.log("SCAN:\n" + dump.join("\n"));                   
+      175  });
+      176  
+      177  test("trace viewer has no horizontal overflow on mobile", asyn
+           c ({ page }) => {
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify -g
+      "DEBUG min-content" 2>&1 | grep -A30 "SCAN:" | head -35; echo "exit: $?")
+  ⎿  SCAN:
+     P._heroSub_1g3d9_228 w=369 ws=normal owr=normal "Your Claude Code sess
+     ions, inc"
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+⏺ The leaf scan shows no genuine unbreakable driver on Landing (the wide
+  commentLine spans are inside the install code block's overflow-x:auto
+  scroller; the rest just fill their box at ws:normal). Yet .privacyGrid reports
+  a 421px scroll width with 390px client width. Let me check the grid's
+  computed column template directly — I suspect the single-column media rule
+  isn't taking.
+
+⏺ Bash(cat > /tmp/probe.spec.ts <<'EOF'
+      import { test } from "@playwright/test";…)
+  ⎿  PROBE {
+       "gtc": "401.391px",
+       "w": 390,
+     … +11 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+⏺ The smoking gun: .privacyGrid computes grid-template-columns: 401.391px — the
+  single 1fr track is sizing to 401px inside a 350px content box. This is the
+  classic 1fr min-content blowout (1fr = minmax(auto,1fr), and the auto floor
+  refuses to shrink). The fix is minmax(0, 1fr). Let me clean up the probe,
+  apply minmax(0,1fr) to the collapsing Landing grids, and fix the trace
+  viewer's outcome panel the same way plus min-width:0 on its flex columns.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Confirmed: it's the classic 1fr = minmax(auto,1fr) blowout. Let me remove the
+  probe and convert the collapsing grids to minmax(0,1fr), fix the trace
+  viewer's outcome panel the same way, and let long inline code/PR links wrap.
+
+⏺ Bash(rm -f e2e/probe.spec.ts; echo "removed probe")
+  ⎿  removed probe
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 3 lines, removed 1 line
+      1925     ==========================================================
+            ====== */
+      1926  @media (max-width: 980px) {
+      1927    .heroGrid {
+      1928 -    grid-template-columns: 1fr;                              
+      1928 +    /* minmax(0,…) instead of 1fr so a wide child (code block
+           +, long line)                                                 
+      1929 +       can't push the track past the viewport. */            
+      1930 +    grid-template-columns: minmax(0, 1fr);                   
+      1931      gap: 48px;
+      1932    }
+      1933    .heroVisual {
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 5 lines, removed 5 lines
+      1967      gap: 8px;
+      1968    }
+      1969    .feedGrid {
+      1970 -    grid-template-columns: 1fr;                              
+      1970 +    grid-template-columns: minmax(0, 1fr);                   
+      1971    }
+      1972    .statsStrip {
+      1973 -    grid-template-columns: repeat(2, 1fr);                   
+      1973 +    grid-template-columns: repeat(2, minmax(0, 1fr));        
+      1974    }
+      1975    .privacyGrid {
+      1976 -    grid-template-columns: 1fr;                              
+      1976 +    grid-template-columns: minmax(0, 1fr);                   
+      1977      gap: 32px;
+      1978    }
+      1979    .showoffGrid {
+      1980 -    grid-template-columns: 1fr;                              
+      1980 +    grid-template-columns: minmax(0, 1fr);                   
+      1981      gap: 32px;
+      1982    }
+      1983    .installCard {
+      1984 -    grid-template-columns: 1fr;                              
+      1984 +    grid-template-columns: minmax(0, 1fr);                   
+      1985      padding: 28px;
+      1986    }
+      1987    .hideSm {
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 1 line, removed 1 line
+      2002      font-size: 24px;
+      2003    }
+      2004    .statsStrip {
+      2005 -    grid-template-columns: 1fr 1fr;                          
+      2005 +    grid-template-columns: repeat(2, minmax(0, 1fr));        
+      2006    }
+      2007    .shareChannels {
+      2008      grid-template-columns: 1fr 1fr;
+
+⏺ Now the prLink wrap (screenshot 2's cut-off URL) and the trace viewer outcome
+  panel:
+
+⏺ Update(webapp/frontend/src/routes/Landing.module.css)
+  ⎿  Added 3 lines
+      1605  .prLink {
+      1606    display: inline-flex;
+      1607    align-items: center;
+      1608 +  flex-wrap: wrap;                                           
+      1609    gap: 4px;
+      1610    padding: 10px 14px;
+      1611    background: var(--bg-subtle);
+     ...
+      1614    font: 500 13px var(--font-mono);
+      1615    color: var(--text-strong);
+      1616    text-decoration: none;
+      1617 +  /* Let the long share URL wrap instead of running off the c
+           +ard on mobile. */                                            
+      1618 +  overflow-wrap: anywhere;                                   
+      1619    align-self: flex-start;
+      1620    transition:
+      1621      background 120ms ease,
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 9 lines, removed 1 line
+      507  }
+      508  @media (max-width: 720px) {
+      509    .vibeshub-viewer .outcome-grid {
+      510 -    grid-template-columns: 1fr;                               
+      510 +    /* minmax(0,…) so a long file path in a card can't widen t
+          +he track. */                                                  
+      511 +    grid-template-columns: minmax(0, 1fr);                    
+      512    }
+      513 +  /* Flex columns need min-width:0 so the nowrap file paths in
+          +side actually                                                 
+      514 +     ellipsis instead of forcing the card wide. */            
+      515 +  .vibeshub-viewer .outcome-card,                             
+      516 +  .vibeshub-viewer .outcome-files,                            
+      517 +  .vibeshub-viewer .outcome-file {                            
+      518 +    min-width: 0;                                             
+      519 +  }                                                           
+      520  }
+      521  .vibeshub-viewer .outcome-card {
+      522    background: var(--bg-elevated);
+
+⏺ Now add long inline-code wrapping to the viewer mobile block, then re-run:
+
+⏺ Update(webapp/frontend/src/styles/viewer.css)
+  ⎿  Added 5 lines
+      1956      padding-left: 16px;
+      1957      padding-right: 16px;
+      1958    }
+      1959 +  /* Long inline code tokens (paths, dotted identifiers) have
+           + no break points                                             
+      1960 +     by default; let them break so they don't poke past the v
+           +iewport. */                                                  
+      1961 +  .vibeshub-viewer .assistant-text-body code {               
+      1962 +    overflow-wrap: anywhere;                                 
+      1963 +  }                                                          
+      1964    /* Let the long session id wrap instead of forcing the foot
+            er wider. */
+      1965    .vibeshub-viewer .viewer-footer {
+      1966      padding: 0 16px;
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts mobile-verify -g
+      "horizontal overflow" 2>&1 | grep -E "sources|passed|failed|✓|✘" | head;
+      echo "exit: $?")
+  ⎿    ✓  1 e2e/mobile-verify.spec.ts:141:1 › landing has no horizontal ove
+     rflow on mobile (2.2s)
+       ✓  2 e2e/mobile-verify.spec.ts:148:1 › repo page has no horizontal o
+     … +5 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ All three pass — no horizontal overflow at 390px. Let me view the screenshots
+  to confirm the visual crowding is actually fixed (not just overflow-clipped).
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Landing and repo pages look clean — headers are uncrowded, the browse/trace
+  cards wrap titles to two lines with the date beneath, no overflow. The trace
+  screenshot is full-page (very tall, hard to read the header). Let me grab a
+  viewport-only shot of each page's top to confirm the headers specifically.
+
+⏺ Bash(cat > e2e/_topshot.spec.ts <<'EOF'
+      import { test } from "@playwright/test";…)
+  ⎿    1 passed (2.2s)
+     done
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The trace viewer header is now clean: vibeshub / repo / trace/… (redundant
+  owner crumb dropped, trace id ellipsized), icon-only Share + theme, and the
+  PROMPTS strip scrolls within itself. No overflow. All three views are fixed.
+
+  Let me remove the throwaway DEBUG test, then run the full test suite + build
+  to confirm no regressions.
+
+⏺ Update(webapp/frontend/e2e/mobile-verify.spec.ts)
+  ⎿  Removed 22 lines
+      152    await expectNoHScroll(page);
+      153  });
+      154  
+      155 -test("DEBUG min-content scan", async ({ page }) => {          
+      156 -  await page.goto("/");                                       
+      157 -  await page.waitForLoadState("networkidle");                 
+      158 -  const dump = await page.evaluate(() => {                    
+      159 -    const cw = document.documentElement.clientWidth;          
+      160 -    const out: string[] = [];                                 
+      161 -    Array.from(document.querySelectorAll("body *")).forEach((c
+          -) => {                                                        
+      162 -      const e = c as HTMLElement;                             
+      163 -      // Leaf-ish only, to find true unbreakable sources.     
+      164 -      if (e.children.length > 0) return;                      
+      165 -      const r = e.getBoundingClientRect();                    
+      166 -      if (r.width <= cw - 30) return;                         
+      167 -      const cs = getComputedStyle(e);                         
+      168 -      out.push(                                               
+      169 -        `${e.tagName}.${(e.className || "").toString().slice(0
+          -, 20)} w=${Math.round(r.width)} ws=${cs.whiteSpace} owr=${cs.o
+          -verflowWrap} "${(e.textContent || "").trim().slice(0, 30)}"`, 
+      170 -      );                                                      
+      171 -    });                                                       
+      172 -    return out.length ? out : ["none"];                       
+      173 -  });                                                         
+      174 -  console.log("SCAN:\n" + dump.join("\n"));                   
+      175 -});                                                           
+      176 -                                                              
+      155  test("trace viewer has no horizontal overflow on mobile", asyn
+           c ({ page }) => {
+      156    await page.goto("/alice/repo/pull/3/abc1234567");
+      157    await expect(
+
+⏺ Bash(npm test 2>&1 | tail -20; echo "=== TYPECHECK+BUILD ==="; npm run build
+      2>&1 | tail -15; echo "build exit: $?")
+  ⎿   ❯ Object.getElementError node_modules/@testing-library/dom/dist/confi
+     g.js:37:19
+      ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+     … +34 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ Build passes. One unit test failed — AuthWidget.test.tsx queries the sign-in
+  link by name. My split into Sign in<span> with GitHub</span> shouldn't change
+  the accessible name, so let me check what it actually asserts.
+  Read 1 file (ctrl+o to expand)
+
+⏺ The accessible-name computation across the split text node + span drops the
+  inter-word space, breaking the query. The clean fix is an explicit aria-label
+  on the link — that keeps the full "Sign in with GitHub" name for screen
+  readers (even when the visible text is just "Sign in" on mobile) and satisfies
+  the test.
+
+⏺ Update(webapp/frontend/src/components/AuthWidget.tsx)
+  ⎿  Added 1 line
+      13        <a
+      14          className="iconbtn primary"
+      15          href={`/api/auth/github/login?next=${next}`}
+      16 +        aria-label="Sign in with GitHub"                       
+      17        >
+      18          Sign in<span className="auth-extra"> with GitHub</span>
+      19        </a>
+
+⏺ Bash(npm test 2>&1 | tail -6; echo "=== e2e (existing + mobile) ==="; npx
+      playwright test --config=e2e/playwright.config.ts 2>&1 | tail -8)
+  ⎿   Test Files  20 passed (20)
+           Tests  168 passed (168)
+        Start at  16:13:54
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+⏺ 3 e2e failures. Let me see the actual errors — need to determine whether
+  they're caused by my changes or pre-existing.
+
+⏺ Bash(npx playwright test --config=e2e/playwright.config.ts auth.spec.ts
+      viewer.spec.ts 2>&1 | grep -E "Error|expect|locator|getBy|Timed
+      out|waiting for|›|passed|fail…)
+  ⎿  [WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+     [WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+     [WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+     … +44 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ These look like they may be pre-existing/environment failures (note
+  ECONNREFUSED 127.0.0.1:8000 — no backend; and the failures are @octocat auth
+  flow + .tool-head not rendering, none of which my mobile CSS touches at the
+  1280px default e2e viewport). Let me confirm by stashing my changes and
+  running the same tests on clean main.
+
+⏺ Bash(git stash push -m "mobile-fixes" -- webapp/frontend/src 2>&1 | tail -2
+      echo "=== running on clean main ==="…)
+  ⎿  error: pathspec ':(prefix:16)webapp/frontend/webapp/frontend/src' did
+     not match any file(s) known to git
+     Did you forget to 'git add'?
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 4m)
+
+⏺ The stash pathspec was wrong (I'm already inside webapp/frontend). Let me
+  stash just src and re-test on clean code.
+
+⏺ Bash(git stash push -m "mobile-fixes" -- src 2>&1 | tail -2
+      echo "=== stashed? ==="; git stash list | head -2…)
+  ⎿  Saved working directory and index state On main: mobile-fixes
+     === stashed? ===
+     stash@{0}: On main: mobile-fixes
+     … +18 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+⏺ Confirmed — all 3 e2e failures (@octocat auth flow, .tool-head rendering) fail
+  identically on clean main, so they're pre-existing (environment: no backend
+  at :8000), not caused by my changes. My changes are restored.
+
+  Summary of verification: unit tests 168/168 pass (including the AuthWidget
+  test), production build passes, and my 3 mobile-overflow regression tests
+  pass.
+
+  Let me do a final review of the complete diff and the regression test file.
+
+⏺ Bash(git --no-pager diff --stat src; echo "=== full diff ==="; git --no-pager
+      diff src)
+  ⎿   webapp/frontend/src/components/AuthWidget.tsx      |  3 +-
+      .../frontend/src/components/trace/ViewerTopbar.tsx |  9 ++-
+      webapp/frontend/src/routes/Landing.module.css      | 58 +++++++++++++
+     … +359 lines (ctrl+o to expand)
+
+⏺ The diff is clean and fully scoped to mobile breakpoints (plus the safe global
+  overflow-x guard and the backward-compatible auth markup). Everything
+  verifies.
+
+  Summary
+
+  I fixed the mobile horizontal-scroll and crowding across all three views shown
+  in your screenshots. The root causes were more than just "too much stuff" —
+  there were three distinct layout bugs:
+
+  1. Topbars overflowed the viewport (caused the sideways scroll on the repo +
+  trace pages)
+  - The header rows are flex with nowrap children (breadcrumbs, the "Sign in
+  with GitHub" button) and 32px side padding that didn't fit on a phone.
+  - Fixes: 16px padding on mobile; the CTA shows just "Sign in" (full label kept
+  for screen readers via aria-label); the trace viewer drops the redundant
+  owner crumb (vibeshub / vibeshub / vibeshub → vibeshub / repo / trace/…),
+  ellipsizes the trace id, and collapses Share to an icon. On the landing page
+  the "git for your vibes" tagline (which was wrapping one word per line) is
+  hidden on phones.
+  - Added a global html { overflow-x: hidden } safety net.
+
+  2. The trace viewer was pinned to 760px — .vibeshub-viewer is a column-flex
+  with align-items: stretch; the thread's max-width: 760px plus wide content
+  (long prompt lines, code) inflated the flex line and stretched every section
+  to 760px. Fixed by pinning direct children to a definite width:100% (wide code
+  still scrolls inside its own box) and reflowing the outcome panel.
+
+  3. Crowded grids wrapping one word per line — the classic 1fr (=
+  minmax(auto,1fr)) min-content blowout: browse/trace card titles, the privacy
+  preview (long sk-ant-… tokens), the file-path lists. Fixed with minmax(0,1fr),
+  overflow-wrap, min-width:0, and stacking the date below the card body
+  (dropping the redundant short-id hash on mobile, as you suggested).
+
+  Verification (all green):
+  - A new Playwright spec asserts zero horizontal overflow at 390px on landing,
+  repo, and trace pages — all pass. Screenshots confirm clean, uncrowded headers
+  and readable cards.
+  - Unit tests: 168/168 pass; production build passes.
+  - The 3 failing e2e tests (auth flow, two viewer tool-card tests) fail 
+  identically on clean main — they're pre-existing and environment-related (no
+  backend on :8000), not from my changes.
+
+  Two notes:
+  - I left a regression test at webapp/frontend/e2e/mobile-verify.spec.ts
+  (untracked). Keep it as a guard or delete it — your call.
+  - I made no commit, per your workflow. Want me to commit these on a branch /
+  open a PR?
+
+✻ Baked for 39m 50s
+
+※ recap: Goal: fix mobile layout (horizontal scroll, crowded headers/grids) on vibeshub. Done and verified: overflow gone at 390px, tests and build pass. Next: commit the changes on a branch or open a PR if you want. (disable recaps in /config)
+
+❯ yes                                                                           
+
+⏺ I'll create a branch, commit (including the regression test), push, and open a
+  PR.
+
+⏺ Bash(cd /Users/bhavya/git/vibeshub && git status --short && echo "=== current
+      branch ===" && git branch --show-current)
+  ⎿   M webapp/frontend/src/components/AuthWidget.tsx
+      M webapp/frontend/src/components/trace/ViewerTopbar.tsx
+      M webapp/frontend/src/routes/Landing.module.css
+     … +7 lines (ctrl+o to expand)
+
+⏺ Bash(git checkout -b mobile-responsive-fixes && git add webapp/frontend/src
+      webapp/frontend/e2e/mobile-verify.spec.ts && git status --short)
+  ⎿  Switched to a new branch 'mobile-responsive-fixes'
+     A  webapp/frontend/e2e/mobile-verify.spec.ts
+     M  webapp/frontend/src/components/AuthWidget.tsx
+     … +6 lines (ctrl+o to expand)
+
+⏺ Bash(git commit -F - <<'EOF'
+      Fix mobile layout: kill horizontal scroll and de-crowd headers/grids…)
+  ⎿  [mobile-responsive-fixes f13afcf] Fix mobile layout: kill horizontal s
+     croll and de-crowd headers/grids
+      8 files changed, 347 insertions(+), 13 deletions(-)
+      create mode 100644 webapp/frontend/e2e/mobile-verify.spec.ts
+
+⏺ Bash(git push -u origin mobile-responsive-fixes 2>&1 | tail -8)
+  ⎿  remote:
+     remote: Create a pull request for 'mobile-responsive-fixes' on GitHub
+     by visiting:
+     … +8 lines (ctrl+o to expand)
+
+⏺ Bash(gh pr create --title "Fix mobile layout: horizontal scroll + crowded
+      header/grids" --body "$(cat <<'EOF'
+      ## What…)
+  ⎿  https://github.com/vibeshub/vibeshub/pull/85
+⏺ Done. Branch pushed and PR opened:
+
+  https://github.com/vibeshub/vibeshub/pull/85 — Fix mobile layout: horizontal 
+  scroll + crowded header/grids
+
+  - Branch: mobile-responsive-fixes (off main)
+  - 1 commit, 8 files (7 src + the regression test), +347/−13
+  - PR body documents the three root causes, the fixes, and the verification
+  (mobile-overflow spec green, 168/168 unit tests, build passing, the 3
+  pre-existing e2e failures confirmed unrelated)
+
+  Nothing was merged — it's ready for your review.
+
+✻ Cogitated for 1m 7s
+
+※ recap: Goal was fixing mobile layout (horizontal scroll, crowded header/grids); all fixes are done, verified, committed, and pushed as PR #85. Next action is your review of that PR. (disable recaps in /config)
