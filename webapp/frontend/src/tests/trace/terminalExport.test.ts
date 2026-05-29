@@ -100,6 +100,17 @@ describe("parseTerminalExport", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("assigns a unique non-empty uuid to every content record", () => {
+    // buildSession reads top-level `uuid` for prompt/assistant anchors; the
+    // PromptRail and timeline nav only surface prompts whose uuid is truthy,
+    // so a missing uuid silently drops the rail and collapses the layout.
+    const uuids = records
+      .filter((r) => r.type === "user" || r.type === "assistant")
+      .map((r) => r.uuid);
+    expect(uuids.every((u) => typeof u === "string" && u.length > 0)).toBe(true);
+    expect(new Set(uuids).size).toBe(uuids.length); // all unique
+  });
+
   it("drops orphan ⎿ output that has no preceding tool", () => {
     // The `/resume` prompt is immediately followed by `⎿ Resume cancelled`
     // with no tool_use before it; that output has nowhere to attach and is
@@ -216,5 +227,13 @@ describe("real export round-trips through buildSession", () => {
     expect(Object.keys(session.meta.toolCounts)).toEqual(
       expect.arrayContaining(["Skill", "Bash", "Update", "Write"]),
     );
+  });
+
+  it("gives every user prompt a uuid so the PromptRail renders", () => {
+    // The rail (and the prompt jump-anchors) require a truthy uuid; without
+    // one, the rail collapses to empty and the transcript column shrinks.
+    const prompts = session.stream.filter((e) => e.kind === "user_prompt");
+    expect(prompts.length).toBeGreaterThan(0);
+    expect(prompts.every((p) => p.uuid.length > 0)).toBe(true);
   });
 });
