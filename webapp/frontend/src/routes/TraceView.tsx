@@ -124,6 +124,10 @@ export function TraceView() {
           repoOwner={repoParts[0]}
           repoName={repoParts[1]}
           ownerControls={ownerControls}
+          canEditTitle={isOwner}
+          onTraceUpdated={(updated) =>
+            setHead({ kind: "ready", trace: updated })
+          }
         />
       )}
     </div>
