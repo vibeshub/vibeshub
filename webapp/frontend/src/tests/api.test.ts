@@ -330,3 +330,34 @@ describe("api / uploads + patch + pickers", () => {
     expect(prs[0].number).toBe(7);
   });
 });
+
+describe("uploadTrace source_export", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("appends source_export only when provided", async () => {
+    const bodies: FormData[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        bodies.push(init!.body as FormData);
+        return new Response(
+          JSON.stringify({
+            short_id: "abc",
+            trace_url: "/t/abc",
+            created: true,
+          }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        );
+      },
+    );
+    const jsonl = new File(["{}\n"], "chat.jsonl");
+    const raw = new File(["banner"], "chat.txt");
+
+    await uploadTrace({ transcript: jsonl, sourceExport: raw });
+    expect(bodies[0].has("source_export")).toBe(true);
+
+    await uploadTrace({ transcript: jsonl });
+    expect(bodies[1].has("source_export")).toBe(false);
+  });
+});
