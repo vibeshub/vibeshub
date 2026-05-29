@@ -160,3 +160,25 @@ describe("rejoin", () => {
     );
   });
 });
+
+import { buildSession, parseJsonl } from "../../components/trace/parser";
+
+describe("buildSession reads terminal-meta", () => {
+  it("sets sourceFormat and modelLabel from the marker", () => {
+    const { jsonl } = terminalExportToJsonl(SAMPLE);
+    const session = buildSession(parseJsonl(jsonl));
+    expect(session.meta.sourceFormat).toBe("terminal");
+    expect(session.meta.modelLabel).toBe("Opus 4.8");
+    expect(session.meta.version).toBe("v2.1.156");
+    expect(session.meta.cwd).toBe("~/git/vibeshub");
+    expect(session.meta.model).toBeNull(); // real model id stays unknown
+  });
+
+  it("leaves sourceFormat null for an ordinary jsonl transcript", () => {
+    const session = buildSession(
+      parseJsonl('{"type":"user","message":{"content":"hi"}}\n'),
+    );
+    expect(session.meta.sourceFormat).toBeNull();
+    expect(session.meta.modelLabel).toBeNull();
+  });
+});
