@@ -4,9 +4,8 @@
 // thinking, real ids, or untruncated tool I/O. This is a best-effort
 // convenience path; .jsonl remains the full-fidelity input.
 
-// Exported (not a bare local) so `noUnusedLocals` doesn't flag it before
-// Task 2's parser consumes it; it's the record shape `buildSession` reads.
-export type AnyRec = Record<string, unknown>;
+// The synthetic-record shape `buildSession` consumes.
+type AnyRec = Record<string, unknown>;
 
 // Glyphs the renderer puts at the start of a logical line.
 const GLYPHS = ["❯", "⏺", "⎿", "✻", "※"] as const;
@@ -19,7 +18,7 @@ interface ScannedLine {
 }
 
 // Classify a raw line by its leading glyph (after any indentation).
-export function scan(line: string): ScannedLine {
+function scan(line: string): ScannedLine {
   const indent = line.length - line.trimStart().length;
   const t = line.trimStart();
   for (const g of GLYPHS) {
