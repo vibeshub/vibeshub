@@ -6,11 +6,14 @@ import { fmtTokens } from "./format";
 import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
+import { HeroTitle } from "./HeroTitle";
 
 interface Props {
   session: Session;
   trace: TraceSummary;
   rawHref: string;
+  canEdit?: boolean;
+  onTraceUpdated?: (trace: TraceSummary) => void;
 }
 
 function HeroEyebrow({ session, trace, rawHref }: Props) {
@@ -172,13 +175,24 @@ function ToolsChips({ session }: { session: Session }) {
   );
 }
 
-export function Hero({ session, trace, rawHref }: Props) {
+export function Hero({
+  session,
+  trace,
+  rawHref,
+  canEdit,
+  onTraceUpdated,
+}: Props) {
   const meta = session.meta;
   return (
     <section>
       <div className="hero">
         <HeroEyebrow session={session} trace={trace} rawHref={rawHref} />
-        <h1 className="hero-title">{meta.aiTitle || "Untitled session"}</h1>
+        <HeroTitle
+          trace={trace}
+          aiTitle={meta.aiTitle}
+          canEdit={!!canEdit}
+          onUpdated={onTraceUpdated ?? (() => {})}
+        />
         <HeroBadges trace={trace} />
       </div>
       <Outcome session={session} trace={trace} />
