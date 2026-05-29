@@ -1971,3 +1971,14 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Provenance chip for traces reconstructed from a .txt terminal export. */
+.vibeshub-viewer .meta-import-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text-strong);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+}

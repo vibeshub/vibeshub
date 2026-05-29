@@ -101,10 +101,13 @@ function HeroBadges({ trace }: { trace: TraceSummary }) {
   );
 }
 
-function MetaLine({ session }: { session: Session }) {
+export function MetaLine({ session }: { session: Session }) {
   const meta = session.meta;
   const items: Array<{ k: string; v: string }> = [];
-  if (meta.model) items.push({ k: "model", v: meta.model });
+  // Terminal exports have no canonical model id, only the banner label; show
+  // whichever we have.
+  const modelVal = meta.model ?? meta.modelLabel;
+  if (modelVal) items.push({ k: "model", v: modelVal });
   if (meta.gitBranch) items.push({ k: "branch", v: meta.gitBranch });
   if (meta.cwd) items.push({ k: "cwd", v: meta.cwd });
   if (meta.version) items.push({ k: "cli", v: meta.version });
@@ -118,10 +121,19 @@ function MetaLine({ session }: { session: Session }) {
       v: `${fmtTokens(tokensTotal)} (${fmtTokens(t.output)} out · ${fmtTokens(t.cacheRead)} cache)`,
     });
   }
-  if (items.length === 0) return null;
+  const imported = meta.sourceFormat === "terminal";
+  if (items.length === 0 && !imported) return null;
   return (
     <div className="meta-wrap">
       <div className="metaline">
+        {imported && (
+          <span
+            className="metaline-item meta-import-chip"
+            title="Reconstructed from a Claude Code text export. Token counts, timings, and thinking are not available."
+          >
+            Imported from text export
+          </span>
+        )}
         {items.map((it, i) => (
           <span className="metaline-item" key={i}>
             <span className="kv-key">{it.k}</span>
