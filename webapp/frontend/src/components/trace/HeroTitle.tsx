@@ -1,0 +1,126 @@
+import { useState } from "react";
+import { ApiError, patchTrace } from "../../api";
+import type { TraceSummary } from "../../types";
+
+interface Props {
+  trace: TraceSummary;
+  /** Derived AI title from the parsed session, used as a fallback. */
+  aiTitle: string | null;
+  canEdit: boolean;
+  onUpdated: (trace: TraceSummary) => void;
+}
+
+const MAX_TITLE = 200;
+
+function displayTitle(trace: TraceSummary, aiTitle: string | null): string {
+  return trace.title || aiTitle || "Untitled session";
+}
+
+function errMessage(e: unknown): string {
+  if (e instanceof ApiError) return e.body || `Request failed (${e.status})`;
+  return e instanceof Error ? e.message : String(e);
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden>
+      <path
+        d="M11.5 2.5l2 2L6 12l-2.5.5L4 10l7.5-7.5z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function HeroTitle({ trace, aiTitle, canEdit, onUpdated }: Props) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEditing() {
+    setValue(trace.title ?? "");
+    setError(null);
+    setEditing(true);
+  }
+
+  async function save() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await patchTrace(trace.short_id, { title: value });
+      onUpdated(updated);
+      setEditing(false);
+    } catch (e) {
+      setError(errMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void save();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setEditing(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="hero-title-edit">
+        <input
+          className="hero-title-input"
+          type="text"
+          value={value}
+          maxLength={MAX_TITLE}
+          placeholder="Add a title"
+          autoFocus
+          disabled={busy}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        <div className="hero-title-actions">
+          <button
+            type="button"
+            className="hero-title-btn primary"
+            disabled={busy}
+            onClick={() => void save()}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="hero-title-btn"
+            disabled={busy}
+            onClick={() => setEditing(false)}
+          >
+            Cancel
+          </button>
+        </div>
+        {error && <span className="hero-title-error">{error}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="hero-title-row">
+      <h1 className="hero-title">{displayTitle(trace, aiTitle)}</h1>
+      {canEdit && (
+        <button
+          type="button"
+          className="hero-title-edit-btn"
+          aria-label="Edit title"
+          onClick={startEditing}
+        >
+          <PencilIcon />
+        </button>
+      )}
+    </div>
+  );
+}
