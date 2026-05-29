@@ -24,6 +24,7 @@ class TraceSummary(BaseModel):
     pr_number: int | None
     pr_url: str | None
     pr_title: str | None
+    title: str | None = None
     platform: str
     byte_size: int
     message_count: int

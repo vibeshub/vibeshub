@@ -171,6 +171,7 @@ def _to_summary(t: Trace) -> TraceSummary:
         pr_number=t.pr_number,
         pr_url=t.pr_url,
         pr_title=t.pr_title,
+        title=t.title,
         platform=t.platform,
         byte_size=t.byte_size,
         message_count=t.message_count,
