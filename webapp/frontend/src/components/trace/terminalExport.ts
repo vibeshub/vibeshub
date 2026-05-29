@@ -94,7 +94,13 @@ export function parseTerminalExport(text: string): AnyRec[] {
   // ---- body ----
   let msgN = 0;
   let toolN = 0;
+  let recN = 0;
   let lastToolId: string | null = null;
+  // Every record needs a unique top-level uuid: buildSession reads it as the
+  // prompt/assistant anchor, and the PromptRail (plus prompt jump nav) only
+  // surfaces prompts whose uuid is truthy. Omitting it silently drops the rail,
+  // which collapses the transcript into the empty grid column.
+  const nextUuid = () => `term-rec-${recN++}`;
 
   type Open =
     | { kind: "prompt"; lines: string[] }
@@ -107,12 +113,14 @@ export function parseTerminalExport(text: string): AnyRec[] {
     if (!open) return;
     if (open.kind === "prompt") {
       const content = rejoin(open.lines);
-      if (content) records.push({ type: "user", message: { content } });
+      if (content)
+        records.push({ type: "user", uuid: nextUuid(), message: { content } });
     } else if (open.kind === "assistant") {
       const t = rejoin(open.lines);
       if (t) {
         records.push({
           type: "assistant",
+          uuid: nextUuid(),
           message: {
             id: `term-msg-${msgN++}`,
             content: [{ type: "text", text: t }],
@@ -124,6 +132,7 @@ export function parseTerminalExport(text: string): AnyRec[] {
       if (content) {
         records.push({
           type: "user",
+          uuid: nextUuid(),
           message: {
             content: [
               { type: "tool_result", tool_use_id: open.toolId, content },
@@ -140,6 +149,7 @@ export function parseTerminalExport(text: string): AnyRec[] {
     lastToolId = id;
     records.push({
       type: "assistant",
+      uuid: nextUuid(),
       message: {
         id: `term-msg-${msgN++}`,
         content: [{ type: "tool_use", id, name, input }],
