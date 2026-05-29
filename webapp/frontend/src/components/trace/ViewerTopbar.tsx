@@ -38,8 +38,11 @@ export function ViewerTopbar({
         </Link>
         {repoOwner && (
           <>
-            <span className="brand-sep">/</span>
-            <Link className="topbar-link" to={`/${repoOwner}`}>
+            <span className="brand-sep viewer-crumb-owner">/</span>
+            <Link
+              className="topbar-link viewer-crumb-owner"
+              to={`/${repoOwner}`}
+            >
               {repoOwner}
             </Link>
           </>
@@ -67,7 +70,7 @@ export function ViewerTopbar({
             aria-label="Copy share link"
           >
             <IconLink />
-            <span>Share</span>
+            <span className="share-label">Share</span>
           </button>
           <button
             className="iconbtn"

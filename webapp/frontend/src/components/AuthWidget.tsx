@@ -13,8 +13,9 @@ export function AuthWidget() {
       <a
         className="iconbtn primary"
         href={`/api/auth/github/login?next=${next}`}
+        aria-label="Sign in with GitHub"
       >
-        Sign in with GitHub
+        Sign in<span className="auth-extra"> with GitHub</span>
       </a>
     );
   }

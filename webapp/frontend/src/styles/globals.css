@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+/* Guard against any single wide element forcing a sideways scroll on mobile.
+   Scoped to html (not body) so the sticky topbars keep sticking to the viewport. */
+html {
+  overflow-x: hidden;
+}
+
 html,
 body {
   margin: 0;
@@ -65,4 +71,12 @@ code {
 ::selection {
   background: var(--accent-soft);
   color: var(--text-strong);
+}
+
+/* Trim the "Sign in with GitHub" CTA to "Sign in" on small screens so the
+   topbar fits without overflowing. */
+@media (max-width: 640px) {
+  .auth-extra {
+    display: none;
+  }
 }

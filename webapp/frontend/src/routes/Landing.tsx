@@ -108,7 +108,7 @@ export function Landing() {
             <span className="brand-mark">v</span>
             <span>vibeshub</span>
           </Link>
-          <span className="brand-sep">/</span>
+          <span className={`brand-sep ${styles.taglineSep}`}>/</span>
           <span className={styles.tagline}>git for your vibes</span>
 
           <div className="topbar-spacer" />
