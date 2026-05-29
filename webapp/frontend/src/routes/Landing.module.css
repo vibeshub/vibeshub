@@ -1441,10 +1441,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Flex child: without this its min-content is the full path, which inflates
+     the single-column privacy grid past the viewport on mobile. */
+  min-width: 0;
 }
 .redact pre {
   margin: 0;
   white-space: pre-wrap;
+  /* Break long secret tokens (e.g. sk-ant-…) so they don't blow out the
+     single-column privacy grid on mobile. */
+  overflow-wrap: anywhere;
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
@@ -1599,6 +1605,7 @@
 .prLink {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 10px 14px;
   background: var(--bg-subtle);
@@ -1607,6 +1614,8 @@
   font: 500 13px var(--font-mono);
   color: var(--text-strong);
   text-decoration: none;
+  /* Let the long share URL wrap instead of running off the card on mobile. */
+  overflow-wrap: anywhere;
   align-self: flex-start;
   transition:
     background 120ms ease,
@@ -1919,7 +1928,9 @@
    ================================================================ */
 @media (max-width: 980px) {
   .heroGrid {
-    grid-template-columns: 1fr;
+    /* minmax(0,…) instead of 1fr so a wide child (code block, long line)
+       can't push the track past the viewport. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 48px;
   }
   .heroVisual {
@@ -1959,21 +1970,21 @@
     gap: 8px;
   }
   .feedGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .statsStrip {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .privacyGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 32px;
   }
   .showoffGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 32px;
   }
   .installCard {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding: 28px;
   }
   .hideSm {
@@ -1994,12 +2005,45 @@
     font-size: 24px;
   }
   .statsStrip {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .shareChannels {
     grid-template-columns: 1fr 1fr;
   }
   .navLinks {
     display: none;
+  }
+  /* The "git for your vibes" tagline (and its leading slash) gets squeezed and
+     wraps one word per line in the narrow header; drop it on phones. */
+  .taglineSep,
+  .tagline {
+    display: none;
+  }
+  /* Browse cards: the date + short-id right column forces the title's 1fr track
+     to min-content (one word per line). Stack the date below the body instead
+     and drop the redundant short id. */
+  .traceRow {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .traceRowRight {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-left: 40px;
+  }
+  .traceRowRight span:last-child {
+    display: none;
+  }
+  /* Tighten the tall section rhythm so the page isn't all scrolling on mobile. */
+  .feed,
+  .showoff,
+  .privacy {
+    padding: 56px 0;
+  }
+  .install {
+    padding: 56px 0 72px;
   }
 }

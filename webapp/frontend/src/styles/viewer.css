@@ -344,9 +344,23 @@
     display: block;
     padding: 0;
     max-width: none;
+    /* As a flex item of .vibeshub-viewer it would otherwise refuse to shrink
+       below .thread's max-width (760px) and overflow narrow viewports. */
+    min-width: 0;
   }
   .vibeshub-viewer .promptrail {
     display: none;
+  }
+  /* .vibeshub-viewer is a column flex with align-items: stretch. The thread (and
+     its siblings) carry max-width: var(--content-width) = 760px and hold wide
+     content (long prompt lines, code blocks), so their max-content is 760px.
+     That inflates the flex line cross-size and stretches every section to 760px,
+     overflowing the viewport. A percentage max-width is ignored during intrinsic
+     sizing, so pin each direct child to a definite 100% (of the 390px viewer)
+     instead — wide content still scrolls inside its own overflow-x:auto box. */
+  .vibeshub-viewer > * {
+    width: 100%;
+    min-width: 0;
   }
 }
 
@@ -493,7 +507,15 @@
 }
 @media (max-width: 720px) {
   .vibeshub-viewer .outcome-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0,…) so a long file path in a card can't widen the track. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Flex columns need min-width:0 so the nowrap file paths inside actually
+     ellipsis instead of forcing the card wide. */
+  .vibeshub-viewer .outcome-card,
+  .vibeshub-viewer .outcome-files,
+  .vibeshub-viewer .outcome-file {
+    min-width: 0;
   }
 }
 .vibeshub-viewer .outcome-card {
@@ -1888,4 +1910,64 @@
 }
 .vibeshub-viewer .tool-group-body .tool-card {
   padding-left: 14px;
+}
+
+/* ---------- mobile ---------- */
+@media (max-width: 640px) {
+  /* Topbar: trim padding, drop the redundant owner crumb, truncate the trace
+     id, and collapse the Share button to its icon so the row fits. */
+  .vibeshub-viewer .topbar-inner {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .vibeshub-viewer .viewer-crumb-owner {
+    display: none;
+  }
+  .vibeshub-viewer .brand-trace {
+    display: inline-block;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  .vibeshub-viewer .share-label {
+    display: none;
+  }
+  /* Pull every full-width region in to a 16px gutter. */
+  .vibeshub-viewer .hero {
+    padding: 28px 16px 20px;
+  }
+  .vibeshub-viewer .hero-title {
+    font-size: 30px;
+  }
+  .vibeshub-viewer .outcome-grid,
+  .vibeshub-viewer .meta-wrap,
+  .vibeshub-viewer .tools-chips,
+  .vibeshub-viewer .timeline-wrap {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .vibeshub-viewer .jumpstrip-inner {
+    padding: 8px 16px;
+  }
+  .vibeshub-viewer .thread,
+  .vibeshub-viewer .thread-controls {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* Long inline code tokens (paths, dotted identifiers) have no break points
+     by default; let them break so they don't poke past the viewport. */
+  .vibeshub-viewer .assistant-text-body code {
+    overflow-wrap: anywhere;
+  }
+  /* Let the long session id wrap instead of forcing the footer wider. */
+  .vibeshub-viewer .viewer-footer {
+    padding: 0 16px;
+    white-space: normal;
+  }
+  .vibeshub-viewer .viewer-footer span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 }
