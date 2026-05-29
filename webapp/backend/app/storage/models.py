@@ -72,6 +72,11 @@ class Trace(Base):
         String(32), nullable=True
     )
 
+    # Owner-supplied display title. NULL means "fall back to the trace's
+    # derived title" (the client shows the AI title or "Untitled session").
+    # Settable only by the owner via PATCH /api/traces/{short_id}.
+    title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Subagent summaries surfaced via TraceSummary. Stored as JSON list of
     # AgentSummary dicts (see app/api/schemas.py). NULL for legacy rows
     # pre-migration; empty list [] for rows migrated by
