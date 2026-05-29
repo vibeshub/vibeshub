@@ -7,6 +7,10 @@ import { PageTopbar } from "../components/PageTopbar";
 import { RepoPrPicker } from "../components/RepoPrPicker";
 import type { PickerSelection } from "../components/RepoPrPicker";
 import { SeoHead } from "../components/SeoHead";
+import {
+  looksLikeTerminalExport,
+  terminalExportToJsonl,
+} from "../components/trace/terminalExport";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./UploadPage.module.css";
 
@@ -66,34 +70,66 @@ export function UploadPage() {
     setStatus((s) => (s.kind === "error" ? { kind: "idle" } : s));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!transcript) return;
     setStatus({ kind: "uploading" });
-    uploadTrace({
-      transcript,
-      subagents,
-      isPrivate: selection.kind === "none" ? isPrivate : false,
-      prUrl: selection.kind === "pr" ? selection.prUrl : null,
-      repoFullName:
-        selection.kind === "repo"
-          ? selection.repoFullName
-          : selection.kind === "pr"
+
+    // A .txt is Claude Code's rendered terminal export. Convert it to a
+    // synthetic .jsonl the viewer can read, and keep the raw .txt to archive.
+    let toUpload: File = transcript;
+    let sourceExport: File | null = null;
+    if (transcript.name.toLowerCase().endsWith(".txt")) {
+      const text = await transcript.text();
+      if (!looksLikeTerminalExport(text)) {
+        setStatus({
+          kind: "error",
+          message:
+            "This .txt does not look like a Claude Code export. Upload the .jsonl session file instead.",
+        });
+        return;
+      }
+      const { jsonl, recovered } = terminalExportToJsonl(text);
+      if (!recovered) {
+        setStatus({
+          kind: "error",
+          message:
+            "Could not reconstruct this text export. For a full trace, upload the .jsonl session file at ~/.claude/projects/<session>.jsonl.",
+        });
+        return;
+      }
+      toUpload = new File(
+        [jsonl],
+        transcript.name.replace(/\.txt$/i, ".jsonl"),
+        { type: "application/jsonl" },
+      );
+      sourceExport = transcript;
+    }
+
+    try {
+      const result = await uploadTrace({
+        transcript: toUpload,
+        subagents,
+        sourceExport,
+        isPrivate: selection.kind === "none" ? isPrivate : false,
+        prUrl: selection.kind === "pr" ? selection.prUrl : null,
+        repoFullName:
+          selection.kind === "repo"
             ? selection.repoFullName
-            : null,
-    })
-      .then((result) => {
-        navigate(`/t/${result.short_id}`);
-      })
-      .catch((err) => {
-        const message =
-          err instanceof ApiError
-            ? err.body || `Upload failed (${err.status})`
-            : err instanceof Error
-              ? err.message
-              : String(err);
-        setStatus({ kind: "error", message });
+            : selection.kind === "pr"
+              ? selection.repoFullName
+              : null,
       });
+      navigate(`/t/${result.short_id}`);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.body || `Upload failed (${err.status})`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      setStatus({ kind: "error", message });
+    }
   }
 
   return (
@@ -109,12 +145,12 @@ export function UploadPage() {
 
           <div className={styles.field}>
             <label htmlFor="transcript-input" className={styles.label}>
-              Transcript file (.jsonl)
+              Transcript file (.jsonl, or a .txt export)
             </label>
             <input
               id="transcript-input"
               type="file"
-              accept=".jsonl"
+              accept=".jsonl,.txt"
               disabled={uploading}
               onChange={(e) => {
                 setTranscript(e.target.files?.[0] ?? null);

@@ -148,6 +148,9 @@ export async function fetchGithubContributions(
 export interface UploadTraceArgs {
   transcript: File;
   subagents?: File | null;
+  // Original .txt terminal export, archived alongside the synthetic .jsonl
+  // when the transcript was reconstructed from one. Omitted for .jsonl uploads.
+  sourceExport?: File | null;
   isPrivate?: boolean;
   prUrl?: string | null;
   repoFullName?: string | null;
@@ -159,6 +162,7 @@ export async function uploadTrace(
   const form = new FormData();
   form.append("transcript", args.transcript);
   if (args.subagents) form.append("subagents", args.subagents);
+  if (args.sourceExport) form.append("source_export", args.sourceExport);
   form.append("is_private", String(args.isPrivate ?? false));
   if (args.prUrl) form.append("pr_url", args.prUrl);
   if (args.repoFullName) form.append("repo_full_name", args.repoFullName);

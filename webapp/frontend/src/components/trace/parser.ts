@@ -134,6 +134,8 @@ export function buildSession(records: AnyRec[]): Session {
     cwd: null,
     gitBranch: null,
     model: null,
+    modelLabel: null,
+    sourceFormat: null,
     version: null,
     permissionMode: null,
     startedAt: null,
@@ -170,6 +172,15 @@ export function buildSession(records: AnyRec[]): Session {
         repo: getStr(r, "prRepository") ?? "",
         at: getStr(r, "timestamp") ?? "",
       };
+    }
+    // A trace reconstructed from a terminal .txt export carries one synthetic
+    // marker record. `version`/`cwd` are picked up by the generic captures
+    // below; `model` is deliberately left null (only the banner label is
+    // known, surfaced separately as `modelLabel`).
+    if (r.type === "terminal-meta") {
+      meta.sourceFormat = "terminal";
+      const ml = getStr(r, "modelLabel");
+      if (ml) meta.modelLabel = ml;
     }
 
     const cwd = getStr(r, "cwd");

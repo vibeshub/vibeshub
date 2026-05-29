@@ -33,6 +33,11 @@ export interface SessionMeta {
   cwd: string | null;
   gitBranch: string | null;
   model: string | null;
+  // Banner model label (e.g. "Opus 4.8") when reconstructed from a terminal
+  // export; never the canonical model id. null for jsonl traces.
+  modelLabel: string | null;
+  // "terminal" when reconstructed from a .txt export, else null.
+  sourceFormat: "terminal" | null;
   version: string | null;
   permissionMode: string | null;
   startedAt: string | null;

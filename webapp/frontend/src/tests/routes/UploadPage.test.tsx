@@ -34,6 +34,15 @@ const signedInAuth = {
   signOut: vi.fn(),
 };
 
+// jsdom's File doesn't implement the standard Blob.text() (which the upload
+// page uses to read a .txt export), so attach it for the test. Real browsers
+// provide it natively.
+function txtFile(content: string, name: string): File {
+  const file = new File([content], name, { type: "text/plain" });
+  Object.defineProperty(file, "text", { value: async () => content });
+  return file;
+}
+
 function renderUploadPage() {
   return render(
     <MemoryRouter initialEntries={["/upload"]}>
@@ -142,5 +151,42 @@ describe("UploadPage", () => {
       expect(screen.getByText(/bad transcript/i)).toBeInTheDocument(),
     );
     expect(screen.getByLabelText(/transcript/i)).toBeInTheDocument();
+  });
+
+  it("converts a .txt export to a synthetic .jsonl and attaches the raw .txt", async () => {
+    mockUseAuth.mockReturnValue(signedInAuth);
+    (uploadTrace as Mock).mockResolvedValue({
+      trace_id: "t2",
+      short_id: "def4567890",
+      trace_url: "/t/def4567890",
+      created: true,
+    });
+    renderUploadPage();
+    const exportText =
+      " ▐▛███▜▌   Claude Code v2.1.156\n  ~/git/vibeshub\n\n❯ fix it\n⏺ ok\n";
+    const file = txtFile(exportText, "session.txt");
+    fireEvent.change(screen.getByLabelText(/transcript/i), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
+
+    await waitFor(() => expect(uploadTrace).toHaveBeenCalledTimes(1));
+    const arg = (uploadTrace as Mock).mock.calls[0][0];
+    expect(arg.transcript.name).toBe("session.jsonl");
+    expect(arg.sourceExport.name).toBe("session.txt");
+  });
+
+  it("rejects a .txt that is not a terminal export", async () => {
+    mockUseAuth.mockReturnValue(signedInAuth);
+    renderUploadPage();
+    const file = txtFile("just some notes", "notes.txt");
+    fireEvent.change(screen.getByLabelText(/transcript/i), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/does not look like a Claude Code export/i)).toBeInTheDocument(),
+    );
+    expect(uploadTrace).not.toHaveBeenCalled();
   });
 });

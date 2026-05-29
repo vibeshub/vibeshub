@@ -167,3 +167,53 @@ async def test_uploads_repo_link_rejects_non_collaborator(
         cookies=cookies,
     )
     assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_uploads_stores_redacted_source_export(client):
+    cookies, _ = await authed_cookies(client, login="alice")
+    raw = b"banner\n\xe2\x9d\xaf do a thing with sk-ant-" + b"A" * 30 + b"\n"
+    r = client.post(
+        "/api/uploads",
+        files={
+            "transcript": (
+                "chat.jsonl",
+                b'{"type":"terminal-meta"}\n'
+                b'{"type":"user","message":{"content":"hi"}}\n',
+            ),
+            "source_export": ("chat.txt", raw),
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == short_id)
+        )).scalar_one()
+    assert trace.source_format == "terminal"
+
+    blob_dir = client.app.state.settings.blob_dir
+    stored = (blob_dir / "traces" / short_id / "source_export.txt").read_bytes()
+    assert b"sk-ant-" not in stored
+    assert b"[REDACTED:anthropic_key]" in stored
+
+
+@pytest.mark.asyncio
+async def test_uploads_without_source_export_has_null_format(client):
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.post(
+        "/api/uploads",
+        files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
+        cookies=cookies,
+    )
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == short_id)
+        )).scalar_one()
+    assert trace.source_format is None

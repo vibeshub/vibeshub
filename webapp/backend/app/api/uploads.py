@@ -18,6 +18,7 @@ from app.auth.github import GitHubClient
 from app.auth.sessions import get_current_user
 from app.deps import get_blob_store, get_github, get_app_settings, get_session
 from app.redact.bundle import BundleError, BundleSizeError, unpack_loose_files
+from app.redact.patterns import redact_jsonl
 from app.settings import Settings
 from app.storage.blob import BlobStore
 from app.storage.models import User
@@ -39,6 +40,7 @@ def _trace_url(settings: Settings, sid: str) -> str:
 async def create_upload(
     transcript: UploadFile = File(...),
     subagents: UploadFile | None = File(default=None),
+    source_export: UploadFile | None = File(default=None),
     is_private: bool = Form(default=False),
     pr_url: str | None = Form(default=None),
     repo_full_name: str | None = Form(default=None),
@@ -65,6 +67,24 @@ async def create_upload(
                 status_code=413,
                 detail=f"upload exceeds {settings.max_trace_bytes} bytes",
             )
+
+    # A .txt terminal export is converted to a synthetic .jsonl (the transcript)
+    # client-side; the raw export rides along here so we can re-convert later.
+    # Redact it with the same patterns before storing — it can contain secrets.
+    source_export_bytes: bytes | None = None
+    source_format: str | None = None
+    if source_export is not None:
+        raw = await source_export.read()
+        if (
+            len(main_bytes) + len(zip_bytes or b"") + len(raw)
+            > settings.max_trace_bytes
+        ):
+            raise HTTPException(
+                status_code=413,
+                detail=f"upload exceeds {settings.max_trace_bytes} bytes",
+            )
+        source_export_bytes, _ = redact_jsonl(raw)
+        source_format = "terminal"
 
     try:
         unpacked = unpack_loose_files(
@@ -117,6 +137,8 @@ async def create_upload(
         pr_url=resolved_pr_url,
         pr_title=pr_title,
         is_private=assoc_private,
+        source_export_bytes=source_export_bytes,
+        source_format=source_format,
     )
     await session.commit()
 

@@ -92,6 +92,8 @@ async def create_or_update_trace(
     pr_url: str | None,
     pr_title: str | None,
     is_private: bool,
+    source_export_bytes: bytes | None = None,
+    source_format: str | None = None,
 ) -> TraceWriteResult:
     """Write the bundle's blobs and create or refresh the matching Trace row.
 
@@ -110,6 +112,12 @@ async def create_or_update_trace(
     sid = existing.short_id if existing is not None else generate()
     blob_prefix = f"traces/{sid}/"
     await blob_store.put(f"{blob_prefix}main.jsonl", unpacked.main_bytes)
+    if source_export_bytes is not None:
+        # Archived (already redacted by the caller) so an improved converter
+        # can re-parse the original export later.
+        await blob_store.put(
+            f"{blob_prefix}source_export.txt", source_export_bytes
+        )
 
     agent_summaries: list[dict] = []
     for agent in unpacked.agents:
@@ -151,6 +159,7 @@ async def create_or_update_trace(
         trace.blob_prefix = blob_prefix
         trace.agents = agent_summaries
         trace.agent_count = len(agent_summaries)
+        trace.source_format = source_format
     else:
         trace = Trace(
             short_id=sid,
@@ -171,6 +180,7 @@ async def create_or_update_trace(
             blob_prefix=blob_prefix,
             agents=agent_summaries,
             agent_count=len(agent_summaries),
+            source_format=source_format,
         )
         session.add(trace)
 
