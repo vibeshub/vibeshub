@@ -66,6 +66,12 @@ class Trace(Base):
     blob_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     blob_prefix: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
+    # "terminal" when the trace was reconstructed from a .txt export (its raw
+    # bytes are archived at {blob_prefix}source_export.txt); NULL otherwise.
+    source_format: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True
+    )
+
     # Subagent summaries surfaced via TraceSummary. Stored as JSON list of
     # AgentSummary dicts (see app/api/schemas.py). NULL for legacy rows
     # pre-migration; empty list [] for rows migrated by
