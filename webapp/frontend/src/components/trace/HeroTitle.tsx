@@ -77,6 +77,7 @@ export function HeroTitle({ trace, aiTitle, canEdit, onUpdated }: Props) {
         <input
           className="hero-title-input"
           type="text"
+          aria-label="Session title"
           value={value}
           maxLength={MAX_TITLE}
           placeholder="Add a title"
@@ -103,7 +104,11 @@ export function HeroTitle({ trace, aiTitle, canEdit, onUpdated }: Props) {
             Cancel
           </button>
         </div>
-        {error && <span className="hero-title-error">{error}</span>}
+        {error && (
+          <span className="hero-title-error" role="alert">
+            {error}
+          </span>
+        )}
       </div>
     );
   }

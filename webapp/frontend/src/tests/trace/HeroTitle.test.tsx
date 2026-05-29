@@ -107,6 +107,28 @@ describe("HeroTitle", () => {
     expect(onUpdated).toHaveBeenCalledWith(updated);
   });
 
+  it("keeps the editor open and shows an error when save fails", async () => {
+    vi.mocked(api.patchTrace).mockRejectedValue(new Error("boom"));
+    const onUpdated = vi.fn();
+    render(
+      <HeroTitle
+        trace={makeTrace()}
+        aiTitle={null}
+        canEdit
+        onUpdated={onUpdated}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /edit title/i }));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "New title" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(onUpdated).not.toHaveBeenCalled();
+    // Still in edit mode: the textbox is still present.
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
   it("cancel exits edit mode without calling the API", () => {
     render(
       <HeroTitle
