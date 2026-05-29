@@ -153,3 +153,57 @@ async def test_patch_clears_association_to_standalone(
         )).scalar_one()
     assert trace.repo_full_name is None
     assert trace.pr_number is None
+
+
+@pytest.mark.asyncio
+async def test_patch_sets_title(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.patch(f"/api/traces/{sid}", json={"title": "  My session  "},
+                     cookies=cookies)
+    assert r.status_code == 200
+    assert r.json()["title"] == "My session"
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == sid)
+        )).scalar_one()
+    assert trace.title == "My session"
+
+
+@pytest.mark.asyncio
+async def test_patch_empty_title_resets_to_null(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="alice")
+    client.patch(f"/api/traces/{sid}", json={"title": "Something"},
+                 cookies=cookies)
+    r = client.patch(f"/api/traces/{sid}", json={"title": "   "},
+                     cookies=cookies)
+    assert r.status_code == 200
+    assert r.json()["title"] is None
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == sid)
+        )).scalar_one()
+    assert trace.title is None
+
+
+@pytest.mark.asyncio
+async def test_patch_title_too_long_rejected(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.patch(f"/api/traces/{sid}", json={"title": "x" * 201},
+                     cookies=cookies)
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_patch_title_non_owner_forbidden(client):
+    sid = await _seed_standalone_trace(client, owner_login="alice")
+    cookies, _ = await authed_cookies(client, login="bob", github_id=200)
+    r = client.patch(f"/api/traces/{sid}", json={"title": "hijack"},
+                     cookies=cookies)
+    assert r.status_code == 403
