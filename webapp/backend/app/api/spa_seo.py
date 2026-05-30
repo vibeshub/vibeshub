@@ -58,7 +58,7 @@ _RESERVED_OWNERS = frozenset({
 # file at the site root (Vite `public/` output), e.g. "og-vibeviewer.png".
 _STATIC_PAGES: dict[str, tuple[str, str, str, str]] = {
     "vibeviewer": (
-        "Claude Code transcript viewer · vibeshub",
+        "Claude Code trace viewer · vibeshub",
         "Drop a Claude Code transcript and get a clean, replayable, "
         "shareable trace in seconds. No login required, secrets redacted "
         "on upload.",
