@@ -667,10 +667,6 @@ export function VibeViewer() {
           <span className="pt">
             <TrustCheck /> Secrets redacted on upload
           </span>
-          <span className="sep">·</span>
-          <span className="pt">
-            <TrustCheck /> Delete anytime
-          </span>
         </div>
 
         <HowToSection flashCard={flashCard} />
@@ -844,8 +840,13 @@ function CodeBlock({ lines }: { lines: CodeLine[] }) {
   );
 }
 
-const WAY2_FULL = `ls -t ~/.claude/projects/*/*.jsonl | head
+const WAY2_FULL = `# Search your sessions for a phrase you remember
+grep -ril "fix the navbar" ~/.claude/projects/
 
+# ...or just grab the newest session
+ls -t ~/.claude/projects/*/*.jsonl | head
+
+# Then optionally bundle that session's subagents
 SESSION=~/.claude/projects/<encoded-cwd>/<session-id>.jsonl
 zip -j ~/vibeshub-subagents.zip "\${SESSION%.jsonl}"/subagents/* 2>/dev/null \\
   && echo "wrote ~/vibeshub-subagents.zip" || echo "no subagents for this session"`;
@@ -916,9 +917,10 @@ function HowToSection({ flashCard }: { flashCard: string | null }) {
               transcript of every session on your machine: token usage, timings,
               thinking, tool I/O, and subagents.
               <span className="how-note">
-                Find it under <span className="em">~/.claude/projects/</span>,
-                upload the .jsonl, and optionally add a .zip of the session's
-                subagent transcripts.
+                They live under <span className="em">~/.claude/projects/</span>,
+                one folder per project. Not sure which file? Search them for a
+                phrase you remember, or grab the newest, then upload that .jsonl
+                (optionally with a .zip of its subagents).
               </span>
             </p>
           </div>
@@ -926,8 +928,11 @@ function HowToSection({ flashCard }: { flashCard: string | null }) {
             <CodeCopyButton text={WAY2_FULL} />
             <CodeBlock
               lines={[
-                { text: "# Newest sessions first", kind: "cmt" },
-                { text: "ls -t ~/.claude/projects/*/*.jsonl", kind: "cmd" },
+                { text: "# Search for a phrase you remember", kind: "cmt" },
+                { text: 'grep -ril "fix the navbar" ~/.claude/projects/', kind: "cmd" },
+                { text: "" },
+                { text: "# ...or just grab the newest session", kind: "cmt" },
+                { text: "ls -t ~/.claude/projects/*/*.jsonl | head", kind: "cmd" },
                 { text: "" },
                 { text: "# Optional: bundle subagents", kind: "cmt" },
                 { text: 'zip -j subagents.zip "<session>"/subagents/*', kind: "cmd" },
