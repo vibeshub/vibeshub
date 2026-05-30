@@ -115,6 +115,7 @@ export function Landing() {
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
             <a href="#browse">Browse</a>
+            <Link to="/vibeviewer">Viewer</Link>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -635,6 +636,7 @@ export function Landing() {
             <div className={styles.footerLinks}>
               <a href="https://github.com/vibeshub/vibeshub">GitHub</a>
               <a href="#browse">Browse</a>
+              <Link to="/vibeviewer">Viewer</Link>
               <Link to="/privacy">Privacy</Link>
               <a href="#install">Install</a>
             </div>
