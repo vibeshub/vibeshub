@@ -205,7 +205,9 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
     title = f"{subject} · vibeshub"
 
     desc_parts = [
-        f"Claude Code session by @{trace.owner_login}",
+        f"Claude Code session by @{trace.owner_login}"
+        if trace.owner_login
+        else "Claude Code session",
         f"{trace.message_count} messages",
     ]
     if trace.repo_full_name:

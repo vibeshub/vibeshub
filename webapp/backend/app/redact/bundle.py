@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 import json
+import os.path
 import re
 import tarfile
 import zipfile
@@ -24,6 +25,12 @@ from app.redact.patterns import RedactionReport, redact_jsonl
 AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
 AGENT_JSONL_RE = re.compile(r"^agents/(a[0-9a-f]{16})\.jsonl$")
 AGENT_META_RE = re.compile(r"^agents/(a[0-9a-f]{16})\.meta\.json$")
+
+# Local Claude Code subagent naming (e.g. ~/.claude/projects/.../subagents/),
+# matched against the member's basename so a leading directory prefix
+# (`subagents/agent-a....jsonl`) is tolerated. Used by unpack_loose_files only.
+LOCAL_AGENT_JSONL_RE = re.compile(r"^agent-(a[0-9a-f]{16})\.jsonl$")
+LOCAL_AGENT_META_RE = re.compile(r"^agent-(a[0-9a-f]{16})\.meta\.json$")
 
 
 class BundleError(Exception):
@@ -181,10 +188,22 @@ def unpack_loose_files(
                 if info.is_dir():
                     continue
                 name = info.filename
+                # Accept either the canonical bundle layout
+                # (agents/<id>.jsonl) matched on the full path, or the local
+                # Claude Code layout (agent-<id>.jsonl) matched on the
+                # basename so a leading dir (subagents/agent-...) is tolerated.
+                base = os.path.basename(name)
+                is_meta = False
                 if (m := AGENT_JSONL_RE.match(name)):
                     agent_id = m.group(1)
                 elif (m := AGENT_META_RE.match(name)):
                     agent_id = m.group(1)
+                    is_meta = True
+                elif (m := LOCAL_AGENT_JSONL_RE.match(base)):
+                    agent_id = m.group(1)
+                elif (m := LOCAL_AGENT_META_RE.match(base)):
+                    agent_id = m.group(1)
+                    is_meta = True
                 else:
                     raise BundleError(f"disallowed zip member: {name}")
                 total_bytes += info.file_size
@@ -194,10 +213,10 @@ def unpack_loose_files(
                         f"{max_total_bytes}"
                     )
                 data = zf.read(info)
-                if AGENT_JSONL_RE.match(name):
-                    agent_jsonls[agent_id] = data
-                else:
+                if is_meta:
                     agent_metas[agent_id] = data
+                else:
+                    agent_jsonls[agent_id] = data
         finally:
             zf.close()
 

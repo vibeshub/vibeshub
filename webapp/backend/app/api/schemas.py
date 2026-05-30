@@ -18,7 +18,8 @@ class AgentSummary(BaseModel):
 class TraceSummary(BaseModel):
     trace_id: str
     short_id: str
-    owner_login: str
+    # None for an anonymous (no-login) upload that has not been claimed.
+    owner_login: str | None
     # None for a standalone trace (no PR/repo association).
     repo_full_name: str | None
     pr_number: int | None
@@ -40,3 +41,10 @@ class IngestResponse(BaseModel):
     short_id: str
     trace_url: str
     created: bool = True
+    # One-time token to later claim an anonymous (no-login) upload. None for
+    # the CLI ingest path and for signed-in web uploads.
+    claim_token: str | None = None
+
+
+class ClaimRequest(BaseModel):
+    claim_token: str

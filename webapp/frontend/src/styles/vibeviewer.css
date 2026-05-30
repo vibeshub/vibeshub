@@ -1,0 +1,827 @@
+/* vibeviewer.css — the public, no-login upload page (/vibeviewer).
+   Ported from the Claude Design handoff (Vibeviewer.html). Every selector is
+   scoped under .vv-page so it can't collide with other pages; tokens come from
+   tokens.css and the topbar chrome from pages.css. No em-dashes in copy. */
+
+/* Promote the AuthWidget "Sign in" button into a real primary CTA in the topbar
+   (matches Landing). */
+.vv-page .topbar-actions .iconbtn.primary {
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  border-color: var(--text-strong);
+}
+.vv-page .topbar-actions .iconbtn.primary:hover {
+  background: oklch(from var(--text-strong) calc(l + 0.07) c h);
+  border-color: oklch(from var(--text-strong) calc(l + 0.07) c h);
+  color: var(--bg-elevated);
+}
+
+/* ============ layout ============ */
+.vv-page .vv {
+  position: relative;
+  max-width: var(--header-width);
+  margin: 0 auto;
+  padding: clamp(40px, 9vh, 96px) 32px 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: calc(100vh - 60px);
+  overflow: hidden;
+}
+/* dotted backdrop, masked to fade out */
+.vv-page .vv::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    oklch(0.5 0.01 75 / 0.07) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 78% 62% at 50% 26%,
+    black 28%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 78% 62% at 50% 26%,
+    black 28%,
+    transparent 78%
+  );
+}
+.vv-page .vv > * {
+  position: relative;
+  z-index: 1;
+}
+
+.vv-page .vv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 13px 5px 11px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  font: 600 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  box-shadow: var(--shadow-1);
+}
+.vv-page .vv-eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.vv-page .vv-title {
+  font-size: clamp(38px, 5.6vw, 60px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 22px 0 0;
+  max-width: 16ch;
+  text-wrap: balance;
+}
+.vv-page .vv-title .hl {
+  color: var(--accent-strong);
+  font-style: italic;
+  font-weight: 500;
+}
+.vv-page .vv-sub {
+  font-size: clamp(16px, 1.7vw, 19px);
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 50ch;
+  margin: 20px 0 0;
+  text-wrap: pretty;
+}
+
+/* the stage that swaps between idle / uploading / success */
+.vv-page .vv-stage {
+  width: 100%;
+  max-width: 560px;
+  margin-top: 40px;
+}
+
+/* ---- dropzone (idle) ---- */
+.vv-page .dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 44px 32px 38px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+    color-mix(in oklab, var(--accent-soft) 30%, var(--bg-elevated));
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+.vv-page .dropzone:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2), 0 16px 40px -20px oklch(0.55 0.14 45 / 0.4);
+}
+.vv-page .dropzone.dragover {
+  border-color: var(--accent-strong);
+  border-style: solid;
+  background: color-mix(in oklab, var(--accent-soft) 70%, var(--bg-elevated));
+  transform: scale(1.01);
+}
+.vv-page .dz-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  margin-bottom: 12px;
+  transition: transform 0.2s ease;
+}
+.vv-page .dropzone:hover .dz-icon {
+  transform: translateY(-2px);
+}
+.vv-page .dz-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.vv-page .dz-title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+}
+.vv-page .dz-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.vv-page .dz-sub .browse {
+  color: var(--accent-strong);
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent-strong) 45%, transparent);
+}
+.vv-page .dz-sub .browse:hover {
+  border-bottom-color: var(--accent-strong);
+}
+.vv-page .dz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+.vv-page .dz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 11.5px var(--font-mono);
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.vv-page .dz-chip svg {
+  width: 11px;
+  height: 11px;
+  color: var(--text-faint);
+}
+
+/* ---- uploading ---- */
+.vv-page .vv-uploading {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-2);
+  padding: 26px 26px 24px;
+  text-align: left;
+}
+.vv-page .up-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.vv-page .up-file .fic {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.vv-page .up-file .fic svg {
+  width: 18px;
+  height: 18px;
+}
+.vv-page .up-name {
+  font: 600 14px var(--font-mono);
+  color: var(--text-strong);
+}
+.vv-page .up-meta {
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+.vv-page .up-track {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+}
+.vv-page .up-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  border-radius: 999px;
+  transition: width 0.25s linear;
+}
+.vv-page .up-status {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+  font-feature-settings: "tnum";
+}
+
+/* ---- success ---- */
+.vv-page .vv-success {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-2), 0 24px 60px -30px oklch(0.4 0.04 60 / 0.35);
+  overflow: hidden;
+  text-align: left;
+  animation: vvPop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes vvPop {
+  from {
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.vv-page .sx-top {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.vv-page .sx-check {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: oklch(0.98 0 0);
+  background: var(--tool-bash);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--tool-bash) 18%, transparent);
+}
+.vv-page .sx-check svg {
+  width: 17px;
+  height: 17px;
+}
+.vv-page .sx-titles {
+  flex: 1;
+  min-width: 0;
+}
+.vv-page .sx-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
+}
+.vv-page .sx-sub {
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vv-page .pv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.vv-page .pv-badge svg {
+  width: 11px;
+  height: 11px;
+}
+.vv-page .pv-badge.public {
+  background: color-mix(in oklab, var(--tool-bash) 13%, var(--bg-elevated));
+  color: var(--tool-bash);
+  border-color: color-mix(in oklab, var(--tool-bash) 24%, transparent);
+}
+
+/* the shareable link row, with hover-to-copy */
+.vv-page .sx-share {
+  padding: 18px 20px 6px;
+}
+.vv-page .sx-share-label {
+  font: 600 10.5px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.vv-page .share-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-inset);
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+.vv-page .share-row:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.vv-page .share-url {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font: 500 14px var(--font-mono);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vv-page .share-url .host {
+  color: var(--text-faint);
+}
+.vv-page .share-url .slug {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.vv-page .copy-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 16px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-strong);
+  font: 600 13px var(--font-sans);
+  border-radius: 0 9px 9px 0;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.vv-page .share-row:hover .copy-btn {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.vv-page .copy-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.vv-page .copy-btn.ok {
+  background: var(--tool-bash) !important;
+  color: oklch(0.99 0 0) !important;
+}
+
+/* hover tooltip */
+.vv-page .share-tip {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  font: 600 11.5px var(--font-mono);
+  padding: 6px 11px;
+  border-radius: 7px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+  box-shadow: var(--shadow-2);
+}
+.vv-page .share-tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--text-strong);
+}
+.vv-page .share-row:hover .share-tip,
+.vv-page .share-row.prompt .share-tip {
+  opacity: 1;
+  transform: translate(-50%, -110%);
+}
+/* gentle nudge so the auto-shown tip reads as "do this" */
+.vv-page .share-row.prompt {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.vv-page .sx-hint {
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+  padding: 10px 2px 0;
+}
+.vv-page .sx-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px 20px 20px;
+}
+.vv-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.08s ease;
+}
+.vv-page .btn:active {
+  transform: translateY(1px);
+}
+.vv-page .btn.primary {
+  background: var(--text-strong);
+  color: var(--bg-elevated);
+  border-color: var(--text-strong);
+}
+.vv-page .btn.primary:hover {
+  background: oklch(from var(--text-strong) calc(l + 0.07) c h);
+  border-color: oklch(from var(--text-strong) calc(l + 0.07) c h);
+}
+.vv-page .btn.ghost {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--border);
+}
+.vv-page .btn.ghost:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+.vv-page .btn.ghost:disabled {
+  cursor: default;
+  color: var(--tool-bash);
+  border-color: color-mix(in oklab, var(--tool-bash) 35%, transparent);
+  background: color-mix(in oklab, var(--tool-bash) 10%, var(--bg-elevated));
+}
+.vv-page .btn svg {
+  width: 15px;
+  height: 15px;
+}
+.vv-page .btn .arrow {
+  width: 14px;
+  height: 14px;
+}
+
+/* github nudge */
+.vv-page .vv-nudge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 26px;
+  padding: 9px 15px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+.vv-page .vv-nudge svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-faint);
+  flex: none;
+}
+.vv-page .vv-nudge a {
+  color: var(--accent-strong);
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent-strong) 40%, transparent);
+}
+.vv-page .vv-nudge a:hover {
+  border-bottom-color: var(--accent-strong);
+}
+
+/* reassurance row under everything */
+.vv-page .vv-trust {
+  display: flex;
+  align-items: center;
+  gap: 8px 22px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 40px;
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+}
+.vv-page .vv-trust .pt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.vv-page .vv-trust svg {
+  width: 13px;
+  height: 13px;
+  color: var(--tool-bash);
+}
+.vv-page .vv-trust .sep {
+  opacity: 0.4;
+}
+
+.vv-page .vv-error {
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--color-danger);
+  max-width: 50ch;
+  text-wrap: pretty;
+}
+
+.vv-page .vv-foot {
+  margin-top: 56px;
+  font: 500 12px var(--font-mono);
+  color: var(--text-faint);
+}
+
+/* ---- how-to section ---- */
+.vv-page .vv-how {
+  width: 100%;
+  max-width: 980px;
+  margin: 88px auto 0;
+  text-align: left;
+}
+.vv-page .vv-how-head {
+  text-align: center;
+  margin-bottom: 38px;
+}
+.vv-page .vv-how-eyebrow {
+  font: 600 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+.vv-page .vv-how-title {
+  font-size: clamp(26px, 3.4vw, 34px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 12px 0 0;
+  text-wrap: balance;
+}
+.vv-page .vv-how-sub {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 56ch;
+  margin: 12px auto 0;
+  text-wrap: pretty;
+}
+
+.vv-page .how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.vv-page .how-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.vv-page .how-card.featured {
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+  box-shadow: var(--shadow-2), 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+.vv-page .how-card-body {
+  padding: 20px 20px 18px;
+  flex: 1;
+}
+.vv-page .how-top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.vv-page .how-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font: 700 13px var(--font-mono);
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.vv-page .how-card.featured .how-num {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+.vv-page .how-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+.vv-page .how-tag {
+  margin-left: auto;
+  flex: none;
+  font: 600 9.5px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 3px 7px;
+  border-radius: 999px;
+}
+.vv-page .how-tag.easy,
+.vv-page .how-tag.rich {
+  background: var(--bg-subtle);
+  color: var(--text-faint);
+  border: 1px solid var(--border-subtle);
+}
+.vv-page .how-tag.rec {
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg-elevated));
+  color: var(--accent-strong);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+}
+.vv-page .how-desc {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+.vv-page .how-desc .em {
+  color: var(--text);
+  font-weight: 600;
+}
+.vv-page .how-note {
+  display: block;
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* code block */
+.vv-page .how-code {
+  position: relative;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-inset);
+}
+.vv-page .how-code pre {
+  margin: 0;
+  padding: 14px 38px 14px 16px;
+  font: 500 12px/1.7 var(--font-mono);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vv-page .how-code .cmt {
+  color: var(--text-faint);
+}
+.vv-page .how-code .cmd {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.vv-page .how-code .var {
+  color: var(--accent-strong);
+}
+.vv-page .how-code .str {
+  color: var(--syn-string);
+}
+.vv-page .how-copy {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font: 600 11px var(--font-mono);
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    color 0.12s,
+    border-color 0.12s;
+}
+.vv-page .how-card:hover .how-copy {
+  opacity: 1;
+}
+.vv-page .how-copy:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+.vv-page .how-copy svg {
+  width: 12px;
+  height: 12px;
+}
+.vv-page .how-copy.ok {
+  color: var(--tool-bash);
+  border-color: color-mix(in oklab, var(--tool-bash) 40%, transparent);
+  opacity: 1;
+}
+.vv-page .how-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-subtle);
+  font: 500 11.5px var(--font-mono);
+  color: var(--text-faint);
+}
+.vv-page .how-fields .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.vv-page .how-fields .pill svg {
+  width: 11px;
+  height: 11px;
+  color: var(--text-faint);
+}
+.vv-page .how-fields .opt {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+@media (max-width: 860px) {
+  .vv-page .how-grid {
+    grid-template-columns: 1fr;
+    max-width: 540px;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 640px) {
+  .vv-page .vv {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .vv-page .vv-stage {
+    max-width: 100%;
+  }
+  .vv-page .sx-actions .btn {
+    flex: 1;
+  }
+}

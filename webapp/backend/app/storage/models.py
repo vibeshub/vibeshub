@@ -32,11 +32,14 @@ class Trace(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     short_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
 
-    owner_login: Mapped[str] = mapped_column(String(64), index=True)
-    # Nullable since 2026-05-22: a standalone trace has no PR/repo. See the
-    # standalone-trace-uploads design. owner_login stays non-null — it is
-    # always the uploader. The indexes are kept; nullable indexed columns
-    # are fine on both Postgres and SQLite.
+    # Nullable since 2026-05-29: an anonymous (no-login) upload has no
+    # uploader. A signed-in upload always sets it. The index is kept;
+    # nullable indexed columns are fine on both Postgres and SQLite.
+    owner_login: Mapped[Optional[str]] = mapped_column(
+        String(64), index=True, nullable=True
+    )
+    # repo_full_name nullable since 2026-05-22: a standalone trace has no
+    # PR/repo. See the standalone-trace-uploads design. The indexes are kept.
     repo_full_name: Mapped[Optional[str]] = mapped_column(
         String(255), index=True, nullable=True
     )
@@ -76,6 +79,12 @@ class Trace(Base):
     # derived title" (the client shows the AI title or "Untitled session").
     # Settable only by the owner via PATCH /api/traces/{short_id}.
     title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # sha256 hex (64 chars) of the one-time claim token for an anonymous
+    # upload. NULL once claimed (owner_login set) or for signed-in uploads.
+    claim_token_hash: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
 
     # Subagent summaries surfaced via TraceSummary. Stored as JSON list of
     # AgentSummary dicts (see app/api/schemas.py). NULL for legacy rows

@@ -44,7 +44,7 @@ export function PageTopbar({ crumbs }: Props) {
         <div className="topbar-spacer" />
         <div className="topbar-actions">
           {user && (
-            <Link className="topbar-link" to="/upload">
+            <Link className="topbar-link" to="/vibeviewer">
               Upload
             </Link>
           )}

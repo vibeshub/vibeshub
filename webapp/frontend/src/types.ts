@@ -9,7 +9,8 @@ export interface AgentSummary {
 export interface TraceSummary {
   trace_id: string;
   short_id: string;
-  owner_login: string;
+  /** Null for anonymous (unclaimed) uploads from the vibeviewer page. */
+  owner_login: string | null;
   repo_full_name: string | null;
   pr_number: number | null;
   pr_url: string | null;
@@ -161,6 +162,13 @@ export interface UploadResult {
   short_id: string;
   trace_url: string;
   created: boolean;
+  /**
+   * A one-time secret returned only for anonymous (no-login) uploads. The
+   * uploader's browser keeps it so the trace can later be claimed onto a
+   * GitHub profile via POST /api/traces/{short_id}/claim. Null for signed-in
+   * web uploads and CLI uploads.
+   */
+  claim_token?: string | null;
 }
 
 /**

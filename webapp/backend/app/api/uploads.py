@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -50,9 +53,6 @@ async def create_upload(
     settings: Settings = Depends(get_app_settings),
     user: User | None = Depends(get_current_user),
 ) -> IngestResponse:
-    if user is None:
-        raise HTTPException(status_code=403, detail="auth_required")
-
     main_bytes = await transcript.read()
     if len(main_bytes) > settings.max_trace_bytes:
         raise HTTPException(
@@ -95,39 +95,53 @@ async def create_upload(
     except BundleError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    assoc_private = is_private
+    owner_login: str | None = user.github_login if user is not None else None
     repo_name: str | None = None
     pr_number: int | None = None
     resolved_pr_url: str | None = None
     pr_title: str | None = None
+    claim_token: str | None = None
+    claim_token_hash: str | None = None
 
-    if pr_url or repo_full_name:
-        cipher = TokenCipher(settings.token_encryption_key)
-        try:
-            token = cipher.decrypt(user.encrypted_access_token)
-        except Exception:
-            raise HTTPException(
-                status_code=403, detail="github_token_unavailable"
+    if user is None:
+        # Anonymous uploads are always standalone public: ignore any pr_url /
+        # repo_full_name form fields (no GitHub association) and force is
+        # private off. A one-time claim token lets the uploader attach it to
+        # their account later; only the sha256 hash is persisted.
+        assoc_private = False
+        claim_token = secrets.token_urlsafe(32)
+        claim_token_hash = hashlib.sha256(
+            claim_token.encode()
+        ).hexdigest()
+    else:
+        assoc_private = is_private
+        if pr_url or repo_full_name:
+            cipher = TokenCipher(settings.token_encryption_key)
+            try:
+                token = cipher.decrypt(user.encrypted_access_token)
+            except Exception:
+                raise HTTPException(
+                    status_code=403, detail="github_token_unavailable"
+                )
+            assoc = await resolve_association(
+                github=github,
+                token=token,
+                uploader_login=user.github_login,
+                pr_url=pr_url,
+                repo_full_name=repo_full_name,
             )
-        assoc = await resolve_association(
-            github=github,
-            token=token,
-            uploader_login=user.github_login,
-            pr_url=pr_url,
-            repo_full_name=repo_full_name,
-        )
-        repo_name = assoc.repo_full_name
-        pr_number = assoc.pr_number
-        resolved_pr_url = assoc.pr_url
-        pr_title = assoc.pr_title
-        # Repo-associated: privacy mirrors GitHub, not the form field.
-        assoc_private = assoc.is_private
+            repo_name = assoc.repo_full_name
+            pr_number = assoc.pr_number
+            resolved_pr_url = assoc.pr_url
+            pr_title = assoc.pr_title
+            # Repo-associated: privacy mirrors GitHub, not the form field.
+            assoc_private = assoc.is_private
 
     result = await create_or_update_trace(
         session=session,
         blob_store=blob_store,
         unpacked=unpacked,
-        owner_login=user.github_login,
+        owner_login=owner_login,
         platform="web",
         plugin_version=None,
         session_id=None,
@@ -139,6 +153,7 @@ async def create_upload(
         is_private=assoc_private,
         source_export_bytes=source_export_bytes,
         source_format=source_format,
+        claim_token_hash=claim_token_hash,
     )
     await session.commit()
 
@@ -147,4 +162,5 @@ async def create_upload(
         short_id=result.trace.short_id,
         trace_url=_trace_url(settings, result.trace.short_id),
         created=result.created,
+        claim_token=claim_token,
     )

@@ -10,7 +10,8 @@ user + repo overview pages, GitHub sign-in, and the manual web upload form.
 |---|---|
 | `/` | Landing (signed-out) / link to `/home` (signed-in) |
 | `/home` | Redirects signed-in users to their profile |
-| `/upload` | Manual transcript upload (signed-in only) |
+| `/vibeviewer` | Public no-login transcript upload; success card with copy-link + claim-to-profile |
+| `/upload` | Redirects to `/vibeviewer` (retired) |
 | `/privacy` | Privacy policy |
 | `/:owner` | User/org profile (traces + repo breakdown + GitHub stats) |
 | `/:owner/:repo` | Repo overview (traces + contributors) |

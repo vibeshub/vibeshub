@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import re
+import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
@@ -8,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import AgentSummary, TraceSummary
+from app.api.schemas import AgentSummary, ClaimRequest, TraceSummary
 from app.api.trace_service import resolve_association
 from app.auth.crypto import TokenCipher
 from app.auth.scopes import has_repo_scope
@@ -345,6 +347,49 @@ async def get_trace(
     await _require_trace_access(trace, user, settings, access)
     if trace.is_private:
         response.headers["Cache-Control"] = "private, no-store"
+    return _to_summary(trace)
+
+
+@router.post("/api/traces/{short_id}/claim", response_model=TraceSummary)
+async def claim_trace(
+    short_id: str,
+    body: ClaimRequest,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+    user: User | None = Depends(get_current_user),
+):
+    """Attach an anonymous (ownerless) trace to the signed-in user.
+
+    The one-time claim token returned at upload time is compared (in constant
+    time) against the stored sha256 hash. On success the trace gains an
+    `owner_login` and the hash is cleared, so the token can never be reused.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    if user is None:
+        raise HTTPException(status_code=401, detail="auth_required")
+    if not looks_like_short_id(short_id):
+        raise HTTPException(status_code=404, detail="not_found")
+
+    trace = (await session.execute(
+        select(Trace).where(
+            Trace.short_id == short_id, Trace.deleted_at.is_(None)
+        )
+    )).scalar_one_or_none()
+    if trace is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    if trace.owner_login is not None:
+        raise HTTPException(status_code=409, detail="already_claimed")
+    if trace.claim_token_hash is None:
+        raise HTTPException(status_code=409, detail="not_claimable")
+
+    provided_hash = hashlib.sha256(body.claim_token.encode()).hexdigest()
+    if not secrets.compare_digest(provided_hash, trace.claim_token_hash):
+        raise HTTPException(status_code=403, detail="invalid_claim_token")
+
+    trace.owner_login = user.github_login
+    trace.claim_token_hash = None
+    await session.commit()
+    await session.refresh(trace)
     return _to_summary(trace)
 
 
