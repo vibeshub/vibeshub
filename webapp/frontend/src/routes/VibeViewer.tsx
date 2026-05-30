@@ -94,18 +94,36 @@ export function VibeViewer() {
   const [promptCopy, setPromptCopy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [claimState, setClaimState] = useState<ClaimState>("none");
+  const [flashCard, setFlashCard] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progressTimer = useRef<number | null>(null);
   const copyTimer = useRef<number | null>(null);
+  const flashTimer = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       if (progressTimer.current) window.clearInterval(progressTimer.current);
       if (copyTimer.current) window.clearTimeout(copyTimer.current);
+      if (flashTimer.current) window.clearTimeout(flashTimer.current);
     },
     [],
   );
+
+  // The "no transcript handy?" bridge links jump to the matching how-to card
+  // and flash it, so the connection between the prompt and the instructions is
+  // obvious. Honours reduced-motion for the scroll.
+  const jumpToCard = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    }
+    setFlashCard(id);
+    if (flashTimer.current) window.clearTimeout(flashTimer.current);
+    flashTimer.current = window.setTimeout(() => setFlashCard(null), 1700);
+  }, []);
 
   // Returning from OAuth with ?claim=<shortId> (and a stored token) → link the
   // anonymous trace to the now signed-in profile, then open it.
@@ -271,9 +289,10 @@ export function VibeViewer() {
 
   const seo = (
     <SeoHead
-      title="vibeviewer"
-      description="Drop a Claude Code transcript and get a clean, replayable, shareable trace in seconds. No login required."
+      title="Claude Code transcript viewer"
+      description="Drop a Claude Code transcript and get a clean, replayable, shareable trace in seconds. No login required, secrets redacted on upload."
       path="/vibeviewer"
+      image="https://vibeshub.ai/og-vibeviewer.png"
     />
   );
 
@@ -587,6 +606,39 @@ export function VibeViewer() {
           )}
         </div>
 
+        {stage === "idle" && (
+          <p className="vv-bridge">
+            No transcript handy? Get one with{" "}
+            <button
+              type="button"
+              className="bridge-link"
+              aria-label="Jump to the /export instructions below"
+              onClick={() => jumpToCard("how-export")}
+            >
+              /export
+            </button>
+            , a{" "}
+            <button
+              type="button"
+              className="bridge-link"
+              aria-label="Jump to the local session file instructions below"
+              onClick={() => jumpToCard("how-local")}
+            >
+              local .jsonl
+            </button>
+            , or the{" "}
+            <button
+              type="button"
+              className="bridge-link"
+              aria-label="Jump to the plugin instructions below"
+              onClick={() => jumpToCard("how-plugin")}
+            >
+              plugin
+            </button>
+            .
+          </p>
+        )}
+
         {error && <p className="vv-error">{error}</p>}
 
         {stage !== "success" && (
@@ -621,7 +673,7 @@ export function VibeViewer() {
           </span>
         </div>
 
-        <HowToSection />
+        <HowToSection flashCard={flashCard} />
 
         <div className="vv-foot">vibeshub · vibeviewer</div>
       </main>
@@ -801,7 +853,8 @@ zip -j ~/vibeshub-subagents.zip "\${SESSION%.jsonl}"/subagents/* 2>/dev/null \\
 const WAY3_FULL = `/plugin marketplace add vibeshub/vibeshub
 /plugin install vibeshub@vibeshub`;
 
-function HowToSection() {
+function HowToSection({ flashCard }: { flashCard: string | null }) {
+  const flash = (id: string) => (flashCard === id ? " flash" : "");
   return (
     <section className="vv-how">
       <div className="vv-how-head">
@@ -815,7 +868,7 @@ function HowToSection() {
 
       <div className="how-grid">
         {/* Way 1 */}
-        <article className="how-card">
+        <article id="how-export" className={`how-card${flash("how-export")}`}>
           <div className="how-card-body">
             <div className="how-top">
               <span className="how-num">1</span>
@@ -851,7 +904,7 @@ function HowToSection() {
         </article>
 
         {/* Way 2 */}
-        <article className="how-card">
+        <article id="how-local" className={`how-card${flash("how-local")}`}>
           <div className="how-card-body">
             <div className="how-top">
               <span className="how-num">2</span>
@@ -892,7 +945,10 @@ function HowToSection() {
         </article>
 
         {/* Way 3 */}
-        <article className="how-card featured">
+        <article
+          id="how-plugin"
+          className={`how-card featured${flash("how-plugin")}`}
+        >
           <div className="how-card-body">
             <div className="how-top">
               <span className="how-num">3</span>

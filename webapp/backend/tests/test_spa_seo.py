@@ -266,6 +266,65 @@ async def test_deleted_trace_falls_back_to_default(spa_client):
 
 
 # ---------------------------------------------------------------------------
+# Static pages: /vibeviewer
+# ---------------------------------------------------------------------------
+
+class TestStaticPageSeo:
+    def test_vibeviewer_injects_static_meta(self, spa_client):
+        resp = spa_client.get("/vibeviewer")
+        assert resp.status_code == 200
+        body = resp.text
+
+        assert "Claude Code transcript viewer · vibeshub" in body
+        # The keyword-rich description is present.
+        assert "Drop a Claude Code transcript" in body
+        # The default landing title/canonical are gone — critically, the
+        # canonical now points at /vibeviewer rather than the homepage, so
+        # search engines don't fold this URL into "/".
+        assert "vibeshub · share Claude Code sessions" not in body
+        assert 'href="https://vibeshub.test/vibeviewer"' in body
+        assert 'href="https://vibeshub.test/"' not in body
+        assert 'property="og:type" content="website"' in body
+        assert 'name="twitter:card" content="summary_large_image"' in body
+        # Bespoke link-preview art (not the shared og-default.png) on both
+        # the Open Graph and Twitter image tags.
+        assert (
+            'property="og:image" content="https://vibeshub.test/og-vibeviewer.png"'
+            in body
+        )
+        assert (
+            'name="twitter:image" content="https://vibeshub.test/og-vibeviewer.png"'
+            in body
+        )
+        assert "og-default.png" not in body
+
+    @pytest.mark.asyncio
+    async def test_other_cards_still_use_default_og_image(self, spa_client):
+        """The image override is opt-in: DB-derived cards (here, a user
+        page) keep the shared og-default.png."""
+        SessionLocal = spa_client.app.state.session_maker
+        async with SessionLocal() as session:
+            session.add(_make_trace(short_id=SHORT_OK, owner_login="alice"))
+            await session.commit()
+
+        resp = spa_client.get("/alice")
+        body = resp.text
+        assert "og-default.png" in body
+        assert "og-vibeviewer.png" not in body
+
+    def test_static_page_wins_over_user_handler(self, spa_client):
+        """/vibeviewer must be claimed by the static handler even if a
+        GitHub user literally named 'vibeviewer' had public traces — the
+        static handler runs first and 'vibeviewer' is a reserved owner."""
+        resp = spa_client.get("/vibeviewer")
+        body = resp.text
+        # User-handler phrasing ("public Claude Code session... from @") must
+        # not appear; the static card is used instead.
+        assert "public Claude Code session" not in body
+        assert "Claude Code transcript viewer · vibeshub" in body
+
+
+# ---------------------------------------------------------------------------
 # User route: /<owner>
 # ---------------------------------------------------------------------------
 

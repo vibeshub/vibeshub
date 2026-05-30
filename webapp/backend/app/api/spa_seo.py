@@ -40,6 +40,7 @@ SEO_END = "<!--SEO_HEAD_END-->"
 # Kept here so adding a new top-level frontend route is one-line update.
 _RESERVED_OWNERS = frozenset({
     "upload",
+    "vibeviewer",
     "privacy",
     "home",
     "t",
@@ -47,6 +48,24 @@ _RESERVED_OWNERS = frozenset({
     "sitemap.xml",
     "robots.txt",
 })
+
+# Static, indexable SPA pages that carry no DB-derived content but still
+# need a correct <title>/description/canonical. Without this they'd inherit
+# the homepage's default <head> — including its canonical of "/" — which
+# tells search engines to fold these URLs into the homepage. Keyed by
+# `full_path` (no leading slash); value is
+# (title, description, og_type, og_image_filename). The image filename is a
+# file at the site root (Vite `public/` output), e.g. "og-vibeviewer.png".
+_STATIC_PAGES: dict[str, tuple[str, str, str, str]] = {
+    "vibeviewer": (
+        "Claude Code transcript viewer · vibeshub",
+        "Drop a Claude Code transcript and get a clean, replayable, "
+        "shareable trace in seconds. No login required, secrets redacted "
+        "on upload.",
+        "website",
+        "og-vibeviewer.png",
+    ),
+}
 
 
 def extract_trace_short_id(path: str) -> str | None:
@@ -140,6 +159,7 @@ def _render_card_head(
     canonical: str,
     og_type: str,
     base_url: str,
+    image_filename: str = "og-default.png",
 ) -> str:
     """Render the full <title>/<meta>/<link> block for an SSR card.
 
@@ -147,10 +167,12 @@ def _render_card_head(
     emit the same shape: title, description, canonical link, full OG set
     (site_name, type, title, description, url, image), and full Twitter
     card (card, title, description, image). Only the title, description,
-    canonical, and og:type vary by route.
+    canonical, og:type, and og:image vary by route. `image_filename` is a
+    file at the site root (Vite `public/` output); it defaults to the
+    shared og-default.png and is overridden for pages with bespoke art.
     """
     base = base_url.rstrip("/")
-    image = f"{base}/og-default.png"
+    image = f"{base}/{image_filename}"
 
     t = html_escape(title)
     d = html_escape(description, quote=True)
@@ -258,6 +280,25 @@ def _render_pr_head(
     return _render_card_head(title, description, canonical, "website", base_url)
 
 
+async def _try_static_page(
+    path: str, session: AsyncSession, base_url: str
+) -> str | None:
+    """Render a fixed <head> for a known static page (e.g. /vibeviewer).
+
+    No DB access — `session` is accepted only to match the handler
+    signature. Returns None for any path that isn't a registered static
+    page so callers fall through to the other handlers.
+    """
+    page = _STATIC_PAGES.get(path)
+    if page is None:
+        return None
+    title, description, og_type, image_filename = page
+    canonical = f"{base_url.rstrip('/')}/{path}"
+    return _render_card_head(
+        title, description, canonical, og_type, base_url, image_filename
+    )
+
+
 async def _try_trace(
     path: str, session: AsyncSession, base_url: str
 ) -> str | None:
@@ -358,9 +399,10 @@ def _splice(template: str, replacement: str) -> str:
 
 # Ordered handlers: each returns a rendered <head> block or None. The
 # first non-None wins. Order matters — longer/more-specific URL shapes
-# must come before greedier ones. All four route handlers are wired:
-# trace, PR-list, repo, user.
-_HANDLERS = (_try_trace, _try_pr_list, _try_repo, _try_user)
+# must come before greedier ones. Static exact-match pages go first (they're
+# cheap and would otherwise be shadowed by the greedy /<owner> user handler),
+# then trace, PR-list, repo, user.
+_HANDLERS = (_try_static_page, _try_trace, _try_pr_list, _try_repo, _try_user)
 
 
 async def render_spa_html(
