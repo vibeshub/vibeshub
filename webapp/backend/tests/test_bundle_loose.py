@@ -49,6 +49,43 @@ def test_unpack_loose_with_agent_zip():
     }
 
 
+def test_unpack_loose_with_local_agent_naming():
+    # `zip -j out.zip ~/.claude/projects/.../subagents/*` produces flat
+    # `agent-<id>.jsonl` / `agent-<id>.meta.json` members.
+    aid = "a0123456789abcdef"
+    meta = json.dumps({
+        "agentType": "Explore",
+        "description": "test",
+        "toolUseId": "toolu_01abc",
+    }).encode()
+    zip_bytes = _make_zip({
+        f"agent-{aid}.jsonl": b'{"type":"assistant"}\n',
+        f"agent-{aid}.meta.json": meta,
+    })
+    result = unpack_loose_files(
+        b'{"type":"user"}\n', zip_bytes, max_total_bytes=10_000
+    )
+    assert len(result.agents) == 1
+    assert result.agents[0].agent_id == aid
+
+
+def test_unpack_loose_with_local_agent_naming_dir_prefix():
+    # A leading directory prefix (subagents/agent-...) is tolerated.
+    aid = "a0123456789abcdef"
+    meta = json.dumps({
+        "agentType": "Explore", "description": "d", "toolUseId": "t",
+    }).encode()
+    zip_bytes = _make_zip({
+        f"subagents/agent-{aid}.jsonl": b'{"type":"assistant"}\n',
+        f"subagents/agent-{aid}.meta.json": meta,
+    })
+    result = unpack_loose_files(
+        b'{"type":"user"}\n', zip_bytes, max_total_bytes=10_000
+    )
+    assert len(result.agents) == 1
+    assert result.agents[0].agent_id == aid
+
+
 def test_unpack_loose_rejects_unknown_zip_member():
     zip_bytes = _make_zip({"random.txt": b"x"})
     with pytest.raises(BundleError, match="member"):

@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { Home } from "./routes/Home";
 import { Landing } from "./routes/Landing";
@@ -7,8 +7,8 @@ import { Privacy } from "./routes/Privacy";
 import { PrTracesList } from "./routes/PrTracesList";
 import { RepoPage } from "./routes/RepoPage";
 import { TraceView } from "./routes/TraceView";
-import { UploadPage } from "./routes/UploadPage";
 import { UserPage } from "./routes/UserPage";
+import { VibeViewer } from "./routes/VibeViewer";
 
 export function App() {
   return (
@@ -17,7 +17,9 @@ export function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
         <Route path="t/:shortId" element={<TraceView />} />
-        <Route path="upload" element={<UploadPage />} />
+        <Route path="vibeviewer" element={<VibeViewer />} />
+        {/* /upload is retired; the public no-login vibeviewer replaces it. */}
+        <Route path="upload" element={<Navigate to="/vibeviewer" replace />} />
         <Route path="privacy" element={<Privacy />} />
         <Route
           path=":owner/:repo/pull/:number"

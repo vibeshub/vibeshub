@@ -22,7 +22,7 @@ function renderTopbar() {
 describe("PageTopbar", () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it("shows an Upload link pointing at /upload for a signed-in user", () => {
+  it("shows an Upload link pointing at /vibeviewer for a signed-in user", () => {
     mockUseAuth.mockReturnValue({
       loading: false,
       user: { id: "u1", login: "alice", name: "Alice", avatar_url: null },
@@ -31,7 +31,7 @@ describe("PageTopbar", () => {
     });
     renderTopbar();
     const link = screen.getByRole("link", { name: /upload/i });
-    expect(link).toHaveAttribute("href", "/upload");
+    expect(link).toHaveAttribute("href", "/vibeviewer");
   });
 
   it("hides the Upload link from an anonymous visitor", () => {

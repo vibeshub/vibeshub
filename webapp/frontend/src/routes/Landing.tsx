@@ -323,7 +323,7 @@ export function Landing() {
                         session lives on a teammate's laptop, or on a machine
                         where you'd rather not install anything.
                       </p>
-                      <Link to="/upload" className={styles.dropzone}>
+                      <Link to="/vibeviewer" className={styles.dropzone}>
                         <strong>Drop transcript here</strong>
                         <br />
                         <span className={styles.dropzoneDim}>

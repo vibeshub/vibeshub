@@ -22,12 +22,70 @@ def _make_zip(members: dict[str, bytes]) -> bytes:
 
 
 @pytest.mark.asyncio
-async def test_uploads_requires_auth(client):
+async def test_uploads_anonymous_creates_ownerless_public_trace(client):
     r = client.post(
         "/api/uploads",
         files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
     )
-    assert r.status_code == 403
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["created"] is True
+    assert data["claim_token"]  # non-empty
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == data["short_id"])
+        )).scalar_one()
+    assert trace.owner_login is None
+    assert trace.is_private is False
+    assert trace.claim_token_hash is not None
+
+    # Served publicly with owner_login null.
+    g = client.get(f"/api/traces/{data['short_id']}")
+    assert g.status_code == 200, g.text
+    assert g.json()["owner_login"] is None
+
+
+@pytest.mark.asyncio
+async def test_uploads_anonymous_creates_distinct_traces(client):
+    r1 = client.post(
+        "/api/uploads",
+        files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
+    )
+    r2 = client.post(
+        "/api/uploads",
+        files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
+    )
+    assert r1.status_code == 201 and r2.status_code == 201
+    assert r1.json()["short_id"] != r2.json()["short_id"]
+
+
+@pytest.mark.asyncio
+async def test_uploads_anonymous_ignores_repo_association(client):
+    # Anonymous upload that also sends pr/repo fields: ignored, still 201,
+    # ownerless public standalone — no GitHub call, no 403.
+    r = client.post(
+        "/api/uploads",
+        files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
+        data={
+            "pr_url": "https://github.com/alice/repo/pull/1",
+            "repo_full_name": "alice/repo",
+            "is_private": "true",
+        },
+    )
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == short_id)
+        )).scalar_one()
+    assert trace.owner_login is None
+    assert trace.repo_full_name is None
+    assert trace.pr_number is None
+    assert trace.is_private is False
 
 
 @pytest.mark.asyncio
@@ -42,6 +100,8 @@ async def test_uploads_standalone_happy_path(client):
     data = r.json()
     assert data["created"] is True
     assert data["trace_url"].endswith(f"/t/{data['short_id']}")
+    # Signed-in uploads never get a claim token.
+    assert data["claim_token"] is None
 
     SessionLocal = client.app.state.session_maker
     async with SessionLocal() as session:
@@ -52,6 +112,7 @@ async def test_uploads_standalone_happy_path(client):
     assert trace.repo_full_name is None
     assert trace.platform == "web"
     assert trace.is_private is False
+    assert trace.claim_token_hash is None
 
 
 @pytest.mark.asyncio
@@ -217,3 +278,81 @@ async def test_uploads_without_source_export_has_null_format(client):
             select(Trace).where(Trace.short_id == short_id)
         )).scalar_one()
     assert trace.source_format is None
+
+
+async def _anon_upload(client) -> tuple[str, str]:
+    """Anonymous upload; return (short_id, claim_token)."""
+    r = client.post(
+        "/api/uploads",
+        files={"transcript": ("chat.jsonl", b'{"type":"user"}\n')},
+    )
+    assert r.status_code == 201, r.text
+    data = r.json()
+    return data["short_id"], data["claim_token"]
+
+
+@pytest.mark.asyncio
+async def test_claim_happy_path_then_already_claimed(client):
+    short_id, token = await _anon_upload(client)
+    cookies, _ = await authed_cookies(client, login="alice")
+
+    r = client.post(
+        f"/api/traces/{short_id}/claim",
+        json={"claim_token": token},
+        cookies=cookies,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["owner_login"] == "alice"
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (await session.execute(
+            select(Trace).where(Trace.short_id == short_id)
+        )).scalar_one()
+    assert trace.owner_login == "alice"
+    assert trace.claim_token_hash is None
+
+    # A second claim attempt fails — the trace already has an owner.
+    r2 = client.post(
+        f"/api/traces/{short_id}/claim",
+        json={"claim_token": token},
+        cookies=cookies,
+    )
+    assert r2.status_code == 409
+    assert r2.json()["detail"] == "already_claimed"
+
+
+@pytest.mark.asyncio
+async def test_claim_wrong_token_is_403(client):
+    short_id, _ = await _anon_upload(client)
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.post(
+        f"/api/traces/{short_id}/claim",
+        json={"claim_token": "wrong-token"},
+        cookies=cookies,
+    )
+    assert r.status_code == 403
+    assert r.json()["detail"] == "invalid_claim_token"
+
+
+@pytest.mark.asyncio
+async def test_claim_without_auth_is_401(client):
+    short_id, token = await _anon_upload(client)
+    r = client.post(
+        f"/api/traces/{short_id}/claim",
+        json={"claim_token": token},
+    )
+    assert r.status_code == 401
+    assert r.json()["detail"] == "auth_required"
+
+
+@pytest.mark.asyncio
+async def test_claim_missing_trace_is_404(client):
+    from app.short_id import generate
+    cookies, _ = await authed_cookies(client, login="alice")
+    r = client.post(
+        f"/api/traces/{generate()}/claim",
+        json={"claim_token": "anything"},
+        cookies=cookies,
+    )
+    assert r.status_code == 404

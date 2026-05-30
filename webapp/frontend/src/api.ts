@@ -174,6 +174,24 @@ export async function uploadTrace(
   return jsonOrThrow<UploadResult>(r);
 }
 
+/**
+ * Claim an anonymous (unclaimed) trace onto the signed-in user's profile.
+ * `claimToken` is the one-time secret returned by the original anonymous
+ * upload. Requires a session cookie (the viewer must be signed in).
+ */
+export async function claimTrace(
+  shortId: string,
+  claimToken: string,
+): Promise<TraceSummary> {
+  const r = await fetch(`/api/traces/${shortId}/claim`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ claim_token: claimToken }),
+    credentials: "same-origin",
+  });
+  return jsonOrThrow<TraceSummary>(r);
+}
+
 export async function patchTrace(
   shortId: string,
   patch: TracePatch,

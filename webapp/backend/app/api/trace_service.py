@@ -82,7 +82,7 @@ async def create_or_update_trace(
     session: AsyncSession,
     blob_store: BlobStore,
     unpacked: UnpackedBundle,
-    owner_login: str,
+    owner_login: str | None,
     platform: str,
     plugin_version: str | None,
     session_id: str | None,
@@ -94,19 +94,27 @@ async def create_or_update_trace(
     is_private: bool,
     source_export_bytes: bytes | None = None,
     source_format: str | None = None,
+    claim_token_hash: str | None = None,
 ) -> TraceWriteResult:
     """Write the bundle's blobs and create or refresh the matching Trace row.
 
     The caller owns the transaction — this function adds/mutates the row and
     writes blobs but does NOT commit.
     """
-    existing = await _find_existing(
-        session,
-        owner_login=owner_login,
-        repo_full_name=repo_full_name,
-        pr_number=pr_number,
-        session_id=session_id,
-    )
+    # An anonymous upload (owner_login None) has no uploader to scope the
+    # session-id upsert to, and a null session_id never matches anyway, so
+    # distinct anonymous uploads must always create distinct rows. Skip the
+    # lookup entirely; only signed-in uploads can refresh an existing trace.
+    if owner_login is None:
+        existing = None
+    else:
+        existing = await _find_existing(
+            session,
+            owner_login=owner_login,
+            repo_full_name=repo_full_name,
+            pr_number=pr_number,
+            session_id=session_id,
+        )
 
     created = existing is None
     sid = existing.short_id if existing is not None else generate()
@@ -181,6 +189,7 @@ async def create_or_update_trace(
             agents=agent_summaries,
             agent_count=len(agent_summaries),
             source_format=source_format,
+            claim_token_hash=claim_token_hash,
         )
         session.add(trace)
 
