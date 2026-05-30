@@ -29,6 +29,7 @@ const standaloneTrace: TraceSummary = {
   pr_number: null,
   pr_url: null,
   pr_title: null,
+  title: null,
   platform: "claude-code",
   byte_size: 100,
   message_count: 5,

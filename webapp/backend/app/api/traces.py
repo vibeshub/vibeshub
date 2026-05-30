@@ -40,6 +40,7 @@ class TracePatch(BaseModel):
     is_private: bool | None = None
     pr_url: str | None = None
     repo_full_name: str | None = None
+    title: str | None = None
 
 
 def _viewer_token(user: User, settings: Settings) -> str | None:
@@ -171,6 +172,7 @@ def _to_summary(t: Trace) -> TraceSummary:
         pr_number=t.pr_number,
         pr_url=t.pr_url,
         pr_title=t.pr_title,
+        title=t.title,
         platform=t.platform,
         byte_size=t.byte_size,
         message_count=t.message_count,
@@ -548,6 +550,18 @@ async def patch_trace(
     if "is_private" in fields and patch.is_private is not None:
         if trace.repo_full_name is None:
             trace.is_private = patch.is_private
+
+    # Title is owner-editable on any trace. Trim, cap at 200 chars, and treat
+    # an empty/whitespace string as "reset to the derived title" (NULL).
+    if "title" in fields:
+        new_title = patch.title
+        if new_title is not None:
+            new_title = new_title.strip()
+            if len(new_title) > 200:
+                raise HTTPException(status_code=400, detail="title_too_long")
+            if new_title == "":
+                new_title = None
+        trace.title = new_title
 
     await session.commit()
     await session.refresh(trace)

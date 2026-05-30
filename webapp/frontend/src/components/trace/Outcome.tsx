@@ -137,6 +137,7 @@ const FILES_COLLAPSED = 6;
 
 export function Outcome({ session, trace }: Props) {
   const { meta, stream } = session;
+  const isTextImport = meta.sourceFormat === "terminal";
   const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
   const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
   const wall = Math.max(0, end - start);
@@ -177,11 +178,19 @@ export function Outcome({ session, trace }: Props) {
     <div className="outcome-grid">
       <section className="outcome-card">
         <div className="outcome-stats">
-          <StatCell
-            label="Active Time"
-            value={fmtDurationCompact(meta.assistantThinkMs)}
-            sub={`wall: ${fmtDuration(wall)}`}
-          />
+          {isTextImport ? (
+            <StatCell
+              label="Active Time"
+              value="n/a"
+              sub="not available for text imports"
+            />
+          ) : (
+            <StatCell
+              label="Active Time"
+              value={fmtDurationCompact(meta.assistantThinkMs)}
+              sub={`wall: ${fmtDuration(wall)}`}
+            />
+          )}
           <StatCell
             label="Turns"
             value={meta.userPromptCount}

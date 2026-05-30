@@ -19,6 +19,10 @@ interface Props {
   repoName?: string;
   /** Optional owner-only controls rendered inside the topbar. */
   ownerControls?: ReactNode;
+  /** Whether the current viewer owns this trace (enables title editing). */
+  canEditTitle?: boolean;
+  /** Called with the updated summary after an owner edits the title. */
+  onTraceUpdated?: (trace: TraceSummary) => void;
 }
 
 export function TraceViewer({
@@ -29,6 +33,8 @@ export function TraceViewer({
   repoOwner,
   repoName,
   ownerControls,
+  canEditTitle,
+  onTraceUpdated,
 }: Props) {
   const [showSystemEvents, setShowSystemEvents] = useState(false);
   const [expandToolCalls, setExpandToolCalls] = usePersistedBoolean(
@@ -49,7 +55,13 @@ export function TraceViewer({
         />
         <JumpStrip session={session} />
       </div>
-      <Hero session={session} trace={trace} rawHref={rawHref} />
+      <Hero
+        session={session}
+        trace={trace}
+        rawHref={rawHref}
+        canEdit={canEditTitle}
+        onTraceUpdated={onTraceUpdated}
+      />
       {empty ? (
         <div className="empty-state">
           This trace has no parseable events.{" "}

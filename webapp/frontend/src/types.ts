@@ -14,6 +14,7 @@ export interface TraceSummary {
   pr_number: number | null;
   pr_url: string | null;
   pr_title: string | null;
+  title: string | null;
   platform: string;
   byte_size: number;
   message_count: number;
@@ -171,4 +172,5 @@ export interface TracePatch {
   is_private?: boolean;
   pr_url?: string | null;
   repo_full_name?: string | null;
+  title?: string | null;
 }
