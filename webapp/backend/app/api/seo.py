@@ -16,9 +16,10 @@ router = APIRouter()
 
 
 # Routes that are static, indexable, and worth including in every sitemap.
-# /upload and /home are intentionally omitted — neither has value for search
-# results (one is a user action, the other is gated behind auth).
-_STATIC_PATHS: tuple[str, ...] = ("/", "/privacy")
+# /vibeviewer is the public, no-login entry point and a primary landing
+# target, so it belongs here. /upload (now a redirect to /vibeviewer) and
+# /home (auth-gated) are intentionally omitted — neither has search value.
+_STATIC_PATHS: tuple[str, ...] = ("/", "/vibeviewer", "/privacy")
 
 # Sitemap-protocol cap. If/when the dataset grows past this we should split
 # into a sitemap index — for now a single document is fine.

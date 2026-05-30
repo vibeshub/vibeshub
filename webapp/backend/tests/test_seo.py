@@ -52,6 +52,7 @@ def test_sitemap_serves_static_routes_when_no_traces(client):
     assert resp.headers["content-type"].startswith("application/xml")
     locs = _sitemap_locs(resp.text)
     assert "https://vibeshub.test/" in locs
+    assert "https://vibeshub.test/vibeviewer" in locs
     assert "https://vibeshub.test/privacy" in locs
     # /upload and /home are intentionally not indexed.
     assert "https://vibeshub.test/upload" not in locs
