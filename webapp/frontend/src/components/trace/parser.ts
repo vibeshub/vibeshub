@@ -275,10 +275,9 @@ export function buildSession(records: AnyRec[]): Session {
     }
   }
 
-  // Pass 2 — emit the stream in file order. Dedupe assistant content blocks:
-  // each line of an assistant message carries the full content[] but adds one
-  // new block at the end — emit only that last block per line, keyed by
-  // ${msgId}|${blockIdx}|${blockType}.
+  // Pass 2 — emit the stream in file order. Each assistant content block is
+  // written as its own JSONL line (message.content holds a single element),
+  // so emit that block and dedupe by the line's unique uuid (see below).
   const stream: StreamEvent[] = [];
   const emitted = new Set<string>();
   const emittedPrLinks = new Set<string>();
@@ -291,12 +290,17 @@ export function buildSession(records: AnyRec[]): Session {
       const blockIdx = content.length - 1;
       if (blockIdx < 0) continue;
       const block = content[blockIdx];
-      const key = `${msgId}|${blockIdx}|${block.type}`;
-      if (emitted.has(key)) continue;
-      emitted.add(key);
-
       const ts = String(r.timestamp ?? "");
       const uuid = String(r.uuid ?? "");
+      // Dedupe by the record's unique top-level uuid. Each content block is its
+      // own JSONL line, and many lines share one msg.id (a parallel/batched
+      // assistant turn), so a ${msgId}|${blockIdx}|type key collapses distinct
+      // blocks onto each other and drops all but the first. uuid is unique per
+      // block; only a literally re-written line (same uuid) collapses. Fall back
+      // to a never-colliding key when a record somehow lacks a uuid.
+      const key = uuid || `${msgId}|${blockIdx}|${block.type}|${stream.length}`;
+      if (emitted.has(key)) continue;
+      emitted.add(key);
 
       if (block.type === "thinking") {
         const text = String(block.thinking ?? "");

@@ -571,6 +571,78 @@ describe("buildSession with slash-command user messages", () => {
   });
 });
 
+describe("buildSession with one-block-per-line assistant messages", () => {
+  // Current Claude Code writes each assistant content block as its own JSONL
+  // line (message.content has exactly one element), and many consecutive lines
+  // share the same message.id (one parallel/batched assistant turn). The parser
+  // must emit every distinct block. Regression: subagent (Agent) tool cards
+  // vanished because all-but-the-first tool_use sharing a msg.id was dropped,
+  // so there was nothing to expand into the subagent thread.
+  const line = (block: object, uuid: string, ts: string) =>
+    JSON.stringify({
+      type: "assistant",
+      message: {
+        id: "msg_shared",
+        role: "assistant",
+        model: "claude-opus-4-7",
+        content: [block],
+      },
+      uuid,
+      timestamp: ts,
+      sessionId: "s1",
+    });
+
+  const fixture = [
+    line({ type: "thinking", thinking: "planning" }, "a0", "2026-05-29T10:00:00.000Z"),
+    line(
+      { type: "tool_use", id: "toolu_bash1", name: "Bash", input: { command: "ls" } },
+      "a1",
+      "2026-05-29T10:00:01.000Z",
+    ),
+    line(
+      {
+        type: "tool_use",
+        id: "toolu_agent1",
+        name: "Agent",
+        input: { description: "review A", subagent_type: "general-purpose" },
+      },
+      "a2",
+      "2026-05-29T10:00:02.000Z",
+    ),
+    line(
+      { type: "tool_use", id: "toolu_bash2", name: "Bash", input: { command: "pwd" } },
+      "a3",
+      "2026-05-29T10:00:03.000Z",
+    ),
+    line(
+      {
+        type: "tool_use",
+        id: "toolu_agent2",
+        name: "Agent",
+        input: { description: "review B", subagent_type: "general-purpose" },
+      },
+      "a4",
+      "2026-05-29T10:00:04.000Z",
+    ),
+  ].join("\n");
+
+  it("emits every tool_use block when blocks share one msg.id", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const names = session.stream
+      .filter((e) => e.kind === "tool_use")
+      .map((e) => (e as { name: string }).name);
+    expect(names).toEqual(["Bash", "Agent", "Bash", "Agent"]);
+  });
+
+  it("keeps every Agent tool_use card (subagent links) under a shared msg.id", () => {
+    const session = buildSession(parseJsonl(fixture));
+    const agentIds = session.stream
+      .filter((e) => e.kind === "tool_use" && (e as { name: string }).name === "Agent")
+      .map((e) => (e as { id: string }).id);
+    expect(agentIds).toEqual(["toolu_agent1", "toolu_agent2"]);
+  });
+});
+
 describe("parser - progress records", () => {
   it("emits a progress stream event for sidechain hook_progress records", () => {
     const jsonl = [
