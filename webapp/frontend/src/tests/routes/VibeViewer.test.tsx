@@ -96,6 +96,19 @@ describe("VibeViewer", () => {
     ).toBeInTheDocument();
   });
 
+  it("pitches the solo show-off angle and points teams back to the main page", () => {
+    mockUseAuth.mockReturnValue(anon);
+    renderPage();
+    // H1 text node before the highlighted span.
+    expect(
+      screen.getByText(/Show off how you actually/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/A link worth showing off/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/auto-posts these on every PR/i),
+    ).toBeInTheDocument();
+  });
+
   it("uploads anonymously and shows the live-trace success card with a copy prompt", async () => {
     mockUseAuth.mockReturnValue(anon);
     (uploadTrace as Mock).mockResolvedValue({

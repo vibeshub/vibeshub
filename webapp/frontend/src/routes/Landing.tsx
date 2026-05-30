@@ -114,6 +114,7 @@ export function Landing() {
           <div className="topbar-spacer" />
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
+            <a href="#teams">Teams</a>
             <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
             <a href="#privacy">Privacy</a>
@@ -146,7 +147,7 @@ export function Landing() {
             <div className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
                 <span className={styles.tag}>{VERSION_LABEL}</span>
-                <span>public &amp; private &middot; for Claude Code</span>
+                <span>public &amp; private &middot; for vibe coding teams</span>
               </div>
               <h1 className={styles.heroH1}>
                 Don&rsquo;t just ship the diff -
@@ -155,8 +156,9 @@ export function Landing() {
               </h1>
               <p className={styles.heroSub}>
                 Your Claude Code sessions, including every subagent they spawn,
-                become shareable, replayable traces. Show teammates how you
-                actually shipped it, or revisit your own reasoning weeks later.
+                become shareable, replayable traces your whole team can read.
+                Reviewers and teammates see how you actually shipped it, not
+                just the final diff.
               </p>
               <div className={styles.heroInstall}>
                 <div className={styles.heroInstallHead}>
@@ -343,8 +345,8 @@ export function Landing() {
           </div>
         </section>
 
-        {/* ====================== show it off ====================== */}
-        <section className={styles.showoff} id="showoff">
+        {/* ====================== collaborate (teams) ====================== */}
+        <section className={styles.showoff} id="teams">
           <div className={`${styles.container} ${styles.showoffGrid}`}>
             <div className={styles.shareCard}>
               <div className={styles.prCommentHead}>
@@ -385,15 +387,14 @@ export function Landing() {
 
             <div>
               <div className={styles.eyebrow}>
-                <span className={styles.dot} /> Show it off
+                <span className={styles.dot} /> Collaborate
               </div>
               <h2 className={styles.sectionTitle}>
-                Your work, finally legible.
+                Your team&rsquo;s work, finally legible.
               </h2>
               <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
-                Every trace you create gets a stable URL with a social card.
-                Use one anywhere you want your work to be legible to humans,
-                not just to your future self.
+                Every PR your team ships can carry the session that produced it.
+                The whole team reads how it was built, not just what changed.
               </p>
 
               <ul className={styles.showoffUses}>
@@ -402,9 +403,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Receipts on a PR.</strong> The plugin drops the
-                    link as a single bot comment when Claude Code opens a PR.
-                    Reviewers see the actual run, not just the diff.
+                    <strong>Faster, deeper review.</strong> Reviewers open the
+                    actual run, the prompts, tool calls, and reasoning, before
+                    they read the diff. Less guessing, fewer round-trips.
                   </span>
                 </li>
                 <li>
@@ -412,9 +413,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Brag posts.</strong> A social preview with the
-                    title and tool mix that renders cleanly on X and LinkedIn.
-                    Better than a screenshot of your terminal.
+                    <strong>Onboarding without the shoulder-tap.</strong> New
+                    teammates see how tricky changes were really built, with the
+                    full session as context.
                   </span>
                 </li>
                 <li>
@@ -422,10 +423,9 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>On your profile.</strong> Every trace you upload
-                    shows up at{" "}
-                    <code>vibeshub.ai/@you</code>, alongside the repos
-                    you&rsquo;ve contributed to.
+                    <strong>Searchable team history.</strong> Every shipped PR
+                    keeps its session attached, so each repo becomes a browsable
+                    archive of how the team works.
                   </span>
                 </li>
                 <li>
@@ -433,12 +433,19 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Subagents included.</strong> When your session
-                    spawns subagents, every one of them is captured and
-                    replayable too, not just the top-level transcript.
+                    <strong>Shared permissions, zero setup.</strong> Access
+                    mirrors GitHub, so the right people already have visibility,
+                    with no separate ACLs or accounts.
                   </span>
                 </li>
               </ul>
+
+              <p className={styles.showoffCross}>
+                Working solo and just want to show off a session?{" "}
+                <Link to="/vibeviewer" className={styles.ghLink}>
+                  Try the vibeviewer &rarr;
+                </Link>
+              </p>
             </div>
           </div>
         </section>

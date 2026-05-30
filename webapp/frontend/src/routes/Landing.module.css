@@ -2047,3 +2047,9 @@
     padding: 56px 0 72px;
   }
 }
+
+.showoffCross {
+  margin: 20px 0 0;
+  font-size: 13.5px;
+  color: var(--text-faint);
+}
