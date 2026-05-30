@@ -275,7 +275,7 @@ class TestStaticPageSeo:
         assert resp.status_code == 200
         body = resp.text
 
-        assert "Claude Code transcript viewer · vibeshub" in body
+        assert "Claude Code trace viewer · vibeshub" in body
         # The keyword-rich description is present.
         assert "Drop a Claude Code transcript" in body
         # The default landing title/canonical are gone — critically, the
@@ -321,7 +321,7 @@ class TestStaticPageSeo:
         # User-handler phrasing ("public Claude Code session... from @") must
         # not appear; the static card is used instead.
         assert "public Claude Code session" not in body
-        assert "Claude Code transcript viewer · vibeshub" in body
+        assert "Claude Code trace viewer · vibeshub" in body
 
 
 # ---------------------------------------------------------------------------

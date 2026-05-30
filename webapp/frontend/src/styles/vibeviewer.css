@@ -249,6 +249,21 @@
   border-radius: 3px;
 }
 
+/* "See it in action" example link: a quiet helper under the dropzone that
+   mirrors the bridge line's faint styling. The anchor reuses .bridge-link
+   (built for <button>s), so strip the default anchor underline to match. */
+.vv-page .vv-example {
+  max-width: 44ch;
+  margin: 8px auto 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-faint);
+  text-wrap: pretty;
+}
+.vv-page a.bridge-link {
+  text-decoration: none;
+}
+
 /* ---- uploading ---- */
 .vv-page .vv-uploading {
   border: 1px solid var(--border);

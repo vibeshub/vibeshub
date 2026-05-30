@@ -11,6 +11,10 @@ import {
 } from "../components/trace/terminalExport";
 import type { TraceSummary } from "../types";
 
+// A polished public trace linked as a "see it in action" example for cold
+// visitors (e.g. Google Ads) who don't have a transcript handy yet.
+const EXAMPLE_TRACE_PATH = "/t/fxz7sbokor";
+
 // Anonymous uploads come back with a one-time claim token. We stash it in
 // localStorage keyed by short id so it survives the GitHub OAuth round trip and
 // the trace can later be linked to the signer's profile.
@@ -289,7 +293,7 @@ export function VibeViewer() {
 
   const seo = (
     <SeoHead
-      title="Claude Code transcript viewer"
+      title="Claude Code trace viewer"
       description="Drop a Claude Code transcript and get a clean, replayable, shareable trace in seconds. No login required, secrets redacted on upload."
       path="/vibeviewer"
       image="https://vibeshub.ai/og-vibeviewer.png"
@@ -321,7 +325,7 @@ export function VibeViewer() {
 
       <main className="vv">
         <span className="vv-eyebrow">
-          <span className="dot" /> Vibeviewer · no account needed
+          <span className="dot" /> Claude Code trace viewer · no account needed
         </span>
 
         <h1 className="vv-title">
@@ -635,6 +639,21 @@ export function VibeViewer() {
             >
               plugin
             </button>
+            .
+          </p>
+        )}
+
+        {stage === "idle" && (
+          <p className="vv-example">
+            Want to see it in action?{" "}
+            <a
+              className="bridge-link"
+              href={EXAMPLE_TRACE_PATH}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Watch a live example
+            </a>
             .
           </p>
         )}
