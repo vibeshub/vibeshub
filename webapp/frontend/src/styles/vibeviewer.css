@@ -921,4 +921,58 @@
   .vv-page .sx-actions .btn {
     flex: 1;
   }
+  .vv-page .vv-share-uses {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- made-to-be-shared band ---- */
+.vv-page .vv-share {
+  width: 100%;
+  max-width: 980px;
+  margin: 88px auto 0;
+}
+.vv-page .vv-share-uses {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 30px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.vv-page .vv-share-uses li {
+  display: flex;
+  gap: 11px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.vv-page .vv-share-uses .mk {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.vv-page .vv-share-uses .mk svg {
+  width: 13px;
+  height: 13px;
+}
+.vv-page .vv-share-uses strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.vv-page .vv-share-uses code {
+  font: 500 13px var(--font-mono);
+  color: var(--text-strong);
+}
+.vv-page .vv-cross {
+  margin-top: 22px;
+  font-size: 13.5px;
+  color: var(--text-faint);
 }

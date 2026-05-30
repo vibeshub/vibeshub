@@ -329,12 +329,12 @@ export function VibeViewer() {
         </span>
 
         <h1 className="vv-title">
-          Your vibe coding sessions, <span className="hl">visualized</span>.
+          Show off how you actually <span className="hl">built it</span>.
         </h1>
         <p className="vv-sub">
           Your hard work deserves a better look. Drop a Claude Code transcript
-          and get a clean, replayable, shareable trace in seconds, no login
-          required.
+          and get a clean, replayable trace you can share anywhere, in seconds.
+          No login required.
         </p>
 
         <div className="vv-stage">
@@ -688,8 +688,67 @@ export function VibeViewer() {
           </span>
         </div>
 
+        <section className="vv-share">
+          <div className="vv-how-head">
+            <div className="vv-how-eyebrow">Made to be shared</div>
+            <h2 className="vv-how-title">A link worth showing off.</h2>
+            <p className="vv-how-sub">
+              Every trace gets a stable URL built for sharing, so your work is
+              legible to other people, not just your future self.
+            </p>
+          </div>
+          <ul className="vv-share-uses">
+            <li>
+              <span className="mk">
+                <TrustCheck />
+              </span>
+              <span>
+                <strong>A social card that lands.</strong> Drop the link on X or
+                LinkedIn and it renders with the title and tool mix, cleaner than
+                a screenshot of your terminal.
+              </span>
+            </li>
+            <li>
+              <span className="mk">
+                <TrustCheck />
+              </span>
+              <span>
+                <strong>On your profile.</strong> Sign in and every trace you
+                share shows up at <code>vibeshub.ai/@you</code>, a running
+                portfolio of how you build.
+              </span>
+            </li>
+            <li>
+              <span className="mk">
+                <TrustCheck />
+              </span>
+              <span>
+                <strong>Replayable, not a static dump.</strong> Anyone you share
+                with can step through the prompts, tool calls, and reasoning at
+                their own pace.
+              </span>
+            </li>
+            <li>
+              <span className="mk">
+                <TrustCheck />
+              </span>
+              <span>
+                <strong>Subagents included.</strong> When your session spawns
+                subagents, every one is captured and replayable too, not just the
+                top-level transcript.
+              </span>
+            </li>
+          </ul>
+        </section>
+
         <HowToSection flashCard={flashCard} />
 
+        <p className="vv-cross">
+          Shipping with a team?{" "}
+          <Link to="/" className="bridge-link">
+            vibeshub auto-posts these on every PR &rarr;
+          </Link>
+        </p>
         <div className="vv-foot">vibeshub · vibeviewer</div>
       </main>
     </div>
