@@ -426,6 +426,112 @@
   margin: 0 0 18px;
   text-wrap: balance;
 }
+
+/* Inline owner title editor (HeroTitle). The pencil sits next to the heading
+   and only fully reveals on hover/focus; the editor swaps the heading for an
+   input + Save/Cancel. */
+.vibeshub-viewer .hero-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vibeshub-viewer .hero-title-row .hero-title {
+  margin-bottom: 18px;
+}
+
+.vibeshub-viewer .hero-title-edit-btn {
+  flex-shrink: 0;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+.vibeshub-viewer .hero-title-row:hover .hero-title-edit-btn,
+.vibeshub-viewer .hero-title-edit-btn:focus-visible {
+  opacity: 1;
+}
+
+.vibeshub-viewer .hero-title-edit-btn:hover {
+  color: var(--text-strong);
+}
+
+.vibeshub-viewer .hero-title-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.vibeshub-viewer .hero-title-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+}
+
+.vibeshub-viewer .hero-title-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.vibeshub-viewer .hero-title-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.vibeshub-viewer .hero-title-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.vibeshub-viewer .hero-title-btn.primary {
+  background: var(--accent-soft);
+  color: var(--text-strong);
+  border-color: var(--accent);
+}
+
+.vibeshub-viewer .hero-title-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.vibeshub-viewer .hero-title-error {
+  flex-basis: 100%;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+/* On touch / small screens the hover affordance never triggers; keep the
+   pencil visible so owners can still find it. */
+@media (max-width: 640px) {
+  .vibeshub-viewer .hero-title-edit-btn {
+    opacity: 1;
+  }
+}
 .vibeshub-viewer .hero-badges {
   display: flex;
   align-items: center;
