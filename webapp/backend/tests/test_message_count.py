@@ -95,3 +95,19 @@ def test_distinct_messages_with_same_block_shape_each_count():
         '[{"type":"text","text":"b"}]}}',
     )
     assert count_messages(jsonl) == 2
+
+
+def test_codex_counts_assistant_messages_and_tool_calls():
+    data = _lines(
+        '{"type": "session_meta", "payload": {"id": "019e7ed1", "cwd": "/x"}}',
+        '{"type": "turn_context", "payload": {"model": "gpt-5.5"}}',
+        '{"type": "event_msg", "payload": {"type": "user_message", "message": "hi"}}',
+        '{"type": "response_item", "payload": {"type": "message", '
+        '"role": "assistant", "content": [{"type": "output_text", "text": "on it"}]}}',
+        '{"type": "response_item", "payload": {"type": "function_call", '
+        '"name": "exec_command", "arguments": "{\\"cmd\\":\\"ls\\"}", "call_id": "call_1"}}',
+        '{"type": "response_item", "payload": {"type": "function_call_output", '
+        '"call_id": "call_1", "output": "Process exited with code 0\\nOutput:\\nfoo"}}',
+    )
+    # 1 assistant message + 1 function_call = 2 rendered messages.
+    assert count_messages(data) == 2
