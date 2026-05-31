@@ -182,6 +182,21 @@ export function buildSession(records: AnyRec[]): Session {
       const ml = getStr(r, "modelLabel");
       if (ml) meta.modelLabel = ml;
     }
+    // A trace converted from a raw Codex rollout carries one synthetic marker
+    // record. `cwd`/`gitBranch`/`version` are also picked up by the generic
+    // captures below; `model` is deliberately left null here and read from each
+    // assistant record's `message.model` by the generic capture.
+    if (r.type === "codex-meta") {
+      meta.sourceFormat = "codex";
+      const cwd = getStr(r, "cwd");
+      if (cwd) meta.cwd = cwd;
+      const branch = getStr(r, "gitBranch");
+      if (branch) meta.gitBranch = branch;
+      const version = getStr(r, "version");
+      if (version) meta.version = version;
+      const sid = getStr(r, "sessionId");
+      if (sid) meta.sessionId = sid;
+    }
 
     const cwd = getStr(r, "cwd");
     if (cwd && !meta.cwd) meta.cwd = cwd;

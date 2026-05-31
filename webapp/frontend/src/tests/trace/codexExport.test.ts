@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { looksLikeCodex, codexToJsonl } from "../../components/trace/codexExport";
 import { buildSession, parseJsonl } from "../../components/trace/parser";
 import { buildSessionFromRaw } from "../../components/trace/sessionFromRaw";
+import { toolCat, toolLabel } from "../../components/trace/tools";
 
 const ROLLOUT = [
   JSON.stringify({ timestamp: "2026-05-31T16:20:17.129Z", type: "session_meta",
@@ -99,5 +100,15 @@ describe("buildSessionFromRaw dispatch", () => {
     const session = buildSessionFromRaw(claude);
     expect(session.meta.sourceFormat).toBeNull();
     expect(session.stream.some((e) => e.kind === "assistant_text")).toBe(true);
+  });
+});
+
+describe("Codex tool registry", () => {
+  it("categorizes and labels Codex tools", () => {
+    expect(toolCat("shell")).toBe("bash");
+    expect(toolCat("apply_patch")).toBe("write");
+    expect(toolCat("update_plan")).toBe("task");
+    expect(toolCat("spawn_agent")).toBe("agent");
+    expect(toolLabel("shell")).toBe("Shell");
   });
 });

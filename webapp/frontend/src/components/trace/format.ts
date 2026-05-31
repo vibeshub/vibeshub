@@ -196,6 +196,20 @@ export function toolSummary(
   switch (name) {
     case "Bash":
       return s("command") || s("description") || "";
+    case "shell":
+      return s("command") || s("description") || "";
+    case "apply_patch":
+      return shortenPath(s("file_path") || "", root);
+    case "update_plan": {
+      const plan = (input.plan as Array<{ status?: string }>) || [];
+      const done = plan.filter((p) => p?.status === "completed").length;
+      return `${done}/${plan.length} steps`;
+    }
+    case "spawn_agent":
+      return (
+        s("description") ||
+        (s("subagent_type") ? `dispatch ${s("subagent_type")}` : "")
+      );
     case "Read":
     case "Glob":
     case "Grep": {

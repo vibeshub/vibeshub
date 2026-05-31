@@ -8,6 +8,7 @@ import { FileBody } from "./FileBody";
 import { AskUserBody } from "./AskUserBody";
 import { TaskBody } from "./TaskBody";
 import { AgentBody } from "./AgentBody";
+import { PlanBody } from "./PlanBody";
 import { SkillBody } from "./SkillBody";
 import { GenericBody } from "./GenericBody";
 
@@ -53,6 +54,7 @@ function renderBody(
 ) {
   switch (event.name) {
     case "Bash":
+    case "shell":
       return <BashBody input={event.input} result={event.result} />;
     case "Read":
     case "Glob":
@@ -68,6 +70,7 @@ function renderBody(
     case "Write":
     case "Edit":
     case "MultiEdit":
+    case "apply_patch":
       return (
         <FileBody
           mode="write"
@@ -76,6 +79,8 @@ function renderBody(
           root={root}
         />
       );
+    case "update_plan":
+      return <PlanBody input={event.input} />;
     case "AskUserQuestion":
       return (
         <AskUserBody
@@ -89,6 +94,7 @@ function renderBody(
     case "TaskUpdate":
       return <TaskBody mode="update" input={event.input} />;
     case "Agent":
+    case "spawn_agent":
       return (
         <AgentBody
           input={event.input}
