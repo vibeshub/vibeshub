@@ -323,22 +323,34 @@ keeping **Codex-native tool names** so cards are labeled honestly.
 ### 6.1 New: `components/trace/codexExport.ts`
 
 Mirrors `terminalExport.ts`. Exports `looksLikeCodex(text): boolean` and
-`codexToJsonl(text): string` (synthetic Claude-shaped JSONL). Wired into the
-parse step in `routes/TraceView.tsx` and `routes/VibeViewer.tsx` next to the
-terminal-export branch:
+`codexToJsonl(text): string` (synthetic Claude-shaped JSONL).
 
-```
-const text = rawBody;
-const jsonl = looksLikeCodex(text) ? codexToJsonl(text)
-            : looksLikeTerminal(text) ? terminalExportToJsonl(text)
-            : text;
-const session = buildSession(parseJsonl(jsonl));
+**Route ALL raw-transcript parsing through one shared entry point** so the Codex
+(and terminal) dispatch can never be forgotten at a call site:
+
+```ts
+// parser.ts (or a thin sessionFromRaw.ts to avoid an import cycle with codexExport)
+export function buildSessionFromRaw(text: string): Session {
+  const jsonl = looksLikeCodex(text)    ? codexToJsonl(text)
+              : looksLikeTerminal(text) ? terminalExportToJsonl(text)
+              : text;
+  return buildSession(parseJsonl(jsonl));
+}
 ```
 
-This covers both the CLI plugin path (viewer fetches `/raw` → raw Codex bytes →
-convert) and the web drag-upload path uniformly. Nested subagent children are
-fetched via the existing `/agents/<id>` endpoint and run through the same
-dispatch, so a Codex child renders as a full Codex trace.
+There are **three** raw-parse sites today, and only the first is the top-level
+trace. The other two re-parse a fetched *subagent* transcript and currently call
+`buildSession(parseJsonl(jsonl))` directly, so they would feed a Codex child into
+the Claude parser and get an empty session:
+
+1. `routes/TraceView.tsx` + `routes/VibeViewer.tsx` (top-level trace).
+2. `components/trace/tool/AgentBody.tsx:40` (nested subagent, on expand).
+3. `components/trace/Outcome.tsx:94` (every subagent stream, for Files-touched).
+
+All three switch to `buildSessionFromRaw`. This covers the CLI plugin path
+(viewer fetches `/raw` → raw Codex bytes) and the web drag-upload path uniformly,
+and makes Codex subagents render at arbitrary depth (each nested child is itself
+dispatched).
 
 ### 6.2 Record mapping (in `codexToJsonl`)
 
@@ -407,7 +419,39 @@ parser, since Codex emits a patch envelope rather than Claude's
 Widen `SessionMeta.sourceFormat` (currently `"terminal" | null`) to include
 `"codex"`, and add a `platform`/source field threaded from the summary so the
 avatar/badge/copy can branch. `agent_id` stays an opaque string, so Codex UUIDs
-need no type change.
+need no type change. `AgentSummary` (added by the existing Claude subagent
+support) is reused as-is: `tool_use_id` carries the Codex `spawn_agent` `call_id`.
+
+### 6.7 Subagent rendering (Codex-specific touches)
+
+The subagent infrastructure from Claude subagent support is reused; these are the
+Codex deltas beyond the shared `buildSessionFromRaw` fix in §6.1.
+
+- **`tool/ToolCard.tsx` routing.** Codex's subagent tool is named `spawn_agent`,
+  not `Agent`. Add it to the existing `case "Agent":` branch
+  (`case "Agent": case "spawn_agent":`) so `AgentBody` and its already-forwarded
+  `shortId` / `agents` props apply with no other plumbing change.
+- **`AgentBody` field normalization done in the converter (so `AgentBody` stays
+  untouched).** `AgentBody` reads `input.subagent_type`, `input.model`,
+  `input.prompt` (lines 20–23). `codexToJsonl` emits the `spawn_agent` `tool_use`
+  with exactly those keys: `subagent_type` ← `agent_nickname` (fallback
+  `agent_role`), `model` ← child thread model, `prompt` ← `spawn_agent`
+  `args.message`. The `tool_use` `id` is the `call_id`, which matches
+  `AgentSummary.tool_use_id`.
+- **Linkage / recursion via the flat agents list.** `AgentBody` matches
+  `agents.find(a => a.tool_use_id === toolUseId)` against the flat
+  `meta.agents`, which lists every non-guardian descendant (§4.4). Each child's
+  `tool_use_id` is its spawning `call_id` in whatever transcript spawned it, so
+  depth>1 works once all three parse sites use `buildSessionFromRaw`.
+- **`Outcome.tsx` `deriveFiles` tool names.** It currently counts writes only for
+  `Write`/`Edit`/`MultiEdit` and reads for `Read` (lines 50–51). Add the Codex
+  write/read equivalents (`apply_patch` as a write; `shell`/`exec_command` reads
+  are best-effort and may be skipped) so Codex "Files touched" is populated
+  across the parent and subagent streams.
+- **`wait_agent` status (nice-to-have).** Decorate the `AgentBody` header with
+  the child's terminal status from `wait_agent` / `<subagent_notification>` (or
+  the `threads.status` carried in the summary) when available; absence is
+  non-fatal.
 
 ## 7. Architecture & data flow
 
@@ -495,6 +539,11 @@ plumbing or reuse.
 - Viewer test: a Codex trace renders shell, apply_patch (DiffView), and plan
   cards; the platform badge and source-aware avatar show Codex; a `spawn_agent`
   card expands and fetches the nested Codex child.
+- Subagent parse-site coverage (the §6.1 fix): with a Codex parent whose child
+  is a Codex rollout, assert (a) `AgentBody` expand renders the child's real
+  body (not empty), and (b) `Outcome` "Files touched" includes an `apply_patch`
+  from the subagent stream. Both fail if `buildSessionFromRaw` is not used at the
+  AgentBody/Outcome re-parse sites, so this is the regression guard.
 - Reasoning: encrypted-only reasoning is omitted without error; commentary
   renders as thinking.
 
