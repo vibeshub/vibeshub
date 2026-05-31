@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { PageTopbar } from "../components/PageTopbar";
 import { SeoHead } from "../components/SeoHead";
 import styles from "./Privacy.module.css";
@@ -172,7 +173,9 @@ export function Privacy() {
 
       <footer className="footer">
         <span>privacy policy</span>
-        <span>vibeshub</span>
+        <span>
+          <Link to="/contact">Contact</Link> · vibeshub
+        </span>
       </footer>
     </div>
   );

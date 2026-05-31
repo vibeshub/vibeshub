@@ -749,7 +749,9 @@ export function VibeViewer() {
             vibeshub auto-posts these on every PR &rarr;
           </Link>
         </p>
-        <div className="vv-foot">vibeshub · vibeviewer</div>
+        <div className="vv-foot">
+          <Link to="/contact">Contact</Link> · vibeshub · vibeviewer
+        </div>
       </main>
     </div>
   );

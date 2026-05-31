@@ -652,6 +652,16 @@
   color: var(--text-faint);
 }
 
+.vv-page .vv-foot a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.vv-page .vv-foot a:hover {
+  color: var(--text-strong);
+}
+
 /* ---- how-to section ---- */
 .vv-page .vv-how {
   width: 100%;
