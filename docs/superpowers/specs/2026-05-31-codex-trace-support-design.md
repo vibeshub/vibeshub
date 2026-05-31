@@ -204,7 +204,19 @@ each child is its own rollout JSONL. Linking, in priority order (validated
 against three real test subagents Godel/Raman/Poincaré spawned from thread
 `019e7ed1-…`):
 
-1. **Primary graph** — open `$CODEX_HOME/state_5.sqlite` read-only
+0. **Locate the state DB (do not hardcode the filename).** The `_5` in
+   `state_5.sqlite` is a schema-version counter: the Codex binary hardcodes that
+   literal for *this* build, sibling DBs are independently versioned
+   (`goals_1`, `logs_2`, `memories_1`, `state_5`), and old versions are deleted
+   on migration rather than left behind. A future Codex will ship
+   `state_6.sqlite`. Resolve robustly: take `CODEX_HOME` from the environment
+   (default `~/.codex`), glob `state_*.sqlite`, and pick the **highest-N file
+   that actually contains a `thread_spawn_edges` table** (verify via
+   `sqlite_master`). If none qualifies (renamed DB, table moved, locked file),
+   skip straight to the JSONL-header fallback in step 5, which is fully
+   schema-independent.
+
+1. **Primary graph** — open the located DB read-only
    (`file:...?mode=ro`, stdlib `sqlite3`, no new dependency) and query children
    of the main thread id:
 
@@ -406,7 +418,7 @@ Codex turn ends / PR created
   │  hook fires (PostToolUse, matcher includes exec_command)
   ├─ select_adapter → CodexAdapter
   ├─ find_main_transcript  → ~/.codex/sessions/.../rollout-<main>.jsonl
-  ├─ link_subagents        → state_5.sqlite ⋈ threads + spawn_agent outputs
+  ├─ link_subagents        → state_<N>.sqlite ⋈ threads + spawn_agent outputs
   ├─ build_bundle (redact each):  main.jsonl
   │                               agents/<child-uuid>.jsonl
   │                               agents/<child-uuid>.meta.json
@@ -439,7 +451,7 @@ plumbing or reuse.
 
 - Plugin: `plugins/.../tests/fixtures/codex/` with a real (redacted) native
   rollout, a parent-with-three-subagents set (Godel/Raman/Poincaré) plus a
-  trimmed `state_5.sqlite`, a guardian-present case, and a deep (depth>1) case.
+  trimmed `state_<N>.sqlite`, a guardian-present case, and a deep (depth>1) case.
 - Frontend: `src/tests/fixtures/sample-codex-rollout.jsonl` (native main thread,
   with `exec_command`, an `apply_patch`-via-exec, `update_plan`, `spawn_agent`,
   token counts, `task_complete`) and a `sample-codex-subagent.jsonl`.
@@ -452,8 +464,10 @@ plumbing or reuse.
   (Claude).
 - `test_codex_subagent_link.py`: against the fixture sqlite + transcripts,
   assert the three children resolve with correct `tool_use_id` (from
-  `spawn_agent` outputs), guardians excluded, depth>1 recursion, and the
-  glob fallback when the DB is removed.
+  `spawn_agent` outputs), guardians excluded, depth>1 recursion, the highest-N
+  DB-discovery rule (e.g. a fixture renamed `state_6.sqlite` alongside a decoy
+  `state_4.sqlite` lacking the table), and the glob fallback when no DB
+  qualifies.
 - `test_codex_reader.py`: `find_main_transcript` returns the payload
   `transcript_path`; fallback to newest matching rollout.
 - Extend `test_pipeline.py` to run a Codex bundle end-to-end with mocked HTTP:
@@ -525,8 +539,10 @@ through step 3.
 - **Codex hook payload shape** (§8.5): the single unverified-by-reading
   assumption. Mitigated by a live-check step and the runtime-independent manual
   command.
-- **`state_5.sqlite` schema drift** across Codex versions: mitigated by the
-  filesystem-glob fallback (§4.4 step 5), which needs only the child JSONL
+- **State DB filename/schema drift** across Codex versions (the `state_<N>`
+  counter will bump; the table could move): mitigated by highest-N discovery
+  (§4.4 step 0) and the filesystem-glob fallback (§4.4 step 5), which needs only
+  the child JSONL
   headers.
 - **Encrypted reasoning** (§6.3): a fidelity ceiling inherent to Codex, not an
   engineering gap. We surface commentary and plan steps instead.
