@@ -115,3 +115,27 @@ def test_redaction_runs_on_each_file():
 def test_malformed_tar_rejected():
     with pytest.raises(BundleError):
         unpack_and_redact(b"not a tar file", max_total_bytes=10_000)
+
+
+def test_unpack_accepts_codex_uuid_agent():
+    uuid = "019e7f09-bca2-7150-ac2b-54f7b075a2ea"
+    tar = _make_tar({
+        "main.jsonl": b'{"type":"session_meta","payload":{"id":"019e7ed1"}}\n',
+        f"agents/{uuid}.jsonl": b'{"type":"session_meta","payload":{"id":"019e7f09"}}\n',
+        f"agents/{uuid}.meta.json": (
+            b'{"agentType":"default","description":"Godel","toolUseId":"call_x"}'
+        ),
+    })
+    bundle = unpack_and_redact(tar, max_total_bytes=10_000)
+    assert len(bundle.agents) == 1
+    assert bundle.agents[0].agent_id == uuid
+    assert bundle.agents[0].meta["toolUseId"] == "call_x"
+
+
+def test_unpack_still_rejects_traversal_agent_name():
+    tar = _make_tar({
+        "main.jsonl": b"{}\n",
+        "agents/../../etc/passwd.jsonl": b"{}\n",
+    })
+    with pytest.raises(BundleError):
+        unpack_and_redact(tar, max_total_bytes=10_000)
