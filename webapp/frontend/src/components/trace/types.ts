@@ -36,8 +36,9 @@ export interface SessionMeta {
   // Banner model label (e.g. "Opus 4.8") when reconstructed from a terminal
   // export; never the canonical model id. null for jsonl traces.
   modelLabel: string | null;
-  // "terminal" when reconstructed from a .txt export, else null.
-  sourceFormat: "terminal" | null;
+  // "terminal" when reconstructed from a .txt export, "codex" when converted
+  // from a raw Codex rollout, else null.
+  sourceFormat: "terminal" | "codex" | null;
   version: string | null;
   permissionMode: string | null;
   startedAt: string | null;
