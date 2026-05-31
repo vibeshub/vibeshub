@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { looksLikeCodex, codexToJsonl } from "../../components/trace/codexExport";
 import { buildSession, parseJsonl } from "../../components/trace/parser";
@@ -110,5 +113,25 @@ describe("Codex tool registry", () => {
     expect(toolCat("update_plan")).toBe("task");
     expect(toolCat("spawn_agent")).toBe("agent");
     expect(toolLabel("shell")).toBe("Shell");
+  });
+});
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CODEX = readFileSync(join(__dirname, "../fixtures/sample-codex.jsonl"), "utf-8");
+const CHILD = readFileSync(join(__dirname, "../fixtures/sample-codex-subagent.jsonl"), "utf-8");
+
+describe("real Codex fixtures", () => {
+  it("renders the main rollout with tool cards and tokens", () => {
+    const s = buildSessionFromRaw(CODEX);
+    expect(s.meta.sourceFormat).toBe("codex");
+    expect(s.meta.toolCallCount).toBeGreaterThan(0);
+    expect(s.meta.firstPrompt).toBeTruthy();
+  });
+
+  it("renders a Codex subagent child (the AgentBody/Outcome re-parse path)", () => {
+    const child = buildSessionFromRaw(CHILD);
+    expect(child.meta.sourceFormat).toBe("codex");
+    expect(child.stream.length).toBeGreaterThan(0);
+    expect(child.stream.some((e) => e.kind === "assistant_text" || e.kind === "tool_use")).toBe(true);
   });
 });
