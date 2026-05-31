@@ -1438,6 +1438,29 @@
   margin-bottom: 10px;
 }
 
+/* Plan (Codex update_plan) */
+.vibeshub-viewer .plan-body {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.vibeshub-viewer .plan-item {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+.vibeshub-viewer .plan-item .plan-status {
+  width: 1em;
+  color: var(--text-muted);
+}
+.vibeshub-viewer .plan-item.plan-completed .plan-step {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.vibeshub-viewer .plan-item.plan-in_progress .plan-status {
+  color: var(--tool-task);
+}
+
 /* Bash block */
 .vibeshub-viewer .bash-block {
   background: var(--bg-inset);
