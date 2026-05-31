@@ -154,7 +154,7 @@ export function codexToJsonl(text: string): string {
       } else if (pt === "token_count" && lastAssistant) {
         const info = (payload.info ?? {}) as AnyRec;
         const lastUse = info.last_token_usage as AnyRec | undefined;
-        if (lastUse) (lastAssistant.message as AnyRec).usage = mapUsage(lastUse);
+        if (lastUse) ((lastAssistant as AnyRec).message as AnyRec).usage = mapUsage(lastUse);
       } else if (pt === "task_complete" && typeof payload.duration_ms === "number") {
         records.push({ type: "system", subtype: "turn_duration", durationMs: payload.duration_ms, uuid: uuid(), timestamp: ts });
       }
