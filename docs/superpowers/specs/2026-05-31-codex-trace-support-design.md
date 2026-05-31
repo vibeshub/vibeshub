@@ -229,9 +229,11 @@ against three real test subagents Godel/Raman/Poincaré spawned from thread
    WHERE e.parent_thread_id = :main_thread_id;
    ```
 
-   `thread_spawn_edges` is the clean user-spawned graph; **guardian** subagents
-   (approval-review threads, `agent_role='guardian'`, `thread_source='subagent'`)
-   are absent from it by construction, so they are excluded automatically.
+   `thread_spawn_edges` is the clean user-spawned graph used for **linkage**.
+   **Guardian** subagents (approval-review threads, `agent_role='guardian'`,
+   `thread_source='subagent'`) are absent from it by construction. We still
+   *bundle* them for completeness (step 4) but mark them so the viewer hides
+   them by default.
 
 2. **Read each child** transcript bytes from `rollout_path`.
 
@@ -241,15 +243,27 @@ against three real test subagents Godel/Raman/Poincaré spawned from thread
    `call_id` becomes the `AgentEntry.tool_use_id`. (`wait_agent` `targets`
    provide status corroboration.)
 
-4. **Recurse** over `thread_spawn_edges` for `depth > 1`; bundle every
-   non-guardian descendant as a flat `agents/<child_thread_id>` entry. Each
-   links to whichever transcript spawned it via that transcript's `spawn_agent`
-   output, so cross-level linking still works with a flat bundle.
+4. **Recurse + completeness sweep.** Recurse over `thread_spawn_edges` for
+   `depth > 1`, and additionally sweep `threads WHERE thread_source='subagent'`
+   (joined transitively to the main thread via `forked_from_id`) so that **every
+   descendant rollout is bundled, guardians included** (the union of the
+   edge-graph and the sweep). Each becomes a flat `agents/<child_thread_id>`
+   entry tagged with its `agent_role`. User-spawned children link to their
+   spawning `spawn_agent` `call_id` (step 3); guardians and any edge-gap children
+   get `tool_use_id=None` and `agent_type="guardian"` (rendered hidden-by-default,
+   §6.7). This is what makes a future "show guardians" or revised-linkage change
+   require no re-upload (§11).
 
 5. **Fallback** when the DB is locked/absent/schema-drifted: glob
-   `~/.codex/sessions/**/*.jsonl`, read line 1, keep files where
-   `payload.forked_from_id == main_thread_id` and
-   `payload.source.subagent.thread_spawn.agent_role != "guardian"`.
+   `~/.codex/sessions/**/*.jsonl`, read line 1, keep every file where
+   `payload.forked_from_id` chains to `main_thread_id`, carrying
+   `payload.source.subagent.thread_spawn.agent_role` through as the tag (do not
+   drop guardians here either).
+
+6. **Size cap.** Respect the existing `max_trace_bytes` budget. If the union
+   exceeds it, drop guardian (`agent_type="guardian"`) entries first since they
+   are hidden noise, then log what was dropped (no silent truncation). User
+   subagents are never dropped.
 
 The result is a `list[AgentEntry]` in the **same shape the Claude linker
 produces**, so `bundle.py` / `upload.py` / the backend / the viewer's subagent
@@ -443,6 +457,14 @@ Codex deltas beyond the shared `buildSessionFromRaw` fix in §6.1.
   `meta.agents`, which lists every non-guardian descendant (§4.4). Each child's
   `tool_use_id` is its spawning `call_id` in whatever transcript spawned it, so
   depth>1 works once all three parse sites use `buildSessionFromRaw`.
+- **Guardians are stored but not rendered.** Guardian entries carry
+  `tool_use_id=null` (no user `spawn_agent` call spawned them), so no `AgentBody`
+  card references them and they simply don't appear in the transcript today,
+  which is the desired hidden-by-default behavior. They live only as
+  `agents/<id>.jsonl` blobs + `AgentSummary` rows, available for a future
+  "show guardians" feature with no re-upload (§11). `Outcome.tsx` should skip
+  `agent_type==="guardian"` entries when fetching subagent streams for
+  Files-touched (they rarely write and would only add fetch cost).
 - **`Outcome.tsx` `deriveFiles` tool names.** It currently counts writes only for
   `Write`/`Edit`/`MultiEdit` and reads for `Read` (lines 50–51). Add the Codex
   write/read equivalents (`apply_patch` as a write; `shell`/`exec_command` reads
@@ -598,3 +620,56 @@ through step 3.
 - **Apply-patch parsing**: Codex's patch envelope must be parsed into
   `DiffView`'s row model; if a patch shape is unrecognized, fall back to showing
   the raw patch text in a `BashBody`-style card rather than dropping it.
+
+## 11. Forward-compatibility invariant: upload raw, re-parse later
+
+A first-class design goal: **the parsing/conversion (and even subagent-linking)
+logic can be revised at any time and applied to already-uploaded traces with
+zero re-upload.** This holds because the *canonical stored form is the raw,
+complete Codex rollout JSONL*, never a converted or lossy derivative.
+
+What is stored, byte-for-byte (after secret redaction only):
+
+- `main.jsonl` — the entire main-thread rollout, every line (`session_meta`,
+  `turn_context`, all `response_item`s and `event_msg`s). Codex context
+  compaction affects the model's window, not the append-only on-disk rollout, so
+  the file is the full session history.
+- `agents/<id>.jsonl` — the entire rollout of **every** descendant subagent,
+  guardians included (§4.4 step 4).
+
+Everything the viewer renders is recoverable from those bytes, verified against
+real traces:
+
+| Display datum | Source in the stored blob |
+|---|---|
+| Model | `turn_context.payload.model` |
+| Token usage (incl. cache split) | `event_msg.token_count.info` |
+| Duration / TTFT / Active Time | `event_msg.task_complete.{duration_ms,time_to_first_token_ms}` |
+| Real user prompts | `event_msg.user_message` |
+| Tool calls + outputs (exit code, etc.) | `response_item.function_call` / `function_call_output` |
+| Reasoning availability | `response_item.reasoning` (encrypted flag) |
+| Parent → child subagent link | main blob `spawn_agent` `function_call_output` `{agent_id, nickname}` |
+| Child → parent + role/nickname/depth | child blob line-1 `session_meta` (`forked_from_id`, `source.subagent.thread_spawn.*`) |
+
+Consequences:
+
+- **The `state_<N>.sqlite` is not uploaded and does not need to be.** It is an
+  index whose every field (linkage, role, nickname, status, per-thread tokens) is
+  redundantly present in the stored JSONL headers/outputs above. The plugin uses
+  it only as the convenient upload-time source; re-derivation later needs only
+  the stored blobs.
+- **Improving `codexExport.ts`** (better card mapping, reasoning handling, token
+  math) re-renders all existing Codex traces on next view, no re-upload.
+- **Revising subagent linkage rules** (e.g. surfacing guardians, fixing a
+  cross-link) also needs no re-upload, because guardians and the linkage signals
+  are already in the stored blobs.
+- The few backend columns (`platform`, `message_count`, `agents` summary,
+  `title`, repo/PR) are **caches** of blob-derived data, safe to recompute. Only
+  redaction is intentionally lossy, and only for secrets, preserving structure.
+
+Known boundary (documented, not a silent gap): a **resumed or forked main
+session** whose history spans multiple rollout files. The plugin bundles the
+active rollout; stitching multi-file main-thread history is out of scope for v1
+and would be the one case needing additional capture. Subagent *forks* (the
+`spawn_agent` case) are fully covered because each child is its own bundled
+rollout.
