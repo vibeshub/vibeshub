@@ -97,9 +97,11 @@ into Codex format. A file is **imported** if any line contains
 `external-import-turn`, or if it has zero `function_call`/`reasoning`/
 `turn_context` lines. Otherwise native. `originator` and `base_instructions` are
 identical across both and must not be used to discriminate. The frontend
-detector (`looksLikeCodex`) keys on `session_meta` line 1 plus the presence of
-`response_item`/`turn_context`; imported-Claude files are already handled by the
-existing Claude parser and need no Codex path.
+detector (`looksLikeCodex`) keys on the **Codex envelope** (line 1
+`type=="session_meta"` with a Codex `payload`, plus `response_item`/`event_msg`
+lines). `codexToJsonl` handles both native and imported-into-Codex files, since
+both share that envelope; the native/imported distinction matters only for which
+transcript the plugin selects, not for rendering.
 
 ### 3.3 Tool calls and outputs
 
@@ -280,9 +282,9 @@ optional widening below).
   path-traversal rejection. The id is regex-sanitized before any path
   construction, as today.
 - **`app/message_count.py`** — add a Codex branch so list views show a correct
-  count. Detect the Codex shape (line 1 `type=="session_meta"` with no
-  `external-import-turn`) and count `response_item` `message`/`function_call`
-  items. Claude branch unchanged; unknown shapes still return 0.
+  count. Detect the Codex envelope (line 1 `type=="session_meta"` with a Codex
+  `payload`) and count `response_item` `message`/`function_call` items. Claude
+  branch unchanged; unknown shapes still return 0.
 - **`app/api/ingest.py` / `app/api/uploads.py`** — accept and store
   `platform="codex"` (ingest reads it from `X-Vibeshub-Platform`, already
   free-text; the web path may set `source_format="codex"`). No validation that
