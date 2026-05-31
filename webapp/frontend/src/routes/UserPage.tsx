@@ -454,7 +454,9 @@ export function UserPage() {
 
       <footer className="footer">
         <span>user · @{owner}</span>
-        <span>vibeshub</span>
+        <span>
+          <Link to="/contact">Contact</Link> · vibeshub
+        </span>
       </footer>
     </div>
   );

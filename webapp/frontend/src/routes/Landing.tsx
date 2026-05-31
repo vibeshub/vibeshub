@@ -645,6 +645,7 @@ export function Landing() {
               <a href="#browse">Browse</a>
               <Link to="/vibeviewer">Viewer</Link>
               <Link to="/privacy">Privacy</Link>
+              <Link to="/contact">Contact</Link>
               <a href="#install">Install</a>
             </div>
           </div>

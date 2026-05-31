@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
+import { Contact } from "./routes/Contact";
 import { Home } from "./routes/Home";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
@@ -21,6 +22,7 @@ export function App() {
         {/* /upload is retired; the public no-login vibeviewer replaces it. */}
         <Route path="upload" element={<Navigate to="/vibeviewer" replace />} />
         <Route path="privacy" element={<Privacy />} />
+        <Route path="contact" element={<Contact />} />
         <Route
           path=":owner/:repo/pull/:number"
           element={<PrTracesList />}

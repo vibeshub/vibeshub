@@ -299,7 +299,9 @@ export function RepoPage() {
         <span>
           repo · {owner}/{repo}
         </span>
-        <span>vibeshub</span>
+        <span>
+          <Link to="/contact">Contact</Link> · vibeshub
+        </span>
       </footer>
     </div>
   );

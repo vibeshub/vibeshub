@@ -1,0 +1,69 @@
+/* Contact.module.css — minimal layout for the /contact page.
+   Local to the Contact route; all selectors are class-scoped via CSS Modules. */
+
+.contact {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 96px 24px 120px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 16px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 40px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0 0 16px;
+}
+
+.lead {
+  color: var(--text-muted);
+  font-size: 17px;
+  line-height: 1.7;
+  margin: 0 0 36px;
+  max-width: 46ch;
+}
+
+.email {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-decoration: none;
+  padding: 14px 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--accent-soft, color-mix(in oklab, var(--accent) 8%, transparent));
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.email:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.emailArrow {
+  color: var(--text-faint);
+}
