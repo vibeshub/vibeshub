@@ -454,9 +454,11 @@ Codex deltas beyond the shared `buildSessionFromRaw` fix in §6.1.
   `AgentSummary.tool_use_id`.
 - **Linkage / recursion via the flat agents list.** `AgentBody` matches
   `agents.find(a => a.tool_use_id === toolUseId)` against the flat
-  `meta.agents`, which lists every non-guardian descendant (§4.4). Each child's
-  `tool_use_id` is its spawning `call_id` in whatever transcript spawned it, so
-  depth>1 works once all three parse sites use `buildSessionFromRaw`.
+  `meta.agents`, which lists every descendant (§4.4); user-spawned children carry
+  their spawning `call_id` as `tool_use_id` and match a card, while guardians
+  carry `tool_use_id=null` and match nothing (hidden by default). Each child's
+  `call_id` is the one in whatever transcript spawned it, so depth>1 works once
+  all three parse sites use `buildSessionFromRaw`.
 - **Guardians are stored but not rendered.** Guardian entries carry
   `tool_use_id=null` (no user `spawn_agent` call spawned them), so no `AgentBody`
   card references them and they simply don't appear in the transcript today,
