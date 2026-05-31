@@ -24,7 +24,7 @@ def _make_trace(**overrides) -> Trace:
         repo_full_name=overrides.pop("repo_full_name", None),
         pr_number=overrides.pop("pr_number", None),
         pr_title=overrides.pop("pr_title", None),
-        platform="claude-code",
+        platform=overrides.pop("platform", "claude-code"),
         byte_size=1024,
         message_count=overrides.pop("message_count", 42),
         is_private=overrides.pop("is_private", False),
@@ -188,6 +188,21 @@ async def test_public_standalone_trace_injects_meta(spa_client):
     assert 'property="og:title"' in body
     assert 'property="og:type" content="article"' in body
     assert 'name="twitter:card" content="summary_large_image"' in body
+
+
+@pytest.mark.asyncio
+async def test_trace_head_names_codex_agent(spa_client):
+    trace = _make_trace(
+        short_id=SHORT_OK, owner_login="alice", platform="codex",
+        message_count=7,
+    )
+    async with spa_client.app.state.session_maker() as session:
+        session.add(trace)
+        await session.commit()
+
+    body = spa_client.get(f"/t/{SHORT_OK}").text
+    assert "Codex CLI session by @alice" in body
+    assert "Claude Code session" not in body
 
 
 @pytest.mark.asyncio
