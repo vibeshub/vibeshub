@@ -6,7 +6,7 @@ import {
   fmtDurationCompact,
   shortenPath,
 } from "./format";
-import { buildSession, parseJsonl } from "./parser";
+import { buildSessionFromRaw } from "./sessionFromRaw";
 import { fetchAgentJsonl } from "../../api";
 
 interface Props {
@@ -91,7 +91,7 @@ function useSubagentStreams(trace: TraceSummary): {
     Promise.all(
       agents.map((a) =>
         fetchAgentJsonl(trace.short_id, a.agent_id)
-          .then((jsonl) => buildSession(parseJsonl(jsonl)).stream)
+          .then((jsonl) => buildSessionFromRaw(jsonl).stream)
           .catch(() => null),
       ),
     ).then((results) => {

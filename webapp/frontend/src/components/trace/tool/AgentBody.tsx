@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { clip } from "../format";
 import { fetchAgentJsonl } from "../../../api";
-import { buildSession, parseJsonl } from "../parser";
+import { buildSessionFromRaw } from "../sessionFromRaw";
 import type { AgentSummary, Session } from "../types";
 import { NestedThread } from "../NestedThread";
 
@@ -37,7 +37,7 @@ export function AgentBody({ input, toolUseId, shortId, agents }: Props) {
       setLoading(true);
       try {
         const jsonl = await fetchAgentJsonl(shortId, linked.agent_id);
-        setNested(buildSession(parseJsonl(jsonl)));
+        setNested(buildSessionFromRaw(jsonl));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
