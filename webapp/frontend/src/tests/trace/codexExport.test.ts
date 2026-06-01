@@ -42,6 +42,26 @@ describe("looksLikeCodex", () => {
     expect(looksLikeCodex('{"type":"assistant","message":{"content":[]}}\n')).toBe(false);
     expect(looksLikeCodex("Claude Code v2.1\n❯ hi\n⏺ hello\n")).toBe(false);
   });
+
+  // Codex >= 0.135 (Codex Desktop) embeds base_instructions + dynamic_tools in
+  // session_meta, pushing the first line past 32 KB. Recognition must read the
+  // whole first line, not an arbitrary byte slice.
+  it("recognizes a rollout whose session_meta first line exceeds 16 KB", () => {
+    const fatMeta = JSON.stringify({
+      timestamp: "2026-06-01T16:26:53.980Z", type: "session_meta",
+      payload: { id: "019e8402", cwd: "/Users/x/repo", cli_version: "0.135.0-alpha.1",
+        base_instructions: { text: "x".repeat(30000) }, git: { branch: "main" } },
+    });
+    expect(fatMeta.length).toBeGreaterThan(16000);
+    const rollout = fatMeta + "\n" +
+      JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: "hi" } }) + "\n" +
+      JSON.stringify({ type: "response_item", payload: { type: "message", role: "assistant",
+        content: [{ type: "output_text", text: "hello" }] } }) + "\n";
+    expect(looksLikeCodex(rollout)).toBe(true);
+    const session = buildSessionFromRaw(rollout);
+    expect(session.meta.sourceFormat).toBe("codex");
+    expect(session.stream.length).toBeGreaterThan(0);
+  });
 });
 
 describe("codexToJsonl -> buildSession", () => {

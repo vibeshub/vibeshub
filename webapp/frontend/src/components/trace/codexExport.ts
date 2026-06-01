@@ -8,7 +8,12 @@ type AnyRec = Record<string, unknown>;
 const APPLY_PATCH_RE = /^\s*apply_patch\b/;
 
 export function looksLikeCodex(text: string): boolean {
-  const firstLine = text.slice(0, 16000).split("\n").find((l) => l.trim());
+  // The first physical line is the session_meta record. Read it in full (up to
+  // the first newline) rather than slicing an arbitrary byte window: Codex >=
+  // 0.135 embeds base_instructions + dynamic_tools, pushing this line past
+  // 32 KB. Matches the backend's lines[0] check in message_count.py.
+  const nl = text.indexOf("\n");
+  const firstLine = (nl === -1 ? text : text.slice(0, nl)).trim();
   if (!firstLine) return false;
   try {
     const rec = JSON.parse(firstLine) as AnyRec;
