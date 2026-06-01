@@ -57,7 +57,10 @@ def build_bundle(
             jsonl_out, r = redact(jsonl_in)
             _accumulate(r)
 
-            meta_in = json.loads(a.meta_path.read_text(encoding="utf-8"))
+            if a.meta is not None:
+                meta_in = dict(a.meta)
+            else:
+                meta_in = json.loads(a.meta_path.read_text(encoding="utf-8"))
             # Resolve toolUseId from linker output (may be None for orphans).
             meta_in["toolUseId"] = a.tool_use_id
             meta_bytes_in = json.dumps(meta_in, ensure_ascii=False).encode("utf-8")

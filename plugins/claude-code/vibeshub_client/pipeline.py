@@ -8,7 +8,6 @@ from typing import Optional
 from vibeshub_client.bundle import build_bundle
 from vibeshub_client.post_comment import build_comment_body, post_pr_comment
 from vibeshub_client.redact import redact_jsonl
-from vibeshub_client.subagent_link import link_subagents
 from vibeshub_client.upload import UploadError, upload_bundle
 from vibeshub_client.version import PLUGIN_VERSION
 
@@ -49,7 +48,7 @@ async def run_share_pipeline(
     if not paths.main_jsonl.is_file():
         return RunResult(uploaded=False, skip_reason="transcript not found")
 
-    agents = link_subagents(paths.main_jsonl, paths.subagents_dir)
+    agents = reader.link_subagents(paths, hook_input)
     log.info("found %d subagent(s) for session", len(agents))
 
     tar_bytes, report = build_bundle(paths.main_jsonl, agents, redact=redact_jsonl)

@@ -82,6 +82,10 @@ class ClaudeCodeTranscriptReader(TranscriptReader):
 
         return SessionPaths(main_jsonl=candidates[-1], subagents_dir=None)
 
+    def link_subagents(self, paths: "SessionPaths", hook_input: dict) -> list:
+        from vibeshub_client.subagent_link import link_subagents
+        return link_subagents(paths.main_jsonl, paths.subagents_dir)
+
     # Back-compat shim — call sites in hooks may still use find_session().
     def find_session(self, hook_input: dict) -> Path:
         return self.find_session_paths(hook_input).main_jsonl
