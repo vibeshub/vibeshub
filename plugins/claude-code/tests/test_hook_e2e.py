@@ -180,6 +180,57 @@ def test_hook_uploads_when_gh_pr_create_succeeds(
     assert "elapsed=" in upload_line, upload_line
 
 
+def test_hook_uploads_codex_platform(
+    tmp_path: Path,
+    fake_gh_dir: Path,
+    fake_server,
+):
+    """Under a Codex payload (transcript_path under .codex/sessions, CODEX_HOME
+    set, tool_input.cmd), the hook uploads with platform=codex."""
+    codex_home = tmp_path / ".codex"
+    rollout = codex_home / "sessions" / "2026" / "05" / "31" / "rollout-x.jsonl"
+    rollout.parent.mkdir(parents=True)
+    rollout.write_text(
+        '{"type":"session_meta","payload":{"id":"019e7ed1"}}\n'
+        '{"type":"response_item","payload":{"type":"message","role":"user",'
+        '"content":[{"type":"input_text","text":"hi"}]}}\n'
+    )
+
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    hook_log = tmp_path / "hook.log"
+
+    payload = {
+        "session_id": "019e7ed1",
+        "cwd": str(tmp_path),
+        "transcript_path": str(rollout),
+        "tool_input": {"cmd": "gh pr create --fill"},
+        "tool_response": {
+            "stdout": "https://github.com/alice/repo/pull/3\n",
+            "stderr": "",
+        },
+    }
+
+    env = os.environ.copy()
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(hook_log)
+    env["CODEX_HOME"] = str(codex_home)
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1
+    body = fake_server[0]
+    assert body["pr_url"] == "https://github.com/alice/repo/pull/3"
+    assert body["platform"] == "codex"
+    assert body["content_type"] == "application/x-tar"
+    # gzipped tar magic
+    assert body["tar_bytes"][:2] == b"\x1f\x8b"
+    assert "[vibeshub] trace uploaded" in proc.stderr
+
+
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
     hook_script = plugin_root / "hooks" / "on-pr-share.py"
