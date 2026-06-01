@@ -251,3 +251,9 @@ def test_main_delete_bare_token_routes_through_short_id_path():
     by_short.assert_called_once()
     assert by_short.call_args.args[0] == "abc1234567"
     by_pr.assert_not_called()
+
+
+def test_share_trace_uses_select_adapter():
+    src = _SHARE_TRACE_PATH.read_text()
+    assert "select_adapter" in src
+    assert "ClaudeCodeTranscriptReader()" not in src  # no longer constructed directly
