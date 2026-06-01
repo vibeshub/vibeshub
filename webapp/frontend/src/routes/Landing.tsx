@@ -9,8 +9,9 @@ import type { RepoOverview, TraceSummary } from "../types";
 import styles from "./Landing.module.css";
 
 // Keep in sync with plugins/claude-code/.claude-plugin/plugin.json.
-const PLUGIN_VERSION = "0.3.1";
-const VERSION_LABEL = `v${PLUGIN_VERSION.split(".").slice(0, 2).join(".")}`;
+const PLUGIN_VERSION = "0.4.0";
+const PLUGIN_MINOR_VERSION = PLUGIN_VERSION.split(".").slice(0, 2).join(".");
+const VERSION_LABEL = `v${PLUGIN_MINOR_VERSION}`;
 
 // What a new user needs on their machine before installing.
 const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 3.9+";
@@ -534,7 +535,7 @@ export function Landing() {
                   {"\n  AWS_SECRET="}
                   <span className={styles.strike}>aQF/9qZxV7…</span>
                   <span className={styles.okChip}>[redacted:aws]</span>
-                  {'\n  USER_AGENT=vibeshub/0.3"\n'}
+                  {`\n  USER_AGENT=vibeshub/${PLUGIN_MINOR_VERSION}"\n`}
                   <span className={styles.dim}>{"}"}</span>
                   {"\n\n"}
                   <span className={styles.comment}>
@@ -979,4 +980,3 @@ function IconChevronDown() {
     </svg>
   );
 }
-
