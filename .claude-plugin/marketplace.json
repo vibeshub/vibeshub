@@ -1,5 +1,6 @@
 {
   "name": "vibeshub",
+  "description": "Plugins for sharing and showcasing your AI coding sessions on vibeshub.",
   "owner": {
     "name": "vibeshub",
     "email": "team@vibeshub.ai"
