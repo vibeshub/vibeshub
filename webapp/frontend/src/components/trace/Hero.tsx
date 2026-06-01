@@ -42,7 +42,7 @@ function HeroEyebrow({ session, trace, rawHref }: Props) {
           <span>·</span>
         </>
       )}
-      <span>{trace.platform}</span>
+      <span>{trace.platform === "codex" ? "Codex CLI" : trace.platform}</span>
       <span>·</span>
       <span>SESSION · {id}</span>
       {date && (
@@ -125,7 +125,8 @@ export function MetaLine({ session }: { session: Session }) {
     });
   }
   const imported = meta.sourceFormat === "terminal";
-  if (items.length === 0 && !imported) return null;
+  const isCodex = meta.sourceFormat === "codex";
+  if (items.length === 0 && !imported && !isCodex) return null;
   return (
     <div className="meta-wrap">
       <div className="metaline">
@@ -135,6 +136,14 @@ export function MetaLine({ session }: { session: Session }) {
             title="Reconstructed from a Claude Code text export. Token counts, timings, and thinking are not available."
           >
             Imported from text export
+          </span>
+        )}
+        {isCodex && (
+          <span
+            className="metaline-item meta-import-chip"
+            title="Captured from an OpenAI Codex CLI rollout."
+          >
+            Codex CLI
           </span>
         )}
         {items.map((it, i) => (

@@ -9,7 +9,7 @@ import { PrivateTraceGate } from "../components/PrivateTraceGate";
 import { SeoHead } from "../components/SeoHead";
 import { TraceManageMenu } from "../components/TraceManageMenu";
 import { TraceViewer } from "../components/trace/TraceViewer";
-import { buildSession, parseJsonl } from "../components/trace/parser";
+import { buildSessionFromRaw } from "../components/trace/sessionFromRaw";
 import type { Session } from "../components/trace/types";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./TraceView.module.css";
@@ -63,7 +63,7 @@ export function TraceView() {
 
   const session: Session | null = useMemo(() => {
     if (body.kind !== "ready") return null;
-    const built = buildSession(parseJsonl(body.jsonl));
+    const built = buildSessionFromRaw(body.jsonl);
     if (trace?.agents) {
       built.meta.agents = trace.agents;
     }

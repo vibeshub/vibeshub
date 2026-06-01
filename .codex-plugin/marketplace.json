@@ -1,0 +1,14 @@
+{
+  "name": "vibeshub",
+  "owner": {
+    "name": "vibeshub",
+    "email": "team@vibeshub.ai"
+  },
+  "plugins": [
+    {
+      "name": "vibeshub",
+      "source": "./plugins/claude-code",
+      "description": "Upload Claude Code and Codex CLI conversation traces to vibeshub when a PR is created"
+    }
+  ]
+}

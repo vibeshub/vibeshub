@@ -8,11 +8,14 @@ from typing import Optional
 from vibeshub_client.bundle import build_bundle
 from vibeshub_client.post_comment import build_comment_body, post_pr_comment
 from vibeshub_client.redact import redact_jsonl
-from vibeshub_client.subagent_link import link_subagents
 from vibeshub_client.upload import UploadError, upload_bundle
 from vibeshub_client.version import PLUGIN_VERSION
 
 log = logging.getLogger(__name__)
+
+
+def _platform_label(platform_id: str) -> str:
+    return "Codex CLI" if platform_id == "codex" else "Claude Code"
 
 
 @dataclass
@@ -45,7 +48,7 @@ async def run_share_pipeline(
     if not paths.main_jsonl.is_file():
         return RunResult(uploaded=False, skip_reason="transcript not found")
 
-    agents = link_subagents(paths.main_jsonl, paths.subagents_dir)
+    agents = reader.link_subagents(paths, hook_input)
     log.info("found %d subagent(s) for session", len(agents))
 
     tar_bytes, report = build_bundle(paths.main_jsonl, agents, redact=redact_jsonl)
@@ -62,6 +65,7 @@ async def run_share_pipeline(
             plugin_version=PLUGIN_VERSION,
             session_id=options.session_id,
             redaction_count_client=report.total(),
+            platform=reader.platform_id(),
         )
     except UploadError as e:
         return RunResult(
@@ -76,7 +80,10 @@ async def run_share_pipeline(
         try:
             post_pr_comment(
                 pr_url=options.pr_url,
-                body=build_comment_body(result.trace_url, options.pr_url),
+                body=build_comment_body(
+                    result.trace_url, options.pr_url,
+                    platform_label=_platform_label(reader.platform_id()),
+                ),
             )
         except RuntimeError as e:
             return RunResult(

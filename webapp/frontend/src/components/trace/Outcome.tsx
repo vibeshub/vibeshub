@@ -6,7 +6,7 @@ import {
   fmtDurationCompact,
   shortenPath,
 } from "./format";
-import { buildSession, parseJsonl } from "./parser";
+import { buildSessionFromRaw } from "./sessionFromRaw";
 import { fetchAgentJsonl } from "../../api";
 
 interface Props {
@@ -48,7 +48,12 @@ function deriveFiles(
           : null;
       if (!fp) continue;
       if (e.name === "Read") reads.add(fp);
-      if (e.name === "Write" || e.name === "Edit" || e.name === "MultiEdit") {
+      if (
+        e.name === "Write" ||
+        e.name === "Edit" ||
+        e.name === "MultiEdit" ||
+        e.name === "apply_patch"
+      ) {
         writes.push({ path: fp, name: e.name, ts: e.ts });
       }
     }
@@ -80,7 +85,11 @@ function useSubagentStreams(trace: TraceSummary): {
   );
 
   useEffect(() => {
-    const agents = trace.agents ?? [];
+    // Skip guardian subagents: their review threads shouldn't add to
+    // files-touched or the subagent panel.
+    const agents = (trace.agents ?? []).filter(
+      (a) => a.agent_type !== "guardian",
+    );
     if (agents.length === 0) {
       setStreams([]);
       setLoading(false);
@@ -91,7 +100,7 @@ function useSubagentStreams(trace: TraceSummary): {
     Promise.all(
       agents.map((a) =>
         fetchAgentJsonl(trace.short_id, a.agent_id)
-          .then((jsonl) => buildSession(parseJsonl(jsonl)).stream)
+          .then((jsonl) => buildSessionFromRaw(jsonl).stream)
           .catch(() => null),
       ),
     ).then((results) => {

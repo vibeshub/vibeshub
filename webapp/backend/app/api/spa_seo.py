@@ -197,6 +197,13 @@ def _render_card_head(
     )
 
 
+def _agent_label(platform: str | None) -> str:
+    """Human label for the producing agent, derived from the trace platform."""
+    if platform and platform.lower().startswith("codex"):
+        return "Codex CLI"
+    return "Claude Code"
+
+
 def _render_trace_head(trace: Trace, base_url: str) -> str:
     short_id = trace.short_id
 
@@ -226,10 +233,11 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
     )
     title = f"{subject} · vibeshub"
 
+    agent = _agent_label(trace.platform)
     desc_parts = [
-        f"Claude Code session by @{trace.owner_login}"
+        f"{agent} session by @{trace.owner_login}"
         if trace.owner_login
-        else "Claude Code session",
+        else f"{agent} session",
         f"{trace.message_count} messages",
     ]
     if trace.repo_full_name:

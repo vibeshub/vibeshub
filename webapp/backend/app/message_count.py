@@ -17,15 +17,50 @@ from __future__ import annotations
 import json
 
 
+def _looks_like_codex(lines: list[bytes]) -> bool:
+    if not lines:
+        return False
+    try:
+        rec = json.loads(lines[0])
+    except ValueError:
+        return False
+    return (
+        isinstance(rec, dict)
+        and rec.get("type") == "session_meta"
+        and isinstance(rec.get("payload"), dict)
+        and "id" in rec["payload"]
+    )
+
+
+def _count_codex(lines: list[bytes]) -> int:
+    count = 0
+    for raw in lines:
+        try:
+            rec = json.loads(raw)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict) or rec.get("type") != "response_item":
+            continue
+        payload = rec.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        ptype = payload.get("type")
+        if ptype == "message" and payload.get("role") == "assistant":
+            count += 1
+        elif ptype == "function_call":
+            count += 1
+    return count
+
+
 def count_messages(jsonl_bytes: bytes) -> int:
     """Count rendered messages (assistant text blocks + tool calls) in a
     trace JSONL. Unparseable lines are skipped, matching the parser."""
+    lines = [raw.strip() for raw in jsonl_bytes.splitlines() if raw.strip()]
+    if _looks_like_codex(lines):
+        return _count_codex(lines)
     emitted: set[tuple[str, int, str]] = set()
     count = 0
-    for raw in jsonl_bytes.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
+    for line in lines:
         try:
             rec = json.loads(line)
         except ValueError:

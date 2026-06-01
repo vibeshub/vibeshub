@@ -89,6 +89,31 @@ async def test_upload_success_sends_tar_and_headers():
 
 
 @pytest.mark.asyncio
+async def test_upload_sends_codex_platform():
+    captured: dict = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.header_items())
+        return _ok_response()
+
+    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
+        await upload_bundle(
+            server_url="https://vibeshub.test",
+            token="t",
+            tar_bytes=b"x",
+            pr_url=None,
+            repo_full_name=None,
+            plugin_version="0.4.0",
+            session_id=None,
+            redaction_count_client=0,
+            platform="codex",
+        )
+
+    # urllib title-cases header names
+    assert captured["headers"]["X-vibeshub-platform"] == "codex"
+
+
+@pytest.mark.asyncio
 async def test_upload_omits_session_header_when_none():
     captured: dict = {}
 

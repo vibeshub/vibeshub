@@ -355,3 +355,40 @@ async def test_ingest_does_not_resurrect_a_deleted_trace(client, respx_mock):
     assert r2.status_code == 201, r2.text
     assert r2.json()["created"] is True
     assert r2.json()["short_id"] != sid1
+
+
+@pytest.mark.asyncio
+async def test_ingest_codex_platform_and_uuid_agent(client, respx_mock):
+    _mock_alice_pr1(respx_mock)
+
+    uuid = "019e7f09-bca2-7150-ac2b-54f7b075a2ea"
+    main = (
+        b'{"type":"session_meta","payload":{"id":"019e7ed1","cwd":"/x"}}\n'
+        b'{"type":"response_item","payload":{"type":"message","role":"assistant",'
+        b'"content":[{"type":"output_text","text":"on it"}]}}\n'
+        b'{"type":"response_item","payload":{"type":"function_call",'
+        b'"name":"exec_command","arguments":"{\\"cmd\\":\\"ls\\"}","call_id":"c1"}}\n'
+    )
+    body = make_bundle({
+        "main.jsonl": main,
+        f"agents/{uuid}.jsonl": b'{"type":"session_meta","payload":{"id":"019e7f09"}}\n',
+        f"agents/{uuid}.meta.json": (
+            b'{"agentType":"default","description":"Godel","toolUseId":"call_spawn"}'
+        ),
+    })
+    headers = {**COMMON_HEADERS, "X-Vibeshub-Platform": "codex"}
+    r = client.post("/api/ingest", content=body, headers=headers)
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (
+            await session.execute(select(Trace).where(Trace.short_id == short_id))
+        ).scalar_one()
+
+    assert trace.platform == "codex"
+    assert trace.message_count == 2  # 1 assistant msg + 1 function_call
+    assert trace.agent_count == 1
+    assert trace.agents[0]["agent_id"] == uuid
+    assert trace.agents[0]["tool_use_id"] == "call_spawn"

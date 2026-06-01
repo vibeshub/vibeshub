@@ -1200,6 +1200,11 @@
   font-family: var(--font-mono);
   margin-top: 2px;
 }
+.vibeshub-viewer .assistant-avatar[data-agent="codex"] {
+  font-size: 0.62em;
+  letter-spacing: 0;
+  background: var(--tool-agent);
+}
 .vibeshub-viewer .assistant-text-body {
   flex: 1;
   min-width: 0;
@@ -1436,6 +1441,29 @@
   font-size: 12.5px;
   color: var(--text-muted);
   margin-bottom: 10px;
+}
+
+/* Plan (Codex update_plan) */
+.vibeshub-viewer .plan-body {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.vibeshub-viewer .plan-item {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+.vibeshub-viewer .plan-item .plan-status {
+  width: 1em;
+  color: var(--text-muted);
+}
+.vibeshub-viewer .plan-item.plan-completed .plan-step {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.vibeshub-viewer .plan-item.plan-in_progress .plan-status {
+  color: var(--tool-task);
 }
 
 /* Bash block */

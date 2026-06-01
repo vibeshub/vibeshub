@@ -83,3 +83,27 @@ describe("Outcome Active Time", () => {
     expect(screen.getByText(/^wall:/)).toBeTruthy();
   });
 });
+
+describe("Outcome files touched", () => {
+  afterEach(() => cleanup());
+
+  it("counts apply_patch as a touched file", () => {
+    const session = makeSession({
+      sourceFormat: "codex",
+      toolCounts: { apply_patch: 1 },
+      toolCallCount: 1,
+    });
+    session.stream = [
+      {
+        kind: "tool_use",
+        name: "apply_patch",
+        id: "c2",
+        input: { file_path: "src/a.ts" },
+        ts: "",
+        result: null,
+      } as unknown as Session["stream"][number],
+    ];
+    renderOutcome(session, makeTrace({ agents: [] }));
+    expect(screen.getByText(/a\.ts/)).toBeTruthy();
+  });
+});

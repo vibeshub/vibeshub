@@ -37,6 +37,7 @@ class AgentEntry:
     description: str
     jsonl_path: Path
     meta_path: Path
+    meta: dict | None = None
 
 
 @dataclass

@@ -25,6 +25,12 @@ const TOOL_META: Record<string, ToolMeta> = {
   TaskStop: { cat: "task", label: "Task stop" },
   WebFetch: { cat: "read", label: "WebFetch" },
   WebSearch: { cat: "read", label: "WebSearch" },
+  shell: { cat: "bash", label: "Shell" },
+  apply_patch: { cat: "write", label: "Apply patch" },
+  update_plan: { cat: "task", label: "Plan" },
+  spawn_agent: { cat: "agent", label: "Subagent" },
+  wait_agent: { cat: "agent", label: "Wait for agent" },
+  web_search: { cat: "read", label: "Web search" },
 };
 
 export function toolCat(name: string): ToolCategory {

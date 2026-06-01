@@ -44,6 +44,9 @@ export function Thread({
 }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
+  const isCodex = session.meta.sourceFormat === "codex";
+  const avatarChar = isCodex ? "Cx" : "C";
+  const agentKind = isCodex ? "codex" : "claude";
   const totalPrompts = session.meta.userPromptCount;
   const agents = session.meta.agents ?? [];
   const nextPrompt = buildNextPromptIndex(stream);
@@ -97,7 +100,14 @@ export function Thread({
     }
     if (e.kind === "assistant_text") {
       flushRun();
-      out.push(<AssistantText event={e} key={key} />);
+      out.push(
+        <AssistantText
+          event={e}
+          avatar={avatarChar}
+          agent={agentKind}
+          key={key}
+        />,
+      );
       continue;
     }
     if (e.kind === "thinking") {

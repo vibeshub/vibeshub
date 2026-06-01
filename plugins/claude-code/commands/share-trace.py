@@ -140,7 +140,7 @@ async def _share(
 ) -> None:
     from vibeshub_client.gh_token import get_gh_token
     from vibeshub_client.pipeline import RunOptions, run_share_pipeline
-    from reader import ClaudeCodeTranscriptReader
+    from platform_adapter import select_adapter
 
     if not session_id:
         sys.stderr.write(
@@ -158,7 +158,9 @@ async def _share(
         repo_full_name=repo_full_name,
         session_id=session_id,
     )
-    reader = ClaudeCodeTranscriptReader()
+    # Under Codex there is no transcript_path here; select_adapter falls back to
+    # CODEX_HOME, and CodexTranscriptReader picks the newest rollout for the cwd.
+    reader = select_adapter({"cwd": os.getcwd()})
     hook_input = {"session_id": session_id, "cwd": os.getcwd()}
 
     result = await run_share_pipeline(
