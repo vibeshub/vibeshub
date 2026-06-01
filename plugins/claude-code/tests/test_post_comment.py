@@ -17,6 +17,21 @@ def test_build_comment_body_rewrites_short_url_to_pr_style():
     assert "public by default" not in body.lower()
 
 
+def test_comment_body_uses_platform_label():
+    body = build_comment_body(
+        "https://vibeshub.test/t/abc",
+        "https://github.com/alice/repo/pull/1",
+        platform_label="Codex CLI",
+    )
+    assert "Codex CLI trace for this PR" in body
+    # default stays Claude Code
+    default = build_comment_body(
+        "https://vibeshub.test/t/abc",
+        "https://github.com/alice/repo/pull/1",
+    )
+    assert "Claude Code trace for this PR" in default
+
+
 def test_build_comment_body_passes_through_unrecognized_trace_url():
     body = build_comment_body(
         "https://vibeshub.test/something-else",

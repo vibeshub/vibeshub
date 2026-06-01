@@ -38,12 +38,14 @@ async def test_pipeline_builds_bundle_with_agents(tmp_path):
 
     async def fake_upload(
         *, server_url, token, tar_bytes, pr_url, repo_full_name,
-        plugin_version, session_id, redaction_count_client, timeout=60.0,
+        plugin_version, session_id, redaction_count_client,
+        platform="claude-code", timeout=60.0,
     ):
         captured["tar_bytes"] = tar_bytes
         captured["plugin_version"] = plugin_version
         captured["pr_url"] = pr_url
         captured["repo_full_name"] = repo_full_name
+        captured["platform"] = platform
         return UploadResult(trace_id="t1", short_id="abc", trace_url="https://x/abc")
 
     with patch("vibeshub_client.pipeline.upload_bundle", new=fake_upload), \
@@ -68,6 +70,8 @@ async def test_pipeline_builds_bundle_with_agents(tmp_path):
     assert "agents/a1111111111111111.jsonl" in names
     assert "agents/a1111111111111111.meta.json" in names
     assert captured["plugin_version"] == PLUGIN_VERSION
+    # Pipeline threads reader.platform_id() into the upload.
+    assert captured["platform"] == "claude-code"
     # fake_upload returns a default UploadResult (created=True) -> comment posted.
     mock_comment.assert_called_once()
 
@@ -126,7 +130,8 @@ async def test_pipeline_skips_comment_when_trace_not_created(tmp_path):
 
     async def fake_upload(
         *, server_url, token, tar_bytes, pr_url, repo_full_name,
-        plugin_version, session_id, redaction_count_client, timeout=60.0,
+        plugin_version, session_id, redaction_count_client,
+        platform="claude-code", timeout=60.0,
     ):
         return UploadResult(
             trace_id="t1", short_id="abc",
@@ -175,7 +180,8 @@ async def test_pipeline_standalone_uploads_without_comment(tmp_path):
 
     async def fake_upload(
         *, server_url, token, tar_bytes, pr_url, repo_full_name,
-        plugin_version, session_id, redaction_count_client, timeout=60.0,
+        plugin_version, session_id, redaction_count_client,
+        platform="claude-code", timeout=60.0,
     ):
         captured["pr_url"] = pr_url
         captured["repo_full_name"] = repo_full_name
@@ -226,7 +232,8 @@ async def test_pipeline_repo_only_uploads_without_comment(tmp_path):
 
     async def fake_upload(
         *, server_url, token, tar_bytes, pr_url, repo_full_name,
-        plugin_version, session_id, redaction_count_client, timeout=60.0,
+        plugin_version, session_id, redaction_count_client,
+        platform="claude-code", timeout=60.0,
     ):
         captured["pr_url"] = pr_url
         captured["repo_full_name"] = repo_full_name

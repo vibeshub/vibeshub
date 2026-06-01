@@ -20,9 +20,11 @@ def _pr_style_trace_url(trace_url: str, pr_url: str) -> str:
     return f"{t['base']}/{p['owner']}/{p['repo']}/pull/{p['n']}/{t['sid']}"
 
 
-def build_comment_body(trace_url: str, pr_url: str) -> str:
+def build_comment_body(
+    trace_url: str, pr_url: str, *, platform_label: str = "Claude Code"
+) -> str:
     return (
-        f"Claude Code trace for this PR: {_pr_style_trace_url(trace_url, pr_url)}\n\n"
+        f"{platform_label} trace for this PR: {_pr_style_trace_url(trace_url, pr_url)}\n\n"
         "Uploaded by the PR author."
     )
 

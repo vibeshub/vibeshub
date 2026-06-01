@@ -171,13 +171,14 @@ async def upload_bundle(
     plugin_version: str,
     session_id: str | None,
     redaction_count_client: int,
+    platform: str = "claude-code",
     timeout: float = 60.0,
 ) -> UploadResult:
     url = f"{server_url.rstrip('/')}/api/ingest"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/x-tar",
-        "X-Vibeshub-Platform": "claude-code",
+        "X-Vibeshub-Platform": platform,
         "X-Vibeshub-Plugin-Version": plugin_version,
         "X-Vibeshub-Client-Redactions": str(redaction_count_client),
     }

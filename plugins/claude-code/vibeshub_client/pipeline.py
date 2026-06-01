@@ -15,6 +15,10 @@ from vibeshub_client.version import PLUGIN_VERSION
 log = logging.getLogger(__name__)
 
 
+def _platform_label(platform_id: str) -> str:
+    return "Codex CLI" if platform_id == "codex" else "Claude Code"
+
+
 @dataclass
 class RunOptions:
     server_url: str
@@ -62,6 +66,7 @@ async def run_share_pipeline(
             plugin_version=PLUGIN_VERSION,
             session_id=options.session_id,
             redaction_count_client=report.total(),
+            platform=reader.platform_id(),
         )
     except UploadError as e:
         return RunResult(
@@ -76,7 +81,10 @@ async def run_share_pipeline(
         try:
             post_pr_comment(
                 pr_url=options.pr_url,
-                body=build_comment_body(result.trace_url, options.pr_url),
+                body=build_comment_body(
+                    result.trace_url, options.pr_url,
+                    platform_label=_platform_label(reader.platform_id()),
+                ),
             )
         except RuntimeError as e:
             return RunResult(
