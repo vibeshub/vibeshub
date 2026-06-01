@@ -69,7 +69,7 @@ def main() -> None:
 
     tool_input = payload.get("tool_input", {})
     tool_response = payload.get("tool_response", {})
-    command = tool_input.get("command", "")
+    command = tool_input.get("command") or tool_input.get("cmd") or ""
 
     try:
         from vibeshub_client.gh_token import GhTokenError, get_gh_token
@@ -127,7 +127,7 @@ def main() -> None:
 
     server_url = os.environ.get("VIBESHUB_SERVER_URL", "https://vibeshub.ai")
 
-    from reader import ClaudeCodeTranscriptReader
+    from platform_adapter import select_adapter
 
     options = RunOptions(
         server_url=server_url,
@@ -135,7 +135,7 @@ def main() -> None:
         pr_url=pr_url,
         session_id=payload.get("session_id"),
     )
-    reader = ClaudeCodeTranscriptReader()
+    reader = select_adapter(payload)
 
     try:
         result = asyncio.run(
