@@ -15,14 +15,14 @@ Host Claude Code conversation traces and link them to the pull requests they pro
 7. Private-repo traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace. Viewers grant private access with an opt-in "Enable private repositories" login.
 8. Web upload (`/upload`) and standalone (no-repo) traces are also supported — those uploads use a session cookie rather than a `gh` bearer token.
 
-Other platforms (Cursor, Codex, …) can plug in by mirroring [plugins/claude-code/](plugins/claude-code/) — see [plugins/README.md](plugins/README.md).
+Other platforms (Cursor, …) can plug in by mirroring [plugins/cli/](plugins/cli/) — see [plugins/README.md](plugins/README.md).
 
 ## Repo layout
 
 ```
 vibeshub/
 ├── plugins/
-│   ├── claude-code/    # PostToolUse hook + /share-trace slash command;
+│   ├── cli/            # Claude Code + Codex CLI: PostToolUse hook + /share-trace slash command;
 │   │                   # bundles the vibeshub_client library (redaction, upload, gh-comment)
 │   └── README.md       # how to add a new platform plugin
 ├── webapp/
@@ -38,7 +38,7 @@ vibeshub/
 Per-component docs:
 - [webapp/backend/README.md](webapp/backend/README.md) — env vars, OAuth setup, local run, tests
 - [webapp/frontend/README.md](webapp/frontend/README.md) — routes, dev server, build, tests
-- [plugins/claude-code/README.md](plugins/claude-code/README.md) — install, hook config, slash command
+- [plugins/cli/README.md](plugins/cli/README.md) — install, hook config, slash command
 
 ## Local development
 

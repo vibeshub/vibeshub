@@ -2,14 +2,14 @@
 
 Each platform plugin (Claude Code, Cursor, Codex, ...) is a thin layer over
 the `vibeshub_client` library. Today it lives bundled inside
-[claude-code/vibeshub_client/](claude-code/vibeshub_client/) so the plugin is
+[cli/vibeshub_client/](cli/vibeshub_client/) so the plugin is
 self-contained for marketplace install; when a second platform is added,
 lift it back out into a shared location and have both plugins vendor or
 symlink it.
 
 To add `<platform>`:
 
-1. Create `plugins/<platform>/` mirroring the layout of `plugins/claude-code/`,
+1. Create `plugins/<platform>/` mirroring the layout of `plugins/cli/`,
    including a `vibeshub_client/` copy so the plugin is self-contained.
 2. Implement `reader.py` with a `TranscriptReader` subclass that:
    - returns the transcript JSONL path for the active session
@@ -21,10 +21,10 @@ To add `<platform>`:
    `gh pr edit`, and `git push` (the latter two re-share the existing trace
    for the current branch's open PR); other platforms will have different
    surfaces. Triggers are classified in
-   [claude-code/vibeshub_client/share_trigger.py](claude-code/vibeshub_client/share_trigger.py).
+   [cli/vibeshub_client/share_trigger.py](cli/vibeshub_client/share_trigger.py).
 4. Add a slash command (or its platform equivalent) for manual share + delete.
 5. Document install + config in a `README.md` modeled on
-   `plugins/claude-code/README.md`.
+   `plugins/cli/README.md`.
 
 The server doesn't need to change to accept a new platform — the `platform`
 field is free-form on `/api/ingest`. The viewer parses Claude Code's JSONL

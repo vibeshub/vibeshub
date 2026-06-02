@@ -161,7 +161,7 @@ On each developer's machine (one-time):
 - macOS / Linux shell: `export VIBESHUB_SERVER_URL="https://<your-app-fqdn>"`
 - Windows PowerShell: `$env:VIBESHUB_SERVER_URL = "https://<your-app-fqdn>"`
 
-Then install the Claude Code plugin per [../../plugins/claude-code/README.md](../../plugins/claude-code/README.md).
+Then install the Claude Code plugin per [../../plugins/cli/README.md](../../plugins/cli/README.md).
 
 ---
 

@@ -140,7 +140,7 @@ async def test_upload_omits_session_header_when_none():
 async def test_upload_default_timeout_is_60s():
     """Default socket-read timeout must be 60s so it doesn't starve the
     server's worst-case happy path (two sequential GitHub calls @ 10s
-    each + blob put + DB commit). See plugins/claude-code investigation
+    each + blob put + DB commit). See plugins/cli investigation
     of the 30s read-timeout incident."""
     captured: dict = {}
 
