@@ -1,10 +1,19 @@
 {
   "name": "vibeshub",
-  "description": "Upload Claude Code conversation traces to vibeshub when a PR is created",
+  "description": "Upload Claude Code and Codex CLI conversation traces to vibeshub when a PR is created",
   "version": "0.4.0",
   "author": {
     "name": "vibeshub",
-    "email": "noreply@vibeshub.ai"
+    "email": "bhavya@vibeshub.ai",
+    "url": "https://vibeshub.ai/"
   },
-  "license": "MIT"
+  "homepage": "https://vibeshub.ai/",
+  "repository": "https://github.com/vibeshub/vibeshub",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "traces",
+    "pull-requests"
+  ]
 }

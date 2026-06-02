@@ -4,7 +4,35 @@
   "version": "0.4.0",
   "author": {
     "name": "vibeshub",
-    "email": "noreply@vibeshub.ai"
+    "email": "bhavya@vibeshub.ai"
   },
-  "license": "MIT"
+  "homepage": "https://vibeshub.ai/",
+  "repository": "https://github.com/vibeshub/vibeshub",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "claude-code",
+    "traces",
+    "pull-requests"
+  ],
+  "interface": {
+    "displayName": "vibeshub",
+    "shortDescription": "Share Codex and Claude Code traces with vibeshub",
+    "longDescription": "vibeshub uploads coding-agent conversation traces when pull requests are created, then links them from GitHub for review and replay.",
+    "developerName": "vibeshub",
+    "category": "Engineering",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://vibeshub.ai/",
+    "privacyPolicyURL": "https://vibeshub.ai/privacy",
+    "brandColor": "#D07843",
+    "composerIcon": "./assets/apple-touch-icon.png",
+    "logo": "./assets/apple-touch-icon.png",
+    "defaultPrompt": [
+      "Share this coding session with vibeshub"
+    ],
+    "screenshots": []
+  }
 }
