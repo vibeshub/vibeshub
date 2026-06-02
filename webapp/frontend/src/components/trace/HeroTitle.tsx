@@ -6,14 +6,42 @@ interface Props {
   trace: TraceSummary;
   /** Derived AI title from the parsed session, used as a fallback. */
   aiTitle: string | null;
+  /**
+   * First user prompt. Used as a last-resort derived title for traces that
+   * carry no `ai-title` record (e.g. Codex rollouts, terminal exports), which
+   * would otherwise all read "Untitled session". Mirrors how Codex's own
+   * session picker labels sessions by their first message.
+   */
+  firstPrompt: string | null;
   canEdit: boolean;
   onUpdated: (trace: TraceSummary) => void;
 }
 
 const MAX_TITLE = 200;
+// Keep the derived hero title to roughly one line at the 42px heading size.
+const FALLBACK_MAX = 80;
 
-function displayTitle(trace: TraceSummary, aiTitle: string | null): string {
-  return trace.title || aiTitle || "Untitled session";
+// Turn a raw first prompt into a one-line title: collapse whitespace and, when
+// long, truncate at a word boundary with an ellipsis. Returns null for blanks.
+function titleFromPrompt(prompt: string | null): string | null {
+  if (!prompt) return null;
+  const clean = prompt.replace(/\s+/g, " ").trim();
+  if (!clean) return null;
+  if (clean.length <= FALLBACK_MAX) return clean;
+  const slice = clean.slice(0, FALLBACK_MAX);
+  const lastSpace = slice.lastIndexOf(" ");
+  const cut = lastSpace > 0 ? slice.slice(0, lastSpace) : slice;
+  return `${cut}…`;
+}
+
+function displayTitle(
+  trace: TraceSummary,
+  aiTitle: string | null,
+  firstPrompt: string | null,
+): string {
+  return (
+    trace.title || aiTitle || titleFromPrompt(firstPrompt) || "Untitled session"
+  );
 }
 
 function errMessage(e: unknown): string {
@@ -34,7 +62,13 @@ function PencilIcon() {
   );
 }
 
-export function HeroTitle({ trace, aiTitle, canEdit, onUpdated }: Props) {
+export function HeroTitle({
+  trace,
+  aiTitle,
+  firstPrompt,
+  canEdit,
+  onUpdated,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -115,7 +149,9 @@ export function HeroTitle({ trace, aiTitle, canEdit, onUpdated }: Props) {
 
   return (
     <div className="hero-title-row">
-      <h1 className="hero-title">{displayTitle(trace, aiTitle)}</h1>
+      <h1 className="hero-title">
+        {displayTitle(trace, aiTitle, firstPrompt)}
+      </h1>
       {canEdit && (
         <button
           type="button"
