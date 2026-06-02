@@ -136,7 +136,7 @@ On each developer's machine:
 export VIBESHUB_SERVER_URL="https://$FQDN"
 ```
 
-Then install the Claude Code plugin per [../../plugins/claude-code/README.md](../../plugins/claude-code/README.md).
+Then install the Claude Code plugin per [../../plugins/cli/README.md](../../plugins/cli/README.md).
 
 ## Environment variables (reference)
 

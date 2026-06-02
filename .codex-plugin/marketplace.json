@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "vibeshub",
-      "source": "./plugins/claude-code",
+      "source": "./plugins/cli",
       "description": "Upload Claude Code and Codex CLI conversation traces to vibeshub when a PR is created"
     }
   ]
