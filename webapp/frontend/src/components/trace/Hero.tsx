@@ -199,6 +199,7 @@ export function Hero({
         <HeroTitle
           trace={trace}
           aiTitle={meta.aiTitle}
+          firstPrompt={meta.firstPrompt}
           canEdit={!!canEdit}
           onUpdated={onTraceUpdated ?? (() => {})}
         />

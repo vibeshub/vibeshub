@@ -41,6 +41,7 @@ describe("HeroTitle", () => {
       <HeroTitle
         trace={makeTrace({ title: "Custom title" })}
         aiTitle="AI title"
+        firstPrompt="first prompt"
         canEdit={false}
         onUpdated={() => {}}
       />,
@@ -48,11 +49,12 @@ describe("HeroTitle", () => {
     expect(screen.getByRole("heading").textContent).toContain("Custom title");
   });
 
-  it("falls back to aiTitle, then to Untitled session", () => {
+  it("falls back to aiTitle, then the first prompt, then Untitled session", () => {
     const { rerender } = render(
       <HeroTitle
         trace={makeTrace()}
         aiTitle="AI title"
+        firstPrompt="first prompt"
         canEdit={false}
         onUpdated={() => {}}
       />,
@@ -62,6 +64,17 @@ describe("HeroTitle", () => {
       <HeroTitle
         trace={makeTrace()}
         aiTitle={null}
+        firstPrompt="first prompt"
+        canEdit={false}
+        onUpdated={() => {}}
+      />,
+    );
+    expect(screen.getByRole("heading").textContent).toContain("first prompt");
+    rerender(
+      <HeroTitle
+        trace={makeTrace()}
+        aiTitle={null}
+        firstPrompt={null}
         canEdit={false}
         onUpdated={() => {}}
       />,
@@ -71,11 +84,52 @@ describe("HeroTitle", () => {
     );
   });
 
+  it("derives the title from the first prompt for title-less traces", () => {
+    render(
+      <HeroTitle
+        trace={makeTrace()}
+        aiTitle={null}
+        firstPrompt="can you update the UI with the new plugin version 0.4.0"
+        canEdit={false}
+        onUpdated={() => {}}
+      />,
+    );
+    expect(screen.getByRole("heading").textContent).toBe(
+      "can you update the UI with the new plugin version 0.4.0",
+    );
+  });
+
+  it("collapses whitespace and truncates a long first prompt", () => {
+    const long =
+      "Please refactor\nthe entire authentication module so that it supports OAuth, SAML, and passkeys without breaking existing sessions";
+    render(
+      <HeroTitle
+        trace={makeTrace()}
+        aiTitle={null}
+        firstPrompt={long}
+        canEdit={false}
+        onUpdated={() => {}}
+      />,
+    );
+    const text = screen.getByRole("heading").textContent ?? "";
+    expect(text).not.toContain("\n");
+    expect(text).toMatch(/^Please refactor the entire/);
+    expect(text.endsWith("…")).toBe(true);
+    // Truncated well short of the raw prompt, never cutting mid-word: the
+    // kept portion is a whole-word prefix of the collapsed prompt.
+    expect(text.length).toBeLessThanOrEqual(82);
+    const collapsed = long.replace(/\s+/g, " ");
+    const kept = text.slice(0, -1);
+    expect(collapsed.startsWith(kept)).toBe(true);
+    expect(collapsed[kept.length]).toBe(" ");
+  });
+
   it("hides the edit button for non-owners", () => {
     render(
       <HeroTitle
         trace={makeTrace()}
         aiTitle={null}
+        firstPrompt={null}
         canEdit={false}
         onUpdated={() => {}}
       />,
@@ -91,6 +145,7 @@ describe("HeroTitle", () => {
       <HeroTitle
         trace={makeTrace()}
         aiTitle={null}
+        firstPrompt={null}
         canEdit
         onUpdated={onUpdated}
       />,
@@ -114,6 +169,7 @@ describe("HeroTitle", () => {
       <HeroTitle
         trace={makeTrace()}
         aiTitle={null}
+        firstPrompt={null}
         canEdit
         onUpdated={onUpdated}
       />,
@@ -134,6 +190,7 @@ describe("HeroTitle", () => {
       <HeroTitle
         trace={makeTrace({ title: "Original" })}
         aiTitle={null}
+        firstPrompt={null}
         canEdit
         onUpdated={() => {}}
       />,
