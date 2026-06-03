@@ -14,14 +14,23 @@ const PLUGIN_MINOR_VERSION = PLUGIN_VERSION.split(".").slice(0, 2).join(".");
 const VERSION_LABEL = `v${PLUGIN_MINOR_VERSION}`;
 
 // What a new user needs on their machine before installing.
-const INSTALL_PREREQS = "Claude Code · gh CLI (run 'gh auth login') · python3 3.9+";
+const INSTALL_PREREQS =
+  "Claude Code or Codex · gh CLI (run 'gh auth login') · python3 3.9+";
 
 // The runnable install commands - single source of truth for both copy buttons.
+// Claude Code runs them as slash commands inside the CLI; Codex runs them in the
+// terminal (note the different verbs: 'install' vs 'add').
 const INSTALL_STEPS = [
   "/plugin marketplace add vibeshub/vibeshub",
   "/plugin install vibeshub@vibeshub",
 ];
 const INSTALL_COPY = INSTALL_STEPS.join("\n");
+
+const CODEX_INSTALL_STEPS = [
+  "codex plugin marketplace add vibeshub/vibeshub",
+  "codex plugin add vibeshub@vibeshub",
+];
+const CODEX_INSTALL_COPY = CODEX_INSTALL_STEPS.join("\n");
 
 // The vibeshub repo that powers the Browse section.
 const BROWSE_OWNER = "vibeshub";
@@ -98,8 +107,8 @@ export function Landing() {
   return (
     <div className={`page-shell ${styles.shell}`}>
       <SeoHead
-        title="vibeshub · share Claude Code sessions as replayable traces"
-        description="Your Claude Code sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
+        title="vibeshub · share Claude Code & Codex sessions as replayable traces"
+        description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
         path="/"
         bareTitle
       />
@@ -156,10 +165,10 @@ export function Landing() {
                 share the <span className={styles.hl}>vibe</span>.
               </h1>
               <p className={styles.heroSub}>
-                Your Claude Code sessions, including every subagent they spawn,
-                become shareable, replayable traces your whole team can read.
-                Reviewers and teammates see how you actually shipped it, not
-                just the final diff.
+                Your Claude Code and Codex sessions, including every subagent
+                they spawn, become shareable, replayable traces your whole team
+                can read. Reviewers and teammates see how you actually shipped
+                it, not just the final diff.
               </p>
               <div className={styles.heroInstall}>
                 <div className={styles.heroInstallHead}>
@@ -187,7 +196,8 @@ export function Landing() {
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                 </pre>
                 <div className={styles.heroInstallNote}>
-                  requires <code>gh auth login</code> on your machine
+                  requires <code>gh auth login</code> · also on Codex,{" "}
+                  <a href="#install">terminal setup below</a>
                 </div>
               </div>
             </div>
@@ -434,6 +444,16 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
+                    <strong>Every agent, one archive.</strong> Some of the team
+                    runs Claude Code, some runs Codex. Every PR carries its
+                    session either way, so it all lands in one searchable place.
+                  </span>
+                </li>
+                <li>
+                  <span className={styles.mk}>
+                    <IconCheck />
+                  </span>
+                  <span>
                     <strong>Shared permissions, zero setup.</strong> Access
                     mirrors GitHub, so the right people already have visibility,
                     with no separate ACLs or accounts.
@@ -559,15 +579,15 @@ export function Landing() {
             </h2>
             <p className={styles.sectionLede}>
               Install the plugin, sign in with GitHub, and the next PR you
-              open from Claude Code arrives with the session attached.
+              open from Claude Code or Codex arrives with the session attached.
               Nothing else to learn, nothing else to run.
             </p>
 
             <div className={styles.installCard}>
               <div>
-                <h2>Get the Claude Code plugin</h2>
+                <h2>Get the plugin</h2>
                 <p className={styles.installPrereq}>
-                  <strong>Before you start:</strong> Claude Code, the{" "}
+                  <strong>Before you start:</strong> Claude Code or Codex, the{" "}
                   <code>gh</code> CLI authenticated with{" "}
                   <code>gh auth login</code>, and <code>python3</code> 3.9+ on
                   your <code>PATH</code>. The hook uses only the Python
@@ -589,7 +609,8 @@ export function Landing() {
                 </div>
               </div>
 
-              <div className={styles.codeBlock}>
+              <div className={styles.codeCol}>
+                <div className={styles.codeBlock}>
                 <div className={styles.codeHead}>
                   <span className={styles.label}>shell</span>
                   <span className={styles.spacer} />
@@ -609,7 +630,7 @@ export function Landing() {
                   </span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 1 · add the marketplace + install in Claude Code
+                    # 1 · in Claude Code, add the marketplace + install
                   </span>
                   {"\n"}
                   <span className={styles.cmd}>/plugin marketplace add</span>{" "}
@@ -619,7 +640,7 @@ export function Landing() {
                   <span className={styles.arg}>vibeshub@vibeshub</span>
                   {"\n\n"}
                   <span className={styles.commentLine}>
-                    # 2 · that's it - next time Claude Code runs 'gh pr create'
+                    # 2 · that's it - next time your agent runs 'gh pr create'
                   </span>
                   {"\n"}
                   <span className={styles.prompt}>$</span>{" "}
@@ -630,6 +651,34 @@ export function Landing() {
                     {"  ↳ vibeshub: redacted · uploaded · commented on #482 ✓"}
                   </span>
                 </pre>
+                </div>
+
+                <div className={styles.codexNote}>
+                  <div className={styles.codexNoteHead}>
+                    <span className={styles.codexNoteLabel}>
+                      using codex? run these in your terminal
+                    </span>
+                    <span className={styles.spacer} />
+                    <button
+                      type="button"
+                      className={`${styles.codeCopy} ${
+                        copied === "codex-install" ? styles.copied : ""
+                      }`}
+                      onClick={() => copy("codex-install", CODEX_INSTALL_COPY)}
+                    >
+                      {copied === "codex-install" ? "copied" : "copy"}
+                    </button>
+                  </div>
+                  <pre className={styles.codexNoteBody}>
+                    <span className={styles.prompt}>$</span>{" "}
+                    <span className={styles.cmd}>codex plugin marketplace add</span>{" "}
+                    <span className={styles.arg}>vibeshub/vibeshub</span>
+                    {"\n"}
+                    <span className={styles.prompt}>$</span>{" "}
+                    <span className={styles.cmd}>codex plugin add</span>{" "}
+                    <span className={styles.arg}>vibeshub@vibeshub</span>
+                  </pre>
+                </div>
               </div>
             </div>
           </div>
@@ -639,7 +688,8 @@ export function Landing() {
         <footer className={styles.footer}>
           <div className={`${styles.container} ${styles.footerInner}`}>
             <div className={styles.blurb}>
-              vibeshub · public &amp; private viewer for Claude Code traces
+              vibeshub · public &amp; private viewer for Claude Code &amp; Codex
+              traces
             </div>
             <div className={styles.footerLinks}>
               <a href="https://github.com/vibeshub/vibeshub">GitHub</a>
@@ -680,9 +730,9 @@ function BrowseSection({ data }: BrowseSectionProps) {
           .
         </h2>
         <p className={styles.sectionLede}>
-          Every PR here shipped with the Claude Code session that produced
-          it. Open a card to read the prompts, tool calls, and reasoning
-          behind the diff.
+          Every PR here shipped with the Claude Code or Codex session that
+          produced it. Open a card to read the prompts, tool calls, and
+          reasoning behind the diff.
         </p>
 
         <div className={styles.statsStrip}>
@@ -773,17 +823,15 @@ function BrowseSection({ data }: BrowseSectionProps) {
                   <span className={styles.contribName}>claude-code</span>
                   <span className={styles.contribCountTag}>active</span>
                 </div>
-                <div
-                  className={`${styles.contribRow} ${styles.contribRowDim}`}
-                >
+                <div className={styles.contribRow}>
                   <span
                     className={styles.contribAvatar}
-                    style={{ background: "var(--text-faint)" }}
+                    style={{ background: "var(--tool-agent)" }}
                   >
                     cx
                   </span>
                   <span className={styles.contribName}>codex</span>
-                  <span className={styles.contribCountTag}>contribute</span>
+                  <span className={styles.contribCountTag}>active</span>
                 </div>
                 <div
                   className={`${styles.contribRow} ${styles.contribRowDim}`}
