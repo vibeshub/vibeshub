@@ -174,7 +174,7 @@ export function VibeViewer() {
     const { transcript, subagents } = classify(files);
     if (!transcript) {
       setError(
-        "Drop a .jsonl session file or a .txt export from Claude Code (a .zip of subagents is optional).",
+        "Drop a .jsonl session file or a .txt export from Claude Code or Codex (a .zip of subagents is optional).",
       );
       return;
     }
@@ -293,8 +293,8 @@ export function VibeViewer() {
 
   const seo = (
     <SeoHead
-      title="Claude Code trace viewer"
-      description="Drop a Claude Code transcript and get a clean, replayable, shareable trace in seconds. No login required, secrets redacted on upload."
+      title="Claude Code & Codex trace viewer"
+      description="Drop a Claude Code or Codex transcript and get a clean, replayable, shareable trace in seconds. No login required, secrets redacted on upload."
       path="/vibeviewer"
       image="https://vibeshub.ai/og-vibeviewer.png"
     />
@@ -325,16 +325,17 @@ export function VibeViewer() {
 
       <main className="vv">
         <span className="vv-eyebrow">
-          <span className="dot" /> Claude Code trace viewer · no account needed
+          <span className="dot" /> Claude Code &amp; Codex trace viewer · no
+          account needed
         </span>
 
         <h1 className="vv-title">
           Show off how you actually <span className="hl">built it</span>.
         </h1>
         <p className="vv-sub">
-          Your hard work deserves a better look. Drop a Claude Code transcript
-          and get a clean, replayable trace you can share anywhere, in seconds.
-          No login required.
+          Your hard work deserves a better look. Drop a Claude Code or Codex
+          transcript and get a clean, replayable trace you can share anywhere,
+          in seconds. No login required.
         </p>
 
         <div className="vv-stage">
@@ -391,7 +392,7 @@ export function VibeViewer() {
               <div className="dz-sub">
                 or <span className="browse">browse files</span> ·{" "}
                 <span className="mono">.jsonl</span> or{" "}
-                <span className="mono">.txt</span> from Claude Code
+                <span className="mono">.txt</span> from Claude Code or Codex
               </div>
               <div className="dz-chips">
                 <span className="dz-chip">
@@ -723,6 +724,16 @@ export function VibeViewer() {
                 <TrustCheck />
               </span>
               <span>
+                <strong>Both tools, one place.</strong> Sessions from Claude
+                Code and Codex share the same viewer and the same profile, so
+                all your traces live in one place.
+              </span>
+            </li>
+            <li>
+              <span className="mk">
+                <TrustCheck />
+              </span>
+              <span>
                 <strong>Replayable, not a static dump.</strong> Anyone you share
                 with can step through the prompts, tool calls, and reasoning at
                 their own pace.
@@ -993,14 +1004,17 @@ function HowToSection({ flashCard }: { flashCard: string | null }) {
               <span className="how-tag rich">Richest</span>
             </div>
             <p className="how-desc">
-              Claude Code keeps a full <span className="em">.jsonl</span>{" "}
-              transcript of every session on your machine: token usage, timings,
-              thinking, tool I/O, and subagents.
+              Claude Code and Codex both keep a full{" "}
+              <span className="em">.jsonl</span> transcript of every session on
+              your machine: token usage, timings, thinking, tool I/O, and
+              subagents.
               <span className="how-note">
-                They live under <span className="em">~/.claude/projects/</span>,
-                one folder per project. Not sure which file? Search them for a
-                phrase you remember, or grab the newest, then upload that .jsonl
-                (optionally with a .zip of its subagents).
+                Claude Code sessions live under{" "}
+                <span className="em">~/.claude/projects/</span>, Codex rollouts
+                under <span className="em">~/.codex/sessions/</span>. Not sure
+                which file? Search them for a phrase you remember, or grab the
+                newest, then upload that .jsonl (optionally with a .zip of its
+                subagents).
               </span>
             </p>
           </div>
@@ -1044,7 +1058,10 @@ function HowToSection({ flashCard }: { flashCard: string | null }) {
               Install once and it captures and uploads sessions for you, nothing
               to hunt down. Uploads automatically when you open or update a PR,
               and you can share on demand with{" "}
-              <span className="em">/share-trace</span>.
+              <span className="em">/share-trace</span>. It works in both Claude
+              Code and Codex (in Codex, install with{" "}
+              <span className="em">codex plugin add vibeshub@vibeshub</span> from
+              your terminal).
               <span className="how-note">
                 Because it uses your <span className="em">gh</span> identity,
                 plugin uploads land on your profile automatically.
