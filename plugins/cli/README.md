@@ -1,8 +1,8 @@
-# vibeshub — Claude Code + Codex plugin
+# vibeshub — Claude Code + Codex + Cursor plugin
 
-Uploads your Claude Code or Codex conversation trace to vibeshub whenever you
-create or update a PR (or push the branch), and posts a comment on the PR
-linking to the trace. Trace visibility mirrors the repository on GitHub:
+Uploads your Claude Code, Codex, or Cursor conversation trace to vibeshub
+whenever you create or update a PR (or push the branch), and posts a comment on
+the PR linking to the trace. Trace visibility mirrors the repository on GitHub:
 public repos stay public, private repos stay private and are gated on the
 viewer's GitHub access.
 
@@ -26,6 +26,24 @@ You'll also need:
   The client uses only the Python standard library (plus a vendored
   [`truststore`](vibeshub_client/_vendor/README.md) on Python 3.10+ for OS-CA
   TLS verification), so there is nothing extra to `pip install`.
+
+## Cursor
+
+Cursor runs the same share logic through its own hook system. Install the
+user-level hook once per machine:
+
+```
+python3 path/to/plugins/cli/commands/install-cursor.py
+```
+
+This merges an `afterShellExecution` hook into `~/.cursor/hooks.json`
+(preserving any hooks you already have) that runs the plugin's share script
+after a `git push`, tagged with `VIBESHUB_PLATFORM=cursor`. It reads the Cursor
+agent transcript from `~/.cursor/projects/<project>/agent-transcripts/<id>/`
+(including any subagents) and uploads it the same way. Restart Cursor, or
+re-save `hooks.json`, to load it. Cursor transcripts record the conversation
+and tool calls but not tool outputs, token counts, or the model name, so those
+fields are blank in the viewer.
 
 ## Configure
 

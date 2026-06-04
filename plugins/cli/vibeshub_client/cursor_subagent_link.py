@@ -125,7 +125,9 @@ def link_cursor_subagents(main_jsonl: Path, subagents_dir: Path | None) -> list[
             if c in used:
                 continue
             cp = child_prompt[c]
-            if cp and (cp.startswith(d.prompt[:_PREFIX]) or d.prompt.startswith(cp[:_PREFIX])):
+            # Require a non-empty dispatch prompt: an empty prompt would make
+            # cp.startswith("") always true and greedily claim the first child.
+            if cp and d.prompt and (cp.startswith(d.prompt[:_PREFIX]) or d.prompt.startswith(cp[:_PREFIX])):
                 match = c
                 break
         if match is None:
