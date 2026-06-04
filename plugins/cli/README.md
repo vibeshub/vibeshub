@@ -1,9 +1,10 @@
-# vibeshub — Claude Code plugin
+# vibeshub — Claude Code + Codex plugin
 
-Uploads your Claude Code conversation trace to vibeshub whenever you create or
-update a PR (or push the branch), and posts a comment on the PR linking to the
-trace. Trace visibility mirrors the repository on GitHub: public repos stay
-public, private repos stay private and are gated on the viewer's GitHub access.
+Uploads your Claude Code or Codex conversation trace to vibeshub whenever you
+create or update a PR (or push the branch), and posts a comment on the PR
+linking to the trace. Trace visibility mirrors the repository on GitHub:
+public repos stay public, private repos stay private and are gated on the
+viewer's GitHub access.
 
 ## Install
 
@@ -56,7 +57,7 @@ plugin or remove the hook entry from your Claude Code settings. After-the-fact
 deletion of any trace is available via
 `/share-trace delete <pr-url | /t/<id> url | short-id>`.
 
-## Slash command
+## Manual share command
 
 `/share-trace` lets you upload manually (e.g., the hook didn't run, or you want
 to re-share after fixing something) or delete an existing trace. Without
@@ -75,6 +76,13 @@ Forms:
 - `/share-trace <pr-url-or-number>` — share a specific PR
 - `/share-trace delete <pr-url | pr-number | /t/<id> url | short-id>` — delete a
   trace. A bare number is always treated as a PR number.
+
+In Codex, use the namespaced skill command:
+
+- `/vibeshub:share-trace` — auto-detect per the order above
+- `/vibeshub:share-trace <pr-url-or-number>` — share a specific PR
+- `/vibeshub:share-trace delete <pr-url | pr-number | /t/<id> url | short-id>` —
+  delete a trace. A bare number is always treated as a PR number.
 
 ## Privacy
 

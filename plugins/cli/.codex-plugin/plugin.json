@@ -15,6 +15,7 @@
     "traces",
     "pull-requests"
   ],
+  "skills": "./skills/",
   "interface": {
     "displayName": "vibeshub",
     "shortDescription": "Share Codex and Claude Code traces with vibeshub",
