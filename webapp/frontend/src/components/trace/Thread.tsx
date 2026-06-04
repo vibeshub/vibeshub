@@ -44,9 +44,9 @@ export function Thread({
 }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
-  const isCodex = session.meta.sourceFormat === "codex";
-  const avatarChar = isCodex ? "Cx" : "C";
-  const agentKind = isCodex ? "codex" : "claude";
+  const sf = session.meta.sourceFormat;
+  const avatarChar = sf === "codex" ? "Cx" : sf === "cursor" ? "Cu" : "C";
+  const agentKind = sf === "codex" ? "codex" : sf === "cursor" ? "cursor" : "claude";
   const totalPrompts = session.meta.userPromptCount;
   const agents = session.meta.agents ?? [];
   const nextPrompt = buildNextPromptIndex(stream);

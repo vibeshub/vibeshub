@@ -1205,6 +1205,11 @@
   letter-spacing: 0;
   background: var(--tool-agent);
 }
+.vibeshub-viewer .assistant-avatar[data-agent="cursor"] {
+  font-size: 0.62em;
+  letter-spacing: 0;
+  background: var(--tool-agent);
+}
 .vibeshub-viewer .assistant-text-body {
   flex: 1;
   min-width: 0;
