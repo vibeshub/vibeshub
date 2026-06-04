@@ -132,6 +132,21 @@ def test_unpack_accepts_codex_uuid_agent():
     assert bundle.agents[0].meta["toolUseId"] == "call_x"
 
 
+def test_unpack_accepts_cursor_uuid_agent():
+    uuid = "09fbacda-2df4-47a7-a12e-2534c6d55047"
+    tar = _make_tar({
+        "main.jsonl": b'{"role":"user","message":{"content":[{"type":"text","text":"hi"}]}}\n',
+        f"agents/{uuid}.jsonl": b'{"role":"user","message":{"content":[{"type":"text","text":"sub"}]}}\n',
+        f"agents/{uuid}.meta.json": (
+            b'{"agentType":"explore","description":"Bug sweep","toolUseId":"cursor-agent-0"}'
+        ),
+    })
+    bundle = unpack_and_redact(tar, max_total_bytes=10_000)
+    assert len(bundle.agents) == 1
+    assert bundle.agents[0].agent_id == uuid
+    assert bundle.agents[0].meta["toolUseId"] == "cursor-agent-0"
+
+
 def test_unpack_still_rejects_traversal_agent_name():
     tar = _make_tar({
         "main.jsonl": b"{}\n",
