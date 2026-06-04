@@ -257,3 +257,10 @@ async def test_pipeline_repo_only_uploads_without_comment(tmp_path):
     assert captured["pr_url"] is None
     assert captured["repo_full_name"] == "alice/repo"
     mock_comment.assert_not_called()
+
+
+def test_platform_label_cursor():
+    from vibeshub_client.pipeline import _platform_label
+    assert _platform_label("cursor") == "Cursor"
+    assert _platform_label("codex") == "Codex CLI"
+    assert _platform_label("claude-code") == "Claude Code"
