@@ -206,6 +206,22 @@ async def test_trace_head_names_codex_agent(spa_client):
 
 
 @pytest.mark.asyncio
+async def test_trace_head_names_cursor_agent(spa_client):
+    trace = _make_trace(
+        short_id=SHORT_OK, owner_login="alice", platform="cursor",
+        message_count=7,
+    )
+    async with spa_client.app.state.session_maker() as session:
+        session.add(trace)
+        await session.commit()
+
+    body = spa_client.get(f"/t/{SHORT_OK}").text
+    assert "Cursor session by @alice" in body
+    assert "Claude Code session" not in body
+    assert "Codex CLI session" not in body
+
+
+@pytest.mark.asyncio
 async def test_public_repo_trace_canonical_uses_repo_form(spa_client):
     SessionLocal = spa_client.app.state.session_maker
     async with SessionLocal() as session:
