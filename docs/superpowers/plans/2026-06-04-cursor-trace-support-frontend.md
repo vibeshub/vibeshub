@@ -86,38 +86,42 @@ describe("looksLikeCursor", () => {
 });
 
 describe("cursorToJsonl -> buildSession", () => {
-  const session = buildSession(parseJsonl(cursorToJsonl(CURSOR)));
+  const jsonl = cursorToJsonl(CURSOR);
+  const session = buildSession(parseJsonl(jsonl));
 
   it("marks the source as cursor", () => {
     expect(session.meta.sourceFormat).toBe("cursor");
   });
   it("strips the user_query/timestamp envelope from the first prompt", () => {
-    expect(session.firstPrompt).toBe("help me debug");
+    expect(session.meta.firstPrompt).toBe("help me debug");
   });
-  it("parses the coarse user-turn timestamp", () => {
-    // 7:30 PM UTC-7 == 02:30Z next day
-    expect(session.startedAt).toBe("2026-06-04T02:30:00.000Z");
+  it("parses the coarse user-turn timestamp onto the user record", () => {
+    // 7:30 PM UTC-7 == 02:30Z the next day.
+    const userRec = jsonl.trim().split("\n").map((l) => JSON.parse(l)).find((r) => r.type === "user");
+    expect(userRec.timestamp).toBe("2026-06-04T02:30:00.000Z");
   });
-  it("renders assistant text and native tool cards", () => {
-    const names = session.events.flatMap((e) =>
-      e.kind === "assistant" ? e.blocks.filter((b) => b.type === "tool_use").map((b) => b.name) : [],
-    );
+  it("splits assistant blocks into separate stream events with native tool cards", () => {
+    const names = session.stream
+      .filter((e) => e.kind === "tool_use")
+      .map((e) => (e as { name: string }).name);
     expect(names).toContain("Read");
     expect(names).toContain("Shell");
     expect(names).toContain("Subagent");
+    expect(
+      session.stream.some((e) => e.kind === "assistant_text" && (e as { text: string }).text === "Looking now."),
+    ).toBe(true);
   });
   it("assigns a deterministic cursor-agent-N id to the Subagent call", () => {
-    const ids = session.events.flatMap((e) =>
-      e.kind === "assistant"
-        ? e.blocks.filter((b) => b.type === "tool_use" && (b.name === "Subagent" || b.name === "Task")).map((b) => b.id)
-        : [],
-    );
+    const ids = session.stream
+      .filter((e) => e.kind === "tool_use" &&
+        ((e as { name: string }).name === "Subagent" || (e as { name: string }).name === "Task"))
+      .map((e) => (e as { id: string }).id);
     expect(ids).toEqual(["cursor-agent-0"]);
   });
 });
 ```
 
-> NOTE: `session.firstPrompt`, `session.startedAt`, `session.events`, and the event `kind`/`blocks` shape are how the existing `codexExport.test.ts` and `parser.test.ts` assert against a built `Session`. If a property name differs in `types.ts` (e.g. `session.meta.startedAt` or `event.kind === "assistant"` vs another tag), adjust these assertions to match the existing tests in `src/tests/trace/` — do not invent new `Session` fields.
+> NOTE: the `Session` API (verified against `codexExport.test.ts`) is `session.meta.{sourceFormat,firstPrompt,model,cwd}` plus `session.stream` — a flat array of `StreamEvent`s with `kind` in `"assistant_text"` (`.text`), `"tool_use"` (`.name`/`.input`/`.id`/`.result`), `"thinking"`, `"user_prompt"`. There is no `session.events`/`event.blocks`. Cursor Active Time is left to whatever timestamp-based timing `buildSession` derives from the per-record `timestamp` we attach; this plan only asserts the timestamp is parsed onto the user record (no coupling to Session-level timing internals).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -190,6 +194,16 @@ export function cursorToJsonl(text: string): string {
   let lastTs = "";
   let agentN = 0; // ordinal of Task/Subagent dispatches, in document order
 
+  // One synthetic assistant record per content block. The canonical parser
+  // (parser.ts Pass 2) renders only the LAST block of each assistant record, so
+  // every block MUST be its own record (mirrors codexExport.ts pushAssistant).
+  const pushAssistant = (block: AnyRec, ts: string): void => {
+    records.push({
+      type: "assistant", uuid: uuid(), timestamp: ts,
+      message: { id: `cursor-msg-${recN}`, model: null, content: [block] },
+    });
+  };
+
   records.push({ type: "cursor-meta", source: "cursor", uuid: uuid(), timestamp: "", sessionId: null, cwd: null });
 
   for (const raw of lines) {
@@ -214,25 +228,27 @@ export function cursorToJsonl(text: string): string {
     }
 
     if (role === "assistant") {
-      const blocks = content.map((b) => {
-        if (b && b.type === "tool_use" && (b.name === "Task" || b.name === "Subagent")) {
-          return { ...b, id: `cursor-agent-${agentN++}` };
+      for (const b of content) {
+        if (!b || typeof b !== "object") continue;
+        const block = b as AnyRec;
+        if (block.type === "text") {
+          pushAssistant({ type: "text", text: String(block.text ?? "") }, lastTs);
+        } else if (block.type === "thinking") {
+          pushAssistant({ type: "thinking", thinking: String(block.thinking ?? "") }, lastTs);
+        } else if (block.type === "tool_use") {
+          const isAgent = block.name === "Task" || block.name === "Subagent";
+          const id = isAgent ? `cursor-agent-${agentN++}` : `cursor-tool-${recN}`;
+          pushAssistant({ type: "tool_use", id, name: String(block.name ?? ""), input: block.input ?? {} }, lastTs);
         }
-        if (b && b.type === "tool_use" && !b.id) {
-          return { ...b, id: `cursor-tool-${recN}-${(b.name as string) ?? "x"}` };
-        }
-        return b;
-      });
-      records.push({
-        type: "assistant", uuid: uuid(), timestamp: lastTs,
-        message: { id: `cursor-msg-${recN}`, model: null, content: blocks },
-      });
+      }
       continue;
     }
   }
   return records.map((r) => JSON.stringify(r)).join("\n") + "\n";
 }
 ```
+
+> Splitting per block (not packing `content[]` into one record) is required: `parser.ts` Pass 2 emits only `content[content.length - 1]` of each assistant record and dedupes by the record's unique top-level `uuid`, so a single packed record would render only its last block. This mirrors `codexExport.ts`, which emits one content block per assistant record for the same reason. The deterministic `cursor-agent-<N>` id is assigned to `Task`/`Subagent` blocks in document order — identical to the plugin's `link_cursor_subagents` and the backend's expected `tool_use_id`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -570,11 +586,10 @@ describe("real Cursor fixtures", () => {
   it("converts the main transcript and assigns cursor-agent ids to dispatches", () => {
     const s = buildSession(parseJsonl(cursorToJsonl(CURSOR_MAIN)));
     expect(s.meta.sourceFormat).toBe("cursor");
-    const agentIds = s.events.flatMap((e) =>
-      e.kind === "assistant"
-        ? e.blocks.filter((b) => b.type === "tool_use" && (b.name === "Subagent" || b.name === "Task")).map((b) => b.id)
-        : [],
-    );
+    const agentIds = s.stream
+      .filter((e) => e.kind === "tool_use" &&
+        ((e as { name: string }).name === "Subagent" || (e as { name: string }).name === "Task"))
+      .map((e) => (e as { id: string }).id);
     expect(agentIds.length).toBeGreaterThan(0);
     expect(agentIds[0]).toBe("cursor-agent-0");
   });
@@ -582,7 +597,7 @@ describe("real Cursor fixtures", () => {
   it("converts a child subagent transcript on its own (re-parse at depth)", () => {
     const child = buildSession(parseJsonl(cursorToJsonl(CURSOR_CHILD)));
     expect(child.meta.sourceFormat).toBe("cursor");
-    expect(child.events.length).toBeGreaterThan(0);
+    expect(child.stream.length).toBeGreaterThan(0);
   });
 });
 ```

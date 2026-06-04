@@ -269,12 +269,16 @@ export function cursorToJsonl(text: string): string
   Codex (`session_meta`) or a Claude record (which carries a top-level `uuid` /
   `type`). Ordering in the detector chain: Codex, then Cursor, then
   Claude/terminal, so the markers stay unambiguous.
-- **`cursorToJsonl`**: for each record, emit a canonical record with a synthetic
-  truthy top-level `uuid` (`cursor-rec-N`). Assistant records pass their
-  `content[]` through (text / tool_use / thinking), with a synthetic
-  `message.id` and `model: null`. User records strip the envelope (§3.4) and
-  carry the parsed timestamp (§10). Emit a leading `cursor-meta` record
-  (`source: "cursor"`, `sessionId`, `cwd` from the project slug when derivable).
+- **`cursorToJsonl`**: emit a leading `cursor-meta` record (`source: "cursor"`,
+  `sessionId`, `cwd`), then walk the records. Each record gets a synthetic
+  truthy top-level `uuid` (`cursor-rec-N`). An assistant record's `content[]` is
+  **split into one synthetic assistant record per block** (text / tool_use /
+  thinking), mirroring `codexExport.ts`'s `pushAssistant`: the canonical parser
+  (`parser.ts` Pass 2) renders only the *last* block of each assistant record, so
+  every block must be its own record or all but the last are dropped. Each
+  emitted assistant record carries a synthetic `message.id` and `model: null`.
+  User records strip the envelope (§3.4) into a string `message.content` and
+  carry the parsed timestamp (§10).
 
 No tool_result records are synthesized (none exist); tool cards render the call
 without an output body, which the viewer already handles for terminal exports.
