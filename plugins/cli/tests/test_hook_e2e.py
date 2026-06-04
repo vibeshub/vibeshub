@@ -1,7 +1,9 @@
+import io
 import json
 import os
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 from threading import Thread
 
@@ -229,6 +231,65 @@ def test_hook_uploads_codex_platform(
     # gzipped tar magic
     assert body["tar_bytes"][:2] == b"\x1f\x8b"
     assert "[vibeshub] trace uploaded" in proc.stderr
+
+
+def test_hook_uploads_cursor_platform(
+    tmp_path: Path,
+    fake_gh_dir: Path,
+    fake_server,
+):
+    """Under a Cursor afterShellExecution payload (top-level `command`,
+    VIBESHUB_PLATFORM=cursor, transcript under ~/.cursor/projects), a `git push`
+    uploads with platform=cursor and bundles the dispatched subagent."""
+    fake_home = tmp_path / "home"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    uuid = "09fbacda-2df4-47a7-a12e-2534c6d55047"
+    tdir = fake_home / ".cursor" / "projects" / "Repo" / "agent-transcripts" / uuid
+    tdir.mkdir(parents=True)
+    (tdir / f"{uuid}.jsonl").write_text(
+        '{"role":"user","message":{"content":[{"type":"text",'
+        '"text":"<user_query>do a sweep</user_query>"}]}}\n'
+        '{"role":"assistant","message":{"content":['
+        '{"type":"tool_use","name":"Subagent","input":{"subagent_type":"explore",'
+        '"description":"Bug sweep","prompt":"Find bugs"}}]}}\n',
+        encoding="utf-8",
+    )
+    subdir = tdir / "subagents"
+    subdir.mkdir()
+    (subdir / "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl").write_text(
+        '{"role":"user","message":{"content":[{"type":"text","text":"Find bugs"}]}}\n',
+        encoding="utf-8",
+    )
+
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+
+    payload = {
+        "session_id": uuid,
+        "cwd": str(cwd),
+        "command": "git push origin HEAD",  # Cursor afterShellExecution shape
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["VIBESHUB_PLATFORM"] = "cursor"
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(tmp_path / "hook.log")
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1
+    body = fake_server[0]
+    assert body["platform"] == "cursor"
+    assert body["tar_bytes"][:2] == b"\x1f\x8b"  # gzipped tar magic
+    # The dispatched subagent was linked and bundled.
+    with tarfile.open(fileobj=io.BytesIO(body["tar_bytes"]), mode="r:gz") as tf:
+        names = tf.getnames()
+    assert "main.jsonl" in names
+    assert any(n.startswith("agents/") and n.endswith(".jsonl") for n in names), names
 
 
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
