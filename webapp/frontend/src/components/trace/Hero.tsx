@@ -42,7 +42,7 @@ function HeroEyebrow({ session, trace, rawHref }: Props) {
           <span>·</span>
         </>
       )}
-      <span>{trace.platform === "codex" ? "Codex CLI" : trace.platform}</span>
+      <span>{trace.platform === "codex" ? "Codex CLI" : trace.platform === "cursor" ? "Cursor" : trace.platform}</span>
       <span>·</span>
       <span>SESSION · {id}</span>
       {date && (
@@ -126,7 +126,8 @@ export function MetaLine({ session }: { session: Session }) {
   }
   const imported = meta.sourceFormat === "terminal";
   const isCodex = meta.sourceFormat === "codex";
-  if (items.length === 0 && !imported && !isCodex) return null;
+  const isCursor = meta.sourceFormat === "cursor";
+  if (items.length === 0 && !imported && !isCodex && !isCursor) return null;
   return (
     <div className="meta-wrap">
       <div className="metaline">
@@ -144,6 +145,14 @@ export function MetaLine({ session }: { session: Session }) {
             title="Captured from an OpenAI Codex CLI rollout."
           >
             Codex CLI
+          </span>
+        )}
+        {isCursor && (
+          <span
+            className="metaline-item meta-import-chip"
+            title="Captured from a Cursor agent transcript. Tool outputs, token counts, and model name are not recorded by Cursor."
+          >
+            Cursor
           </span>
         )}
         {items.map((it, i) => (

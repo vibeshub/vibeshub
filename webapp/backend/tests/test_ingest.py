@@ -392,3 +392,43 @@ async def test_ingest_codex_platform_and_uuid_agent(client, respx_mock):
     assert trace.agent_count == 1
     assert trace.agents[0]["agent_id"] == uuid
     assert trace.agents[0]["tool_use_id"] == "call_spawn"
+
+
+@pytest.mark.asyncio
+async def test_ingest_cursor_platform_and_uuid_agent(client, respx_mock):
+    _mock_alice_pr1(respx_mock)
+
+    uuid = "09fbacda-2df4-47a7-a12e-2534c6d55047"
+    main = (
+        b'{"role":"user","message":{"content":[{"type":"text",'
+        b'"text":"<user_query>do a sweep</user_query>"}]}}\n'
+        b'{"role":"assistant","message":{"content":['
+        b'{"type":"text","text":"on it"},'
+        b'{"type":"tool_use","name":"Subagent","input":{"subagent_type":"explore",'
+        b'"description":"Bug sweep","prompt":"Find bugs"}}]}}\n'
+    )
+    body = make_bundle({
+        "main.jsonl": main,
+        f"agents/{uuid}.jsonl": (
+            b'{"role":"user","message":{"content":[{"type":"text","text":"Find bugs"}]}}\n'
+        ),
+        f"agents/{uuid}.meta.json": (
+            b'{"agentType":"explore","description":"Bug sweep","toolUseId":"cursor-agent-0"}'
+        ),
+    })
+    headers = {**COMMON_HEADERS, "X-Vibeshub-Platform": "cursor"}
+    r = client.post("/api/ingest", content=body, headers=headers)
+    assert r.status_code == 201, r.text
+    short_id = r.json()["short_id"]
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        trace = (
+            await session.execute(select(Trace).where(Trace.short_id == short_id))
+        ).scalar_one()
+
+    assert trace.platform == "cursor"
+    assert trace.message_count == 2  # 1 assistant text block + 1 tool_use block
+    assert trace.agent_count == 1
+    assert trace.agents[0]["agent_id"] == uuid
+    assert trace.agents[0]["tool_use_id"] == "cursor-agent-0"

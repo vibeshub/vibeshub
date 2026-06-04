@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from app.redact.patterns import RedactionReport, redact_jsonl
 
 
-# Claude Code subagent id (a<16hex>) OR Codex thread UUID (8-4-4-4-12 hex).
+# Claude Code subagent id (a<16hex>) OR Codex/Cursor thread UUID (8-4-4-4-12 hex).
 _AGENT_ID = r"(?:a[0-9a-f]{16}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
 AGENT_ID_RE = re.compile(rf"^{_AGENT_ID}$")
 AGENT_JSONL_RE = re.compile(rf"^agents/({_AGENT_ID})\.jsonl$")

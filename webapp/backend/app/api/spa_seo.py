@@ -201,6 +201,8 @@ def _agent_label(platform: str | None) -> str:
     """Human label for the producing agent, derived from the trace platform."""
     if platform and platform.lower().startswith("codex"):
         return "Codex CLI"
+    if platform and platform.lower() == "cursor":
+        return "Cursor"
     return "Claude Code"
 
 

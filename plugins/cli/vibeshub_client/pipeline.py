@@ -15,7 +15,11 @@ log = logging.getLogger(__name__)
 
 
 def _platform_label(platform_id: str) -> str:
-    return "Codex CLI" if platform_id == "codex" else "Claude Code"
+    if platform_id == "codex":
+        return "Codex CLI"
+    if platform_id == "cursor":
+        return "Cursor"
+    return "Claude Code"
 
 
 @dataclass

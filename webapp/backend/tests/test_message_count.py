@@ -4,6 +4,8 @@ The reference is the frontend parser (buildSession): count one rendered
 message per *last* content block of each assistant JSONL line, deduped on
 (message id, block index, block type), keeping only text and tool_use.
 """
+import json
+
 from app.message_count import count_messages
 
 
@@ -111,3 +113,26 @@ def test_codex_counts_assistant_messages_and_tool_calls():
     )
     # 1 assistant message + 1 function_call = 2 rendered messages.
     assert count_messages(data) == 2
+
+
+def test_cursor_counts_assistant_text_and_tool_calls():
+    data = _lines(
+        json.dumps(
+            {"role": "user",
+             "message": {"content": [{"type": "text", "text": "<user_query>hi</user_query>"}]}}
+        ),
+        json.dumps(
+            {"role": "assistant",
+             "message": {"content": [
+                 {"type": "text", "text": "on it"},
+                 {"type": "tool_use", "name": "Read", "input": {"path": "/x"}},
+                 {"type": "tool_use", "name": "Shell", "input": {"command": "ls"}},
+             ]}}
+        ),
+        json.dumps(
+            {"role": "assistant",
+             "message": {"content": [{"type": "text", "text": "done"}]}}
+        ),
+    )
+    # assistant content blocks rendered as cards: 1 text + 2 tool_use + 1 text = 4
+    assert count_messages(data) == 4

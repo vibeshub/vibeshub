@@ -31,6 +31,11 @@ const TOOL_META: Record<string, ToolMeta> = {
   spawn_agent: { cat: "agent", label: "Subagent" },
   wait_agent: { cat: "agent", label: "Wait for agent" },
   web_search: { cat: "read", label: "Web search" },
+  ReadFile: { cat: "read", label: "Read" },
+  Shell: { cat: "bash", label: "Shell" },
+  AwaitShell: { cat: "bash", label: "Await shell" },
+  Task: { cat: "agent", label: "Subagent" },
+  Subagent: { cat: "agent", label: "Subagent" },
 };
 
 export function toolCat(name: string): ToolCategory {

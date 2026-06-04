@@ -1,0 +1,2 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<user_query>Fetch https://example.com and report verbatim.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Fetched."},{"type":"tool_use","name":"WebFetch","input":{"url":"https://example.com"}}]}}
