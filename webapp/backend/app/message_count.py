@@ -52,12 +52,48 @@ def _count_codex(lines: list[bytes]) -> int:
     return count
 
 
+def _looks_like_cursor(lines: list[bytes]) -> bool:
+    if not lines:
+        return False
+    try:
+        rec = json.loads(lines[0])
+    except ValueError:
+        return False
+    return (
+        isinstance(rec, dict)
+        and "type" not in rec
+        and rec.get("role") in ("user", "assistant")
+        and isinstance(rec.get("message"), dict)
+        and isinstance(rec["message"].get("content"), list)
+    )
+
+
+def _count_cursor(lines: list[bytes]) -> int:
+    count = 0
+    for raw in lines:
+        try:
+            rec = json.loads(raw)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict) or rec.get("role") != "assistant":
+            continue
+        msg = rec.get("message")
+        if not isinstance(msg, dict):
+            continue
+        for block in msg.get("content") or []:
+            if isinstance(block, dict) and block.get("type") in ("text", "tool_use"):
+                count += 1
+    return count
+
+
 def count_messages(jsonl_bytes: bytes) -> int:
     """Count rendered messages (assistant text blocks + tool calls) in a
     trace JSONL. Unparseable lines are skipped, matching the parser."""
     lines = [raw.strip() for raw in jsonl_bytes.splitlines() if raw.strip()]
     if _looks_like_codex(lines):
         return _count_codex(lines)
+    if _looks_like_cursor(lines):
+        return _count_cursor(lines)
     emitted: set[tuple[str, int, str]] = set()
     count = 0
     for line in lines:
