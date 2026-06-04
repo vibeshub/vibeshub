@@ -1,0 +1,3 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<user_query>fan out</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Dispatching."},{"type":"tool_use","name":"Subagent","input":{"subagent_type":"explore","description":"Fetch #1","prompt":"Fetch https://example.com and report verbatim."}},{"type":"tool_use","name":"Subagent","input":{"subagent_type":"explore","description":"Fetch #2","prompt":"Fetch https://example.com and report verbatim."}},{"type":"tool_use","name":"Subagent","input":{"subagent_type":"explore","description":"Fetch #3","prompt":"Fetch https://example.com and report verbatim."}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Done."}]}}
