@@ -69,7 +69,12 @@ def main() -> None:
 
     tool_input = payload.get("tool_input", {})
     tool_response = payload.get("tool_response", {})
-    command = tool_input.get("command") or tool_input.get("cmd") or ""
+    command = (
+        tool_input.get("command")
+        or tool_input.get("cmd")
+        or payload.get("command")  # Cursor afterShellExecution payload
+        or ""
+    )
 
     try:
         from vibeshub_client.gh_token import GhTokenError, get_gh_token
