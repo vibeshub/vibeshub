@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { looksLikeCursor, cursorToJsonl } from "../../components/trace/cursorExport";
 import { buildSession, parseJsonl } from "../../components/trace/parser";
@@ -111,5 +114,28 @@ describe("cursor tool registry", () => {
     expect(toolCat("Subagent")).toBe("agent");
     expect(toolCat("Task")).toBe("agent");
     expect(toolLabel("ReadFile")).toBe("Read");
+  });
+});
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CURSOR_MAIN = readFileSync(join(__dirname, "../fixtures/sample-cursor.jsonl"), "utf-8");
+const CURSOR_CHILD = readFileSync(join(__dirname, "../fixtures/sample-cursor-subagent.jsonl"), "utf-8");
+
+describe("real Cursor fixtures", () => {
+  it("converts the main transcript and assigns cursor-agent ids to dispatches", () => {
+    const s = buildSession(parseJsonl(cursorToJsonl(CURSOR_MAIN)));
+    expect(s.meta.sourceFormat).toBe("cursor");
+    const agentIds = s.stream
+      .filter((e) => e.kind === "tool_use" &&
+        ((e as { name: string }).name === "Subagent" || (e as { name: string }).name === "Task"))
+      .map((e) => (e as { id: string }).id);
+    expect(agentIds.length).toBeGreaterThan(0);
+    expect(agentIds[0]).toBe("cursor-agent-0");
+  });
+
+  it("converts a child subagent transcript on its own (re-parse at depth)", () => {
+    const child = buildSession(parseJsonl(cursorToJsonl(CURSOR_CHILD)));
+    expect(child.meta.sourceFormat).toBe("cursor");
+    expect(child.stream.length).toBeGreaterThan(0);
   });
 });
