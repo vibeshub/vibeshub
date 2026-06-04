@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { looksLikeCursor, cursorToJsonl } from "../../components/trace/cursorExport";
 import { buildSession, parseJsonl } from "../../components/trace/parser";
+import { buildSessionFromRaw } from "../../components/trace/sessionFromRaw";
+import { toolCat, toolLabel } from "../../components/trace/tools";
 
 const CURSOR = [
   JSON.stringify({
@@ -86,5 +88,28 @@ describe("cursor-meta parser branch", () => {
     expect(s.meta.sourceFormat).toBe("cursor");
     expect(s.meta.cwd).toBe("/repo");
     expect(s.meta.sessionId).toBe("sess-1");
+  });
+});
+
+describe("buildSessionFromRaw dispatch", () => {
+  it("converts a raw Cursor transcript", () => {
+    expect(buildSessionFromRaw(CURSOR).meta.sourceFormat).toBe("cursor");
+  });
+  it("leaves a Claude transcript as a passthrough (sourceFormat null)", () => {
+    const claude =
+      JSON.stringify({ type: "user", uuid: "u1", message: { content: "hi" } }) + "\n" +
+      JSON.stringify({ type: "assistant", uuid: "a1", message: { id: "m", content: [{ type: "text", text: "yo" }] } });
+    expect(buildSessionFromRaw(claude).meta.sourceFormat).toBeNull();
+  });
+});
+
+describe("cursor tool registry", () => {
+  it("maps Cursor tool names to the right categories", () => {
+    expect(toolCat("Shell")).toBe("bash");
+    expect(toolCat("AwaitShell")).toBe("bash");
+    expect(toolCat("ReadFile")).toBe("read");
+    expect(toolCat("Subagent")).toBe("agent");
+    expect(toolCat("Task")).toBe("agent");
+    expect(toolLabel("ReadFile")).toBe("Read");
   });
 });
