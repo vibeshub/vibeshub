@@ -14,3 +14,16 @@ def test_selects_claude_by_transcript_path():
 def test_selects_codex_by_env_when_path_ambiguous():
     assert select_adapter({}, env={"CODEX_HOME": "/Users/x/.codex"}).platform_id() == "codex"
     assert select_adapter({}, env={}).platform_id() == "claude-code"
+
+
+def test_selects_cursor_by_transcript_path():
+    r = select_adapter(
+        {"transcript_path": "/Users/x/.cursor/projects/Repo/agent-transcripts/ID/ID.jsonl"},
+        env={},
+    )
+    assert r.platform_id() == "cursor"
+
+
+def test_selects_cursor_by_env_signal():
+    r = select_adapter({"cwd": "/Users/x/repo"}, env={"VIBESHUB_PLATFORM": "cursor"})
+    assert r.platform_id() == "cursor"
