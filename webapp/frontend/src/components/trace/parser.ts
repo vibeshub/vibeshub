@@ -197,6 +197,16 @@ export function buildSession(records: AnyRec[]): Session {
       const sid = getStr(r, "sessionId");
       if (sid) meta.sessionId = sid;
     }
+    // A trace converted from a Cursor agent transcript carries one synthetic
+    // marker record; cwd/sessionId are also picked up by the generic captures
+    // below. `model` stays null (Cursor transcripts record no model).
+    if (r.type === "cursor-meta") {
+      meta.sourceFormat = "cursor";
+      const cwd = getStr(r, "cwd");
+      if (cwd) meta.cwd = cwd;
+      const sid = getStr(r, "sessionId");
+      if (sid) meta.sessionId = sid;
+    }
 
     const cwd = getStr(r, "cwd");
     if (cwd && !meta.cwd) meta.cwd = cwd;
