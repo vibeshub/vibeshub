@@ -1,0 +1,19 @@
+{
+  "name": "vibeshub",
+  "owner": {
+    "name": "vibeshub",
+    "email": "team@vibeshub.ai"
+  },
+  "metadata": {
+    "description": "Plugins for sharing and showcasing your AI coding sessions on vibeshub."
+  },
+  "plugins": [
+    {
+      "name": "vibeshub",
+      "source": "./plugins/cli",
+      "description": "Upload Cursor conversation traces to vibeshub when a PR is created",
+      "category": "Engineering",
+      "keywords": ["cursor", "traces", "pull-requests"]
+    }
+  ]
+}
