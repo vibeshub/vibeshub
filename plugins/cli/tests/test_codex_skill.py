@@ -20,3 +20,22 @@ def test_share_trace_skill_is_packaged_for_codex():
     assert "name: share-trace" in text
     assert "commands/share-trace.py" in text
     assert "vibeshub:share-trace" in text
+
+
+def test_share_trace_skill_documents_codex_slash_invocation():
+    skill = PLUGIN_ROOT / "skills" / "share-trace" / "SKILL.md"
+
+    text = skill.read_text()
+    assert "/vibeshub:share-trace" in text
+    assert "/share-trace" in text
+    assert "Codex surfaces plugin skills" in text
+
+
+def test_share_trace_skill_uses_codex_native_helper_instructions():
+    skill = PLUGIN_ROOT / "skills" / "share-trace" / "SKILL.md"
+
+    text = skill.read_text()
+    assert "Resolve the plugin root" in text
+    assert "Do not use commands/share-trace.md" in text
+    assert "CLAUDE_PLUGIN_ROOT" not in text
+    assert "$ARGUMENTS" not in text

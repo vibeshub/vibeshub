@@ -142,7 +142,11 @@ async def _share(
     from vibeshub_client.pipeline import RunOptions, run_share_pipeline
     from platform_adapter import select_adapter
 
-    if not session_id:
+    # Under Codex there is no Claude session id. select_adapter falls back to
+    # CODEX_HOME, and CodexTranscriptReader picks the newest rollout for cwd.
+    reader = select_adapter({"cwd": os.getcwd(), "plugin_root": str(_PLUGIN_ROOT)})
+
+    if not session_id and reader.platform_id() == "claude-code":
         sys.stderr.write(
             "[vibeshub] no session_id available; this command must be run "
             "inside a Claude Code session\n"
@@ -158,9 +162,6 @@ async def _share(
         repo_full_name=repo_full_name,
         session_id=session_id,
     )
-    # Under Codex there is no transcript_path here; select_adapter falls back to
-    # CODEX_HOME, and CodexTranscriptReader picks the newest rollout for the cwd.
-    reader = select_adapter({"cwd": os.getcwd()})
     hook_input = {"session_id": session_id, "cwd": os.getcwd()}
 
     result = await run_share_pipeline(

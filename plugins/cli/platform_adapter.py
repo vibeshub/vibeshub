@@ -16,14 +16,21 @@ def select_adapter(payload: dict, env: Mapping[str, str] | None = None):
     ~/.cursor/projects); CODEX_HOME breaks ties for the manual/command path."""
     env = os.environ if env is None else env
     tp = payload.get("transcript_path") or ""
+    plugin_root = payload.get("plugin_root") or ""
     if env.get("VIBESHUB_PLATFORM") == "cursor":
         return CursorTranscriptReader()
     if "/.codex/sessions/" in tp:
+        return CodexTranscriptReader()
+    if "/.codex/plugins/" in plugin_root:
         return CodexTranscriptReader()
     if "/.cursor/projects/" in tp:
         return CursorTranscriptReader()
     if "/.claude/" in tp:
         return ClaudeCodeTranscriptReader()
     if env.get("CODEX_HOME"):
+        return CodexTranscriptReader()
+    if not env.get("CLAUDE_PLUGIN_ROOT") and (
+        env.get("CODEX_THREAD_ID") or env.get("CODEX_SANDBOX")
+    ):
         return CodexTranscriptReader()
     return ClaudeCodeTranscriptReader()

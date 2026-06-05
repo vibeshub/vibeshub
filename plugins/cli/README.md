@@ -95,12 +95,17 @@ Forms:
 - `/share-trace delete <pr-url | pr-number | /t/<id> url | short-id>` — delete a
   trace. A bare number is always treated as a PR number.
 
-In Codex, use the namespaced skill command:
+In Codex, plugin skills are surfaced as namespaced slash entries. Use the
+vibeshub skill entry:
 
 - `/vibeshub:share-trace` — auto-detect per the order above
 - `/vibeshub:share-trace <pr-url-or-number>` — share a specific PR
 - `/vibeshub:share-trace delete <pr-url | pr-number | /t/<id> url | short-id>` —
   delete a trace. A bare number is always treated as a PR number.
+
+If you type `/share-trace` in Codex, ask Codex to run the
+`vibeshub:share-trace` skill; the un-namespaced Claude command wrapper is not
+used by Codex.
 
 ## Privacy
 
