@@ -42,7 +42,11 @@ def install(home: Path | None = None, plugin_root: Path | None = None) -> Path:
         h for h in after
         if not (isinstance(h, dict) and _MARKER in str(h.get("command", "")))
     ]
-    after.append({"command": _hook_command(plugin_root), "matcher": r"git\s+push"})
+    after.append({
+        "command": _hook_command(plugin_root),
+        # Same trigger set as vibeshub_client.share_trigger.
+        "matcher": r"gh pr (create|edit)|git\s+push",
+    })
 
     hooks_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return hooks_path
