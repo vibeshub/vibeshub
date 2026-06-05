@@ -124,6 +124,7 @@ export function Landing() {
           <div className="topbar-spacer" />
 
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
+            <a href="#ways">Workflows</a>
             <a href="#teams">Teams</a>
             <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
@@ -202,11 +203,65 @@ export function Landing() {
               </div>
             </div>
 
-            {/* right: pick the workflow that fits - compact 3-tile preview */}
+            {/* right: how it works - compact 3-step timeline */}
             <div className={styles.heroVisual}>
               <div className={styles.eyebrow}>
-                <span className={styles.dot} /> Pick the workflow that fits
+                <span className={styles.dot} /> How it works
               </div>
+              <ol className={styles.heroFlow}>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconTerminal />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>01 · Install the plugin</span>
+                    <p className={styles.heroFlowText}>
+                      One command in Claude Code or Codex. Your GitHub auth is
+                      your vibeshub identity, nothing else to set up.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconPrSvg />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>02 · Open a PR</span>
+                    <p className={styles.heroFlowText}>
+                      Open a PR from your Claude Code or Codex session, the way
+                      you already do. Nothing changes about how you work.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconCheck />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>03 · It posts itself</span>
+                    <p className={styles.heroFlowText}>
+                      The trace uploads and the PR updates with the link,
+                      automatically. Reviewers see how you built it before they
+                      read the diff.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================== pick the workflow ====================== */}
+        <section className={styles.ways} id="ways">
+          <div className={styles.container}>
+            <div className={styles.waysHead}>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> Three ways in
+              </div>
+              <h2 className={styles.sectionTitle}>
+                Pick the workflow that fits.
+              </h2>
+            </div>
               <ul className={styles.heroWays}>
                 <li className={openWay === 0 ? styles.heroWayItemOpen : undefined}>
                   <button
@@ -352,7 +407,6 @@ export function Landing() {
                   )}
                 </li>
               </ul>
-            </div>
           </div>
         </section>
 
