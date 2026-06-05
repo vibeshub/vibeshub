@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib import error as urllib_error
 
@@ -257,3 +258,37 @@ def test_share_trace_uses_select_adapter():
     src = _SHARE_TRACE_PATH.read_text()
     assert "select_adapter" in src
     assert "ClaudeCodeTranscriptReader()" not in src  # no longer constructed directly
+
+
+def test_share_allows_codex_manual_upload_without_session_id(capsys):
+    import asyncio
+
+    mod = _load_share_trace()
+    reader = MagicMock()
+    reader.platform_id.return_value = "codex"
+
+    async def fake_pipeline(*, reader, hook_input, options):
+        assert hook_input["session_id"] is None
+        assert options.session_id is None
+        return SimpleNamespace(
+            uploaded=True,
+            trace_url="https://vibeshub.ai/t/codex123",
+            skip_reason=None,
+        )
+
+    with patch.object(mod, "_resolve_target", return_value=(None, None)), \
+         patch.object(
+             mod, "_PLUGIN_ROOT",
+             Path("/Users/x/.codex/plugins/cache/vibeshub/vibeshub/0.4.0"),
+         ), \
+         patch("vibeshub_client.gh_token.get_gh_token", return_value="tok"), \
+         patch("platform_adapter.select_adapter", return_value=reader) as select, \
+         patch("vibeshub_client.pipeline.run_share_pipeline", fake_pipeline):
+        asyncio.run(mod._share([], "https://vibeshub.ai", None))
+
+    captured = capsys.readouterr()
+    assert "trace uploaded: https://vibeshub.ai/t/codex123" in captured.out
+    assert "no session_id available" not in captured.err
+    assert select.call_args.args[0]["plugin_root"].endswith(
+        "/.codex/plugins/cache/vibeshub/vibeshub/0.4.0"
+    )
