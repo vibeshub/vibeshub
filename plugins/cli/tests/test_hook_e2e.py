@@ -292,6 +292,58 @@ def test_hook_uploads_cursor_platform(
     assert any(n.startswith("agents/") and n.endswith(".jsonl") for n in names), names
 
 
+def test_hook_uploads_cursor_gh_pr_create(
+    tmp_path: Path,
+    fake_gh_dir: Path,
+    fake_server,
+):
+    """Cursor's afterShellExecution payload carries no `tool_response`, so the
+    `gh pr create` path cannot read the new PR URL from stdout. It must fall
+    back to resolving the open PR for the current branch (like push/edit),
+    rather than bailing with "no PR URL in gh stdout"."""
+    fake_home = tmp_path / "home"
+    cwd = tmp_path / "repo"
+    cwd.mkdir()
+    uuid = "09fbacda-2df4-47a7-a12e-2534c6d55047"
+    tdir = fake_home / ".cursor" / "projects" / "Repo" / "agent-transcripts" / uuid
+    tdir.mkdir(parents=True)
+    (tdir / f"{uuid}.jsonl").write_text(
+        '{"role":"user","message":{"content":[{"type":"text",'
+        '"text":"<user_query>do a sweep</user_query>"}]}}\n',
+        encoding="utf-8",
+    )
+
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    hook_log = tmp_path / "hook.log"
+
+    payload = {
+        "session_id": uuid,
+        "cwd": str(cwd),
+        "command": "gh pr create --fill",  # Cursor shape: no tool_response
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["VIBESHUB_PLATFORM"] = "cursor"
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(hook_log)
+    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1, (
+        "expected one upload; "
+        f"stderr={proc.stderr!r} "
+        f"log={hook_log.read_text() if hook_log.exists() else '(none)'}"
+    )
+    body = fake_server[0]
+    assert body["platform"] == "cursor"
+    assert body["pr_url"] == "https://github.com/alice/repo/pull/3"
+    assert "[vibeshub] trace uploaded" in proc.stderr
+
+
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
     plugin_root = Path(__file__).resolve().parents[1]
     hook_script = plugin_root / "hooks" / "on-pr-share.py"

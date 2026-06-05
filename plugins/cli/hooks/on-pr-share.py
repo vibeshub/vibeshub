@@ -99,6 +99,16 @@ def main() -> None:
         elif isinstance(tool_response, str):
             stdout = tool_response
         pr_url = extract_pr_url_from_gh_stdout(stdout)
+        if not pr_url and "tool_response" not in payload:
+            # Cursor's afterShellExecution payload carries no `tool_response`,
+            # so the new PR URL is not available from stdout. The PR was just
+            # created, so resolve the open PR for the current branch — same as
+            # the push/edit path below.
+            try:
+                pr_url = resolve_pr_url(None, cwd=payload.get("cwd"))
+            except (subprocess.SubprocessError, OSError) as e:
+                _log(f"skipped: gh pr create, but no open PR for current branch ({e})")
+                return
         if not pr_url:
             _log("skipped: no PR URL in gh stdout (command likely failed)")
             return  # likely the command failed; nothing to share
