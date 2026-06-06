@@ -85,7 +85,7 @@ export function Landing() {
   const { copied, copy } = useCopy();
   const [browse, setBrowse] = useState<RepoOverview | null>(null);
   // Which hero tile is expanded. null = all collapsed; single-open accordion.
-  const [openWay, setOpenWay] = useState<number | null>(null);
+  const [openWay, setOpenWay] = useState<number | null>(0);
   const toggleWay = (i: number) => setOpenWay((cur) => (cur === i ? null : i));
   // Which agent the hero install pane shows. Defaults to Claude Code.
   const [heroAgent, setHeroAgent] = useState<"claude" | "codex">("claude");
@@ -298,7 +298,7 @@ export function Landing() {
 
         {/* ====================== pick the workflow ====================== */}
         <section className={styles.ways} id="ways">
-          <div className={styles.container}>
+          <div className={`${styles.container} ${styles.waysGrid}`}>
             <div className={styles.waysHead}>
               <div className={styles.eyebrow}>
                 <span className={styles.dot} /> Three ways in
@@ -306,6 +306,11 @@ export function Landing() {
               <h2 className={styles.sectionTitle}>
                 Pick the workflow that fits.
               </h2>
+              <p className={styles.sectionLede} style={{ marginBottom: 0 }}>
+                Three ways to get a session onto vibeshub, from fully
+                automatic to a one-off upload. Reach for whichever suits the
+                moment, they all land in the same place.
+              </p>
             </div>
               <ul className={styles.heroWays}>
                 <li className={openWay === 0 ? styles.heroWayItemOpen : undefined}>
@@ -323,6 +328,11 @@ export function Landing() {
                       <span className={styles.heroWayTitle}>
                         Posts on every PR you open or update
                       </span>
+                      {openWay !== 0 && (
+                        <span className={styles.heroWaySummary}>
+                          Lands on the PR automatically, no extra steps.
+                        </span>
+                      )}
                     </div>
                     <span className={styles.heroWayChev} aria-hidden="true">
                       <IconChevronDown />
@@ -373,6 +383,11 @@ export function Landing() {
                       <span className={styles.heroWayTitle}>
                         Share any session with <code>/share-trace</code>
                       </span>
+                      {openWay !== 1 && (
+                        <span className={styles.heroWaySummary}>
+                          Share a single session on demand.
+                        </span>
+                      )}
                     </div>
                     <span className={styles.heroWayChev} aria-hidden="true">
                       <IconChevronDown />
@@ -425,6 +440,11 @@ export function Landing() {
                       <span className={styles.heroWayTitle}>
                         Drop your <code>.jsonl</code> on the web
                       </span>
+                      {openWay !== 2 && (
+                        <span className={styles.heroWaySummary}>
+                          Publish a trace from any browser.
+                        </span>
+                      )}
                     </div>
                     <span className={styles.heroWayChev} aria-hidden="true">
                       <IconChevronDown />
