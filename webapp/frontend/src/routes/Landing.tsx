@@ -87,6 +87,8 @@ export function Landing() {
   // Which hero tile is expanded. null = all collapsed; single-open accordion.
   const [openWay, setOpenWay] = useState<number | null>(null);
   const toggleWay = (i: number) => setOpenWay((cur) => (cur === i ? null : i));
+  // Which agent the hero install pane shows. Defaults to Claude Code.
+  const [heroAgent, setHeroAgent] = useState<"claude" | "codex">("claude");
 
   // Pull the real public traces for the vibeshub repo to fill the Browse
   // section. Errors are swallowed - the section degrades to skeletons.
@@ -173,32 +175,75 @@ export function Landing() {
               </p>
               <div className={styles.heroInstall}>
                 <div className={styles.heroInstallHead}>
-                  <span className={styles.heroInstallLabel}>
-                    install in claude code
-                  </span>
+                  <span className={styles.heroInstallLabel}>install in</span>
+                  <div
+                    className={styles.heroInstallToggle}
+                    role="tablist"
+                    aria-label="Choose your agent"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={heroAgent === "claude"}
+                      className={`${styles.heroInstallSeg} ${
+                        heroAgent === "claude" ? styles.heroInstallSegOn : ""
+                      }`}
+                      onClick={() => setHeroAgent("claude")}
+                    >
+                      Claude Code
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={heroAgent === "codex"}
+                      className={`${styles.heroInstallSeg} ${
+                        heroAgent === "codex" ? styles.heroInstallSegOn : ""
+                      }`}
+                      onClick={() => setHeroAgent("codex")}
+                    >
+                      Codex
+                    </button>
+                  </div>
                   <span className={styles.spacer} />
                   <button
                     type="button"
                     className={`${styles.codeCopy} ${
                       copied === "hero-install" ? styles.copied : ""
                     }`}
-                    onClick={() => copy("hero-install", INSTALL_COPY)}
+                    onClick={() =>
+                      copy(
+                        "hero-install",
+                        heroAgent === "claude" ? INSTALL_COPY : CODEX_INSTALL_COPY,
+                      )
+                    }
                   >
                     {copied === "hero-install" ? "copied" : "copy"}
                   </button>
                 </div>
-                <pre className={styles.heroInstallBody}>
-                  <span className={styles.prompt}>&gt;</span>{" "}
-                  <span className={styles.cmd}>/plugin marketplace add</span>{" "}
-                  <span className={styles.arg}>vibeshub/vibeshub</span>
-                  {"\n"}
-                  <span className={styles.prompt}>&gt;</span>{" "}
-                  <span className={styles.cmd}>/plugin install</span>{" "}
-                  <span className={styles.arg}>vibeshub@vibeshub</span>
-                </pre>
+                {heroAgent === "claude" ? (
+                  <pre className={styles.heroInstallBody}>
+                    <span className={styles.prompt}>&gt;</span>{" "}
+                    <span className={styles.cmd}>/plugin marketplace add</span>{" "}
+                    <span className={styles.arg}>vibeshub/vibeshub</span>
+                    {"\n"}
+                    <span className={styles.prompt}>&gt;</span>{" "}
+                    <span className={styles.cmd}>/plugin install</span>{" "}
+                    <span className={styles.arg}>vibeshub@vibeshub</span>
+                  </pre>
+                ) : (
+                  <pre className={styles.heroInstallBody}>
+                    <span className={styles.prompt}>$</span>{" "}
+                    <span className={styles.cmd}>codex plugin marketplace add</span>{" "}
+                    <span className={styles.arg}>vibeshub/vibeshub</span>
+                    {"\n"}
+                    <span className={styles.prompt}>$</span>{" "}
+                    <span className={styles.cmd}>codex plugin add</span>{" "}
+                    <span className={styles.arg}>vibeshub@vibeshub</span>
+                  </pre>
+                )}
                 <div className={styles.heroInstallNote}>
-                  requires <code>gh auth login</code> · also on Codex,{" "}
-                  <a href="#install">terminal setup below</a>
+                  requires <code>gh auth login</code>
+                  {heroAgent === "codex" ? " · run these in your terminal" : ""}
                 </div>
               </div>
             </div>

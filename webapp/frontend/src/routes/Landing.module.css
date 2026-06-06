@@ -258,6 +258,37 @@
   text-transform: uppercase;
   color: var(--text-faint);
 }
+.heroInstallToggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.heroInstallSeg {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  white-space: nowrap;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.heroInstallSeg:hover {
+  color: var(--text-muted);
+}
+.heroInstallSegOn,
+.heroInstallSegOn:hover {
+  color: var(--text-strong);
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  box-shadow: var(--shadow-1);
+}
 .heroInstallBody {
   margin: 0;
   padding: 14px 16px;
