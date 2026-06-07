@@ -131,6 +131,7 @@ export function Landing() {
             <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
             <Link to="/blog">Blog</Link>
+            <Link to="/faq">FAQ</Link>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -816,6 +817,7 @@ export function Landing() {
               <a href="#browse">Browse</a>
               <Link to="/vibeviewer">Viewer</Link>
               <Link to="/blog">Blog</Link>
+              <Link to="/faq">FAQ</Link>
               <Link to="/privacy">Privacy</Link>
               <Link to="/contact">Contact</Link>
               <a href="#install">Install</a>

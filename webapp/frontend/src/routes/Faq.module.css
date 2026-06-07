@@ -1,0 +1,274 @@
+/* Faq.module.css — layout for the /faq page. Header mirrors the Privacy page;
+   the accordion mirrors the landing page's "Three ways in" pattern. All
+   selectors are class-scoped via CSS Modules. */
+
+.faq {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+/* ---------- header ---------- */
+
+.header {
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+
+.lead {
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+
+/* ---------- groups ---------- */
+
+.group {
+  margin-top: 36px;
+}
+
+.groupTitle {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin: 0 0 12px;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---------- accordion item ---------- */
+
+.item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 140ms ease;
+}
+
+.item:hover {
+  border-color: var(--border-strong);
+}
+
+.itemOpen {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.q {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 18px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.q:hover {
+  background: var(--bg-subtle);
+}
+
+.qText {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-strong);
+}
+
+.chev {
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.chev svg {
+  width: 15px;
+  height: 15px;
+}
+
+.itemOpen .chev {
+  transform: rotate(180deg);
+  color: var(--text-muted);
+}
+
+/* Collapse via grid rows so the panel content stays mounted in the DOM (good
+   for SEO crawlers) while animating cleanly open and closed. */
+.panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease;
+}
+
+.itemOpen .panel {
+  grid-template-rows: 1fr;
+}
+
+.panelInner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panelInner > :global(*):first-child {
+  padding-top: 0;
+}
+
+/* Inner content padding lives on the children so the collapsed row clips to a
+   true zero height. */
+.panelInner p,
+.panelInner ul,
+.panelInner pre {
+  margin: 0 18px 14px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.panelInner > :first-child {
+  margin-top: 0;
+}
+
+.panelInner > :last-child {
+  margin-bottom: 16px;
+}
+
+.panelInner ul {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panelInner li {
+  color: var(--text-muted);
+}
+
+.panelInner strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.panelInner code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-strong);
+}
+
+.panelInner a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.panelInner a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-strong);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+/* code blocks shouldn't double up the inline-code chrome */
+.code code {
+  all: unset;
+}
+
+/* ---------- closing CTA ---------- */
+
+.cta {
+  margin-top: 44px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ctaText {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 6px;
+}
+
+.ctaSub {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ctaSub a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .faq {
+    padding: 40px 16px 72px;
+  }
+  .title {
+    font-size: 28px;
+  }
+}

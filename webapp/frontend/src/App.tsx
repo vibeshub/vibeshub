@@ -3,6 +3,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { Blog } from "./routes/Blog";
 import { BlogPost } from "./routes/BlogPost";
 import { Contact } from "./routes/Contact";
+import { Faq } from "./routes/Faq";
 import { Home } from "./routes/Home";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
@@ -25,6 +26,7 @@ export function App() {
         <Route path="upload" element={<Navigate to="/vibeviewer" replace />} />
         <Route path="privacy" element={<Privacy />} />
         <Route path="contact" element={<Contact />} />
+        <Route path="faq" element={<Faq />} />
         <Route path="blog" element={<Blog />} />
         <Route path="blog/:slug" element={<BlogPost />} />
         <Route
