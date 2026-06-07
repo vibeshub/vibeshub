@@ -87,6 +87,7 @@ async def run_share_pipeline(
                 body=build_comment_body(
                     result.trace_url, options.pr_url,
                     platform_label=_platform_label(reader.platform_id()),
+                    digest=result.digest,
                 ),
             )
         except RuntimeError as e:
