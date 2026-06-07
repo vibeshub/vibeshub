@@ -106,13 +106,14 @@ interface ChapterMetric {
   toolCount: number;
   durationMs: number | null;   // null when timestamps are unavailable
 }
-function chapterMetrics(stream: StreamEvent[], chapters: DigestChapter[]): ChapterMetric[];
+// Keyed by anchor_uuid; only resolvable anchors get an entry.
+function chapterMetrics(stream: StreamEvent[], chapters: DigestChapter[]): Map<string, ChapterMetric>;
 ```
 
 Algorithm (single pass, easy to unit-test):
 
 1. Build `index: Map<uuid, streamIndex>` from `stream`.
-2. For each chapter in order, resolve its anchor's stream index. A chapter whose anchor is not found in the stream is dropped from the rail (defensive; the pipeline already validates anchors against the distilled surface, but the rendered stream is a different surface).
+2. For each chapter in order, resolve its anchor's stream index. A chapter whose anchor is not found in the stream gets **no metric**; the rail still renders it **title-only** (no bar, no meta) and its click is a no-op. The rail therefore always reflects the full chapter list, never silently dropping one. (The pipeline already validates anchors against the distilled surface, but the rendered stream is a different surface, so this is the defensive path.)
 3. A chapter spans `[start, nextStart)` where `nextStart` is the next resolved anchor index, or `stream.length` for the last chapter. Spans are computed from the **sorted** resolved indices so out-of-order anchors do not produce negative spans.
 4. `toolCount` = count of `kind === "tool_use"` events in the span.
 5. `durationMs` = `ts(nextAnchorEvent) - ts(thisAnchorEvent)`; for the last chapter, `ts(last event in span with a timestamp) - ts(thisAnchorEvent)`. `ts` parses `e.ts` (ISO) via `Date.parse`. If either endpoint lacks a timestamp, `durationMs = null`.
@@ -168,6 +169,7 @@ Add `.chapterrail*` rules to `styles/viewer.css` next to `.promptrail*`, reusing
 | Digest present, chapters empty | PromptRail | 5 bullets (no chips) | none |
 | Digest absent | PromptRail | not rendered | none |
 | Chapters present but timestamps missing | ChapterRail, bars = tool-count, meta = `Nt` only | 5 bullets | rendered |
+| Chapter whose anchor is absent from the rendered stream | ChapterRail row rendered title-only (no bar/meta, click no-op) | 5 bullets | none for that chapter |
 
 ## 6. Testing
 
