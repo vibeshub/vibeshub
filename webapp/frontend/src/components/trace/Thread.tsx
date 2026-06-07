@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import type { Session, StreamEvent } from "./types";
+import type { TraceDigest, DigestChapter } from "../../types";
 import { UserPrompt } from "./UserPrompt";
 import { AssistantText } from "./AssistantText";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { SystemEventRow } from "./SystemEventRow";
 import { PrCard } from "./PrCard";
+import { ChapterDivider } from "./ChapterDivider";
 import { ToolCard } from "./tool/ToolCard";
 import { ToolGroup, type ToolGroupItem } from "./tool/ToolGroup";
 import { progressByTool } from "./parser";
@@ -13,6 +16,7 @@ interface Props {
   shortId: string;
   showSystemEvents: boolean;
   expandToolCalls: boolean;
+  digest?: TraceDigest | null;
 }
 
 function isSystemish(e: StreamEvent): boolean {
@@ -41,6 +45,7 @@ export function Thread({
   shortId,
   showSystemEvents,
   expandToolCalls,
+  digest,
 }: Props) {
   const stream = session.stream;
   const root = session.meta.cwd;
@@ -56,8 +61,40 @@ export function Thread({
   }
   const hooksByTool = progressByTool(stream);
 
+  const chaptersByUuid = useMemo(() => {
+    const m = new Map<string, DigestChapter>();
+    for (const c of digest?.chapters ?? []) m.set(c.anchor_uuid, c);
+    return m;
+  }, [digest]);
+
   const out: React.ReactNode[] = [];
   let promptCounter = -1;
+
+  const pushEvent = (
+    uuid: string | undefined,
+    node: React.ReactNode,
+    key: string,
+  ) => {
+    if (uuid && chaptersByUuid.has(uuid)) {
+      const chapter = chaptersByUuid.get(uuid)!;
+      out.push(
+        <ChapterDivider
+          title={chapter.title}
+          caption={chapter.caption}
+          key={`chapter-${uuid}`}
+        />,
+      );
+    }
+    if (uuid) {
+      out.push(
+        <div id={`evt-${uuid}`} key={key}>
+          {node}
+        </div>,
+      );
+    } else {
+      out.push(node);
+    }
+  };
 
   // When "Expand tool calls" is off (the default), consecutive tool calls
   // accumulate; flushRun() emits the run as one ToolGroup and is called
@@ -88,31 +125,25 @@ export function Thread({
       if (promptCounter > 0) {
         out.push(<div className="turn-sep" key={`sep-${i}`} />);
       }
-      out.push(
-        <UserPrompt
-          event={e}
-          idx={promptCounter}
-          total={totalPrompts}
-          key={key}
-        />,
+      pushEvent(
+        e.uuid,
+        <UserPrompt event={e} idx={promptCounter} total={totalPrompts} />,
+        key,
       );
       continue;
     }
     if (e.kind === "assistant_text") {
       flushRun();
-      out.push(
-        <AssistantText
-          event={e}
-          avatar={avatarChar}
-          agent={agentKind}
-          key={key}
-        />,
+      pushEvent(
+        e.uuid,
+        <AssistantText event={e} avatar={avatarChar} agent={agentKind} />,
+        key,
       );
       continue;
     }
     if (e.kind === "thinking") {
       flushRun();
-      out.push(<ThinkingBlock event={e} key={key} />);
+      pushEvent(e.uuid, <ThinkingBlock event={e} />, key);
       continue;
     }
     if (e.kind === "tool_use") {
@@ -124,7 +155,8 @@ export function Thread({
       if (!expandToolCalls) {
         pendingRun.push(item);
       } else {
-        out.push(
+        pushEvent(
+          e.uuid,
           <ToolCard
             event={e}
             root={root}
@@ -132,15 +164,15 @@ export function Thread({
             shortId={shortId}
             agents={agents}
             progress={item.progress}
-            key={key}
           />,
+          key,
         );
       }
       continue;
     }
     if (e.kind === "pr_link") {
       flushRun();
-      out.push(<PrCard event={e} key={key} />);
+      pushEvent(undefined, <PrCard event={e} key={key} />, key);
       continue;
     }
     if (e.kind === "progress") {
@@ -149,13 +181,13 @@ export function Thread({
       const orphan = !e.parentToolUseID || !toolIds.has(e.parentToolUseID);
       if (orphan && showSystemEvents) {
         flushRun();
-        out.push(<SystemEventRow event={e} key={key} />);
+        pushEvent(e.uuid, <SystemEventRow event={e} />, key);
       }
       continue;
     }
     if (showSystemEvents && isSystemish(e)) {
       flushRun();
-      out.push(<SystemEventRow event={e} key={key} />);
+      pushEvent(e.uuid, <SystemEventRow event={e} />, key);
     }
   }
   flushRun();

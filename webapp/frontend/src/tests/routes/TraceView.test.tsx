@@ -514,3 +514,107 @@ describe("TraceView", () => {
     expect(metaline!.textContent).toMatch(/tokens/i);
   });
 });
+
+describe("DigestPanel integration", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mockUseAuth.mockReturnValue(anonAuth);
+  });
+
+  it("renders DigestPanel when ai_digest is present", async () => {
+    const digest = {
+      ask: "test ask", decisions: "d", files: "f", tests: "t",
+      dead_ends: "e",
+      chapters: [
+        { anchor_uuid: "u1", title: "Frame", caption: "ask" },
+      ],
+    };
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+      ai_digest: digest,
+    });
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await waitFor(() => {
+      expect(screen.getByText("test ask")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Frame")).toBeInTheDocument();
+  });
+
+  it("does not render DigestPanel when ai_digest is absent", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(/SESSION ·/i).length,
+      ).toBeGreaterThan(0);
+    });
+    // The "Key decisions" label only renders inside the DigestPanel.
+    // ("Ask" collides with the Ask tool-category chip in the timeline legend.)
+    expect(screen.queryByText(/^Key decisions$/)).not.toBeInTheDocument();
+  });
+
+  it("renders ChapterDivider above the anchored event when chapters present", async () => {
+    // 779d4aa7-6138-4b55-93bb-0747bbebb8fa is the uuid of the first user
+    // prompt in webapp/frontend/src/tests/fixtures/sample-session.jsonl.
+    // Picking a real fixture uuid means the Thread actually renders an
+    // anchored event, and the divider sits above it.
+    const digest = {
+      ask: "a", decisions: "d", files: "f", tests: "t", dead_ends: "e",
+      chapters: [
+        { anchor_uuid: "779d4aa7-6138-4b55-93bb-0747bbebb8fa",
+          title: "Frame the ask",
+          caption: "User opens the conversation." },
+      ],
+    };
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7",
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+      ai_digest: digest,
+    });
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    // The caption renders only inside ChapterDivider — the DigestPanel jump
+    // button shows the title alone, with caption in a title attribute.
+    await waitFor(() => {
+      expect(
+        screen.getByText("User opens the conversation."),
+      ).toBeInTheDocument();
+    });
+    // The title appears twice — once in the DigestPanel jump rail, once in
+    // the ChapterDivider above the anchored event.
+    expect(screen.getAllByText("Frame the ask").length).toBeGreaterThanOrEqual(2);
+  });
+});

@@ -82,6 +82,7 @@ export function TraceViewer({
               shortId={shortId}
               showSystemEvents={showSystemEvents}
               expandToolCalls={expandToolCalls}
+              digest={trace.ai_digest}
             />
           </div>
         </div>
