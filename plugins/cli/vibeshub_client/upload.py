@@ -131,6 +131,17 @@ class UploadResult:
     short_id: str
     trace_url: str
     created: bool = True
+    digest: dict | None = None
+
+
+def _parse_response(data: dict) -> UploadResult:
+    return UploadResult(
+        trace_id=data["trace_id"],
+        short_id=data["short_id"],
+        trace_url=data["trace_url"],
+        created=data.get("created", True),
+        digest=data.get("ai_digest"),
+    )
 
 
 def _post_bytes(
@@ -198,9 +209,4 @@ async def upload_bundle(
         raise UploadError(f"upload failed: {status} {text}")
 
     data = json.loads(raw.decode("utf-8"))
-    return UploadResult(
-        trace_id=data["trace_id"],
-        short_id=data["short_id"],
-        trace_url=data["trace_url"],
-        created=data.get("created", True),
-    )
+    return _parse_response(data)

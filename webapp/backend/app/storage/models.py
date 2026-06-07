@@ -93,6 +93,14 @@ class Trace(Base):
     agents: Mapped[Optional[list[dict]]] = mapped_column(JSON, nullable=True)
     agent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    # Trace digest agent output. NULL when the upload predates the digest
+    # feature, env vars are unset, or the LLM call failed. See
+    # docs/superpowers/specs/2026-06-06-trace-digest-agent-design.md §7.
+    digest_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    digest_input_hash: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
@@ -144,3 +152,24 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
+
+
+class AgentRun(Base):
+    __tablename__ = "agent_run"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    agent_name: Mapped[str] = mapped_column(String(64), index=True)
+    # Nullable for non-trace agents (future). Indexed for per-trace history.
+    trace_id: Mapped[Optional[str]] = mapped_column(
+        String(32), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True
+    )
+    model: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    outcome: Mapped[str] = mapped_column(String(32), index=True)
+    error_detail: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extra: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

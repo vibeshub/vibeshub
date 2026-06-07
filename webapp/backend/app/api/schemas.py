@@ -15,6 +15,21 @@ class AgentSummary(BaseModel):
     message_count: int
 
 
+class DigestChapter(BaseModel):
+    anchor_uuid: str
+    title: str
+    caption: str
+
+
+class TraceDigest(BaseModel):
+    ask: str
+    decisions: str
+    files: str
+    tests: str
+    dead_ends: str
+    chapters: list[DigestChapter] = Field(default_factory=list)
+
+
 class TraceSummary(BaseModel):
     trace_id: str
     short_id: str
@@ -32,6 +47,7 @@ class TraceSummary(BaseModel):
     created_at: str
     is_private: bool = False
 
+    ai_digest: TraceDigest | None = None
     agent_count: int = 0
     agents: list[AgentSummary] = Field(default_factory=list)
 
@@ -44,6 +60,7 @@ class IngestResponse(BaseModel):
     # One-time token to later claim an anonymous (no-login) upload. None for
     # the CLI ingest path and for signed-in web uploads.
     claim_token: str | None = None
+    ai_digest: TraceDigest | None = None
 
 
 class ClaimRequest(BaseModel):

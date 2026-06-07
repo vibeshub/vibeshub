@@ -7,6 +7,7 @@ import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
 import { HeroTitle } from "./HeroTitle";
+import { DigestPanel } from "./DigestPanel";
 
 interface Props {
   session: Session;
@@ -214,6 +215,7 @@ export function Hero({
         />
         <HeroBadges trace={trace} />
       </div>
+      {trace.ai_digest && <DigestPanel digest={trace.ai_digest} />}
       <Outcome session={session} trace={trace} />
       <MetaLine session={session} />
       <ToolsChips session={session} />

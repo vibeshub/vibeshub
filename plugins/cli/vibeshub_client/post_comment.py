@@ -21,12 +21,40 @@ def _pr_style_trace_url(trace_url: str, pr_url: str) -> str:
 
 
 def build_comment_body(
-    trace_url: str, pr_url: str, *, platform_label: str = "Claude Code"
+    trace_url: str, pr_url: str, *, platform_label: str = "Claude Code",
+    digest: dict | None = None,
 ) -> str:
-    return (
-        f"{platform_label} trace for this PR: {_pr_style_trace_url(trace_url, pr_url)}\n\n"
+    parts: list[str] = []
+    if digest:
+        formatted = _format_digest(digest)
+        if formatted:
+            parts.append(formatted)
+            parts.append("")  # blank line between digest and trace link
+    parts.append(
+        f"{platform_label} trace for this PR: "
+        f"{_pr_style_trace_url(trace_url, pr_url)}\n\n"
         "Uploaded by the PR author."
     )
+    return "\n".join(parts)
+
+
+_DIGEST_FIELDS: list[tuple[str, str]] = [
+    ("ask", "Ask"),
+    ("decisions", "Key decisions"),
+    ("files", "Files touched"),
+    ("tests", "Tests added"),
+    ("dead_ends", "Dead ends"),
+]
+
+
+def _format_digest(digest: dict) -> str:
+    lines: list[str] = []
+    for key, label in _DIGEST_FIELDS:
+        val = digest.get(key)
+        if not val:
+            continue
+        lines.append(f"**{label}:** {val}")
+    return "\n".join(lines)
 
 
 def post_pr_comment(*, pr_url: str, body: str) -> None:

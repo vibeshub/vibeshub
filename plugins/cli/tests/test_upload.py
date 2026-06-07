@@ -436,3 +436,29 @@ def test_windows_ca_der_collects_trusted_der_from_cert_stores():
         der = upload._windows_ca_der()
 
     assert der == b"DER-ROOT-1" + b"DER-ROOT-2" + b"DER-INTERMEDIATE"
+
+
+def test_upload_result_round_trips_digest():
+    """UploadResult parses an optional digest dict from the backend response."""
+    from vibeshub_client.upload import UploadResult, _parse_response
+    payload = {
+        "trace_id": "t1", "short_id": "abc12345",
+        "trace_url": "https://vibeshub.test/t/abc12345",
+        "ai_digest": {
+            "ask": "test ask", "decisions": "d", "files": "f",
+            "tests": "t", "dead_ends": "e",
+            "chapters": [],
+        },
+    }
+    result = _parse_response(payload)
+    assert result.digest == payload["ai_digest"]
+
+
+def test_upload_result_digest_optional():
+    from vibeshub_client.upload import _parse_response
+    payload = {
+        "trace_id": "t1", "short_id": "abc12345",
+        "trace_url": "https://vibeshub.test/t/abc12345",
+    }
+    result = _parse_response(payload)
+    assert result.digest is None

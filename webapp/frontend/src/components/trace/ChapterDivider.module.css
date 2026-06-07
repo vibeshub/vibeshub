@@ -1,0 +1,18 @@
+.divider {
+  margin: 22px 0 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle, #e5e5e5);
+}
+
+.title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-default, #111);
+}
+
+.caption {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-muted, #666);
+  margin-top: 2px;
+}

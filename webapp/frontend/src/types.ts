@@ -6,6 +6,21 @@ export interface AgentSummary {
   message_count: number;
 }
 
+export interface DigestChapter {
+  anchor_uuid: string;
+  title: string;
+  caption: string;
+}
+
+export interface TraceDigest {
+  ask: string;
+  decisions: string;
+  files: string;
+  tests: string;
+  dead_ends: string;
+  chapters: DigestChapter[];
+}
+
 export interface TraceSummary {
   trace_id: string;
   short_id: string;
@@ -23,6 +38,7 @@ export interface TraceSummary {
   is_private: boolean;
   agent_count: number;
   agents: AgentSummary[];
+  ai_digest?: TraceDigest | null;
 }
 
 export interface TraceListResponse {
