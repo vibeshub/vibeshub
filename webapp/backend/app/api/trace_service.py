@@ -193,17 +193,26 @@ async def create_or_update_trace(
         )
         session.add(trace)
 
-    # Trace digest agent — best-effort, never raises.
+    # Trace digest agent — best-effort, never blocks the upload.
+    # compute_digest already catches its own LLM/Pydantic failures; the
+    # outer try guards against unexpected exceptions in distillation
+    # (e.g. malformed event shapes) so the upload always succeeds.
     from app.agents.digest import compute_digest
-    await compute_digest(
-        session,
-        trace,
-        blob=unpacked.main_bytes,
-        subagent_blobs={
-            a.meta.get("toolUseId", a.agent_id): a.jsonl_bytes
-            for a in unpacked.agents
-        },
-    )
+    try:
+        await compute_digest(
+            session,
+            trace,
+            blob=unpacked.main_bytes,
+            subagent_blobs={
+                a.meta.get("toolUseId", a.agent_id): a.jsonl_bytes
+                for a in unpacked.agents
+            },
+        )
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger("vibeshub.agents.digest").exception(
+            "compute_digest raised unexpectedly; upload continues",
+        )
 
     return TraceWriteResult(trace=trace, created=created)
 

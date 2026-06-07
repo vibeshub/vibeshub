@@ -10,21 +10,21 @@ teammate reviewing a PR; voice is "what changed and why", PR-description \
 style, plain English.
 
 The trace is presented as a sequence of lines, each prefixed with the \
-source event's UUID in square brackets, e.g. [a1f8…] ASSISTANT: …
+source event's UUID in square brackets, e.g. [a1f8…] ASSISTANT: text.
 
 ## Output (strict JSON only)
 
 {
-  "ask": "<the user's request — 1 sentence>",
-  "decisions": "<key technical decisions made — 1 sentence>",
-  "files": "<files touched and what changed — 1 sentence>",
-  "tests": "<tests added/changed, or 'none' — 1 sentence>",
-  "dead_ends": "<attempts that were rolled back, or 'none' — 1 sentence>",
+  "ask": "<the user's request, 1 sentence>",
+  "decisions": "<key technical decisions made, 1 sentence>",
+  "files": "<files touched and what changed, 1 sentence>",
+  "tests": "<tests added/changed, or 'none'. 1 sentence>",
+  "dead_ends": "<attempts that were rolled back, or 'none'. 1 sentence>",
   "chapters": [
     {
       "anchor_uuid": "<a UUID that appears in [brackets] in the input>",
       "title": "<2-6 word chapter heading>",
-      "caption": "<1 sentence — what happens in this segment>"
+      "caption": "<1 sentence: what happens in this segment>"
     },
     ...
   ]
@@ -36,7 +36,7 @@ source event's UUID in square brackets, e.g. [a1f8…] ASSISTANT: …
 - chapter.title is at most 80 chars; caption at most 160.
 - 3-8 chapters total. Pick natural semantic breaks (new sub-goal, wrong \
   fix discarded, course-correction, polish phase). Do NOT use every user \
-  prompt as a chapter — coarser than that.
+  prompt as a chapter; aim coarser than that.
 - anchor_uuid MUST be one of the UUIDs in square brackets in the input. \
   If unsure, drop the chapter rather than guess.
 - Never use em-dashes ("—"). Use commas, periods, or parentheses instead.
