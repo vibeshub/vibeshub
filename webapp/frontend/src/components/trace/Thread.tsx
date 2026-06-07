@@ -81,6 +81,7 @@ export function Thread({
         <ChapterDivider
           title={chapter.title}
           caption={chapter.caption}
+          anchorUuid={uuid}
           key={`chapter-${uuid}`}
         />,
       );
@@ -153,6 +154,22 @@ export function Thread({
         progress: hooksByTool.get(e.id) ?? [],
       };
       if (!expandToolCalls) {
+        // A chapter can anchor on a tool_use. In collapsed mode the tool is
+        // folded into a ToolGroup and never passes through pushEvent, so emit
+        // its divider here (flushing the prior run so the divider sits before
+        // the group this tool starts).
+        if (e.uuid && chaptersByUuid.has(e.uuid)) {
+          flushRun();
+          const chapter = chaptersByUuid.get(e.uuid)!;
+          out.push(
+            <ChapterDivider
+              title={chapter.title}
+              caption={chapter.caption}
+              anchorUuid={e.uuid}
+              key={`chapter-${e.uuid}`}
+            />,
+          );
+        }
         pendingRun.push(item);
       } else {
         pushEvent(

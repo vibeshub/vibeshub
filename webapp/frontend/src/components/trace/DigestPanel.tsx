@@ -14,13 +14,6 @@ const BULLETS: Array<{ key: keyof Omit<TraceDigest, "chapters">; label: string }
 ];
 
 export function DigestPanel({ digest }: Props) {
-  const onJump = (uuid: string) => {
-    const el = document.getElementById(`evt-${uuid}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   return (
     <div className={styles.wrap}>
       <section className={styles.panel}>
@@ -33,22 +26,6 @@ export function DigestPanel({ digest }: Props) {
             </div>
           ))}
         </div>
-        {digest.chapters.length > 0 && (
-          <div className={styles.rail}>
-            <div className={styles.railLabel}>Jump to</div>
-            <div className={styles.chapters}>
-              {digest.chapters.map((c) => (
-                <button
-                  key={c.anchor_uuid}
-                  className={styles.chapter}
-                  onClick={() => onJump(c.anchor_uuid)}
-                >
-                  {c.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );

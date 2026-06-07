@@ -5,6 +5,7 @@ import type { Session } from "./types";
 import { ViewerTopbar } from "./ViewerTopbar";
 import { JumpStrip } from "./JumpStrip";
 import { PromptRail } from "./PromptRail";
+import { ChapterRail } from "./ChapterRail";
 import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
@@ -69,7 +70,11 @@ export function TraceViewer({
         </div>
       ) : (
         <div className="viewer-body">
-          <PromptRail session={session} />
+          {trace.ai_digest?.chapters?.length ? (
+            <ChapterRail session={session} digest={trace.ai_digest} />
+          ) : (
+            <PromptRail session={session} />
+          )}
           <div className="viewer-main">
             <ThreadControls
               showSystemEvents={showSystemEvents}

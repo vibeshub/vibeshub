@@ -2,6 +2,8 @@
   margin: 22px 0 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border-subtle, #e5e5e5);
+  /* Clear the sticky viewer header when scrolled to from the chapter rail. */
+  scroll-margin-top: 140px;
 }
 
 .title {

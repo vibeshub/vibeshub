@@ -548,7 +548,10 @@ describe("DigestPanel integration", () => {
     await waitFor(() => {
       expect(screen.getByText("test ask")).toBeInTheDocument();
     });
-    expect(screen.getByText("Frame")).toBeInTheDocument();
+    // The chapter title renders in the ChapterRail (and, when the anchor
+    // resolves in the stream, the inline ChapterDivider). The DigestPanel
+    // no longer renders chapter chips.
+    expect(screen.getAllByText("Frame").length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not render DigestPanel when ai_digest is absent", async () => {
@@ -606,15 +609,57 @@ describe("DigestPanel integration", () => {
       ai_digest: digest,
     });
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
-    // The caption renders only inside ChapterDivider — the DigestPanel jump
-    // button shows the title alone (no caption tooltip).
+    // The caption renders only inside ChapterDivider. The title appears in
+    // both the ChapterRail and the ChapterDivider above the anchored event.
     await waitFor(() => {
       expect(
         screen.getByText("User opens the conversation."),
       ).toBeInTheDocument();
     });
-    // The title appears twice — once in the DigestPanel jump rail, once in
-    // the ChapterDivider above the anchored event.
+    // The title appears twice — once in the ChapterRail, once in the
+    // ChapterDivider above the anchored event.
     expect(screen.getAllByText("Frame the ask").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("renders the chapter rail (not the prompt rail) when chapters present", async () => {
+    const digest = {
+      ask: "a", decisions: "d", files: "f", tests: "t", dead_ends: "e",
+      chapters: [
+        { anchor_uuid: "779d4aa7-6138-4b55-93bb-0747bbebb8fa",
+          title: "Frame the ask", caption: "x" },
+      ],
+    };
+    mockFetchSequence({
+      trace_id: "id", short_id: SHORT_ID, owner_login: "alice",
+      repo_full_name: "alice/repo", pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7", pr_title: "Add thing",
+      platform: "claude-code", byte_size: FIXTURE.length, message_count: 100,
+      created_at: "2026-05-17T00:00:00Z", is_private: false, ai_digest: digest,
+    });
+    const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await waitFor(() =>
+      expect(container.querySelector(".chapterrail")).not.toBeNull(),
+    );
+    expect(container.querySelector(".promptrail")).toBeNull();
+  });
+
+  it("falls back to the prompt rail when the digest has no chapters", async () => {
+    const digest = {
+      ask: "a", decisions: "d", files: "f", tests: "t", dead_ends: "e",
+      chapters: [],
+    };
+    mockFetchSequence({
+      trace_id: "id", short_id: SHORT_ID, owner_login: "alice",
+      repo_full_name: "alice/repo", pr_number: 7,
+      pr_url: "https://github.com/alice/repo/pull/7", pr_title: "Add thing",
+      platform: "claude-code", byte_size: FIXTURE.length, message_count: 100,
+      created_at: "2026-05-17T00:00:00Z", is_private: false, ai_digest: digest,
+    });
+    const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await waitFor(() =>
+      expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
+    );
+    expect(container.querySelector(".promptrail")).not.toBeNull();
+    expect(container.querySelector(".chapterrail")).toBeNull();
   });
 });
