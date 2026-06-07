@@ -130,6 +130,7 @@ export function Landing() {
             <a href="#teams">Teams</a>
             <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
+            <Link to="/blog">Blog</Link>
             <a href="#privacy">Privacy</a>
             <a href="#install">Install</a>
           </nav>
@@ -814,6 +815,7 @@ export function Landing() {
               <a href="https://github.com/vibeshub/vibeshub">GitHub</a>
               <a href="#browse">Browse</a>
               <Link to="/vibeviewer">Viewer</Link>
+              <Link to="/blog">Blog</Link>
               <Link to="/privacy">Privacy</Link>
               <Link to="/contact">Contact</Link>
               <a href="#install">Install</a>
