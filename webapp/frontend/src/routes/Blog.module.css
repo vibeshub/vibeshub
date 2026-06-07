@@ -1,0 +1,322 @@
+/* Blog.module.css — layout for the /blog index and /blog/:slug post pages.
+   Class-scoped via CSS Modules; reuses the design tokens from tokens.css and
+   mirrors the typographic language of Privacy.module.css. */
+
+/* ---------- shared header ---------- */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ---------- index ---------- */
+
+.index {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+.indexHead {
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.indexTitle {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  margin: 0 0 12px;
+}
+
+.indexLede {
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 560px;
+}
+
+.postList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 24px 16px;
+  margin: 0 -16px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  transition: background 120ms ease;
+}
+
+.card + .card {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.card:hover {
+  background: var(--bg-subtle);
+  text-decoration: none;
+}
+
+.cardThumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top left;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.cardMeta .sep {
+  opacity: 0.5;
+}
+
+.cardTitle {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+  margin: 0 0 8px;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+
+.card:hover .cardTitle {
+  color: var(--accent-strong);
+}
+
+.cardExcerpt {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  max-width: 60ch;
+}
+
+.cardMore {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--accent-strong);
+}
+
+/* ---------- post ---------- */
+
+.post {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 56px 24px 40px;
+}
+
+.postHead {
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.postTitle {
+  font-size: 38px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--text-strong);
+  margin: 0 0 16px;
+  text-wrap: balance;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.byline .sep {
+  color: var(--text-faint);
+  opacity: 0.6;
+}
+
+.byline .author {
+  color: var(--text-strong);
+}
+
+/* ---------- prose ---------- */
+
+.prose {
+  color: var(--text);
+  font-size: 16.5px;
+  line-height: 1.72;
+}
+
+.lede {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--text-strong);
+  margin: 0 0 22px;
+  letter-spacing: -0.01em;
+}
+
+.prose h2 {
+  margin: 44px 0 14px;
+  font-size: 22px;
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+}
+
+.prose p {
+  margin: 0 0 16px;
+}
+
+.prose strong {
+  color: var(--text-strong);
+}
+
+.prose ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+.prose li {
+  margin-bottom: 8px;
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-soft, color-mix(in oklab, var(--accent) 12%, transparent));
+  color: var(--text-strong);
+}
+
+.prose a {
+  color: var(--accent-strong, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ---------- figures ---------- */
+
+.figure {
+  margin: 30px 0;
+}
+
+.figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px oklch(0 0 0 / 0.06);
+}
+
+.figure figcaption {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+/* ---------- end-of-post CTA ---------- */
+
+.cta {
+  margin-top: 16px;
+  padding: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+.ctaTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 6px;
+}
+
+.ctaText {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ctaText a {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.ctaText a:hover {
+  text-decoration: underline;
+}
+
+.backLink {
+  display: inline-block;
+  margin-top: 36px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--accent-strong);
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 720px) {
+  .card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .postTitle {
+    font-size: 30px;
+  }
+  .indexTitle {
+    font-size: 30px;
+  }
+}
