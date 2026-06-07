@@ -1,0 +1,8 @@
+{"type":"user","uuid":"u1","message":{"content":"Add a /healthcheck route"}}
+{"type":"assistant","uuid":"a1","message":{"content":[{"type":"text","text":"I'll add it."}]}}
+{"type":"assistant","uuid":"a2","message":{"content":[{"type":"tool_use","id":"tu1","name":"Edit","input":{"file_path":"webapp/backend/app/main.py","old_string":"OLD","new_string":"NEW WITH LOTS OF CONTENT"}}]}}
+{"type":"user","uuid":"u2","message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"ok"}]}}
+{"type":"assistant","uuid":"a3","message":{"content":[{"type":"text","text":"Done."}]}}
+{"type":"permission-mode","permissionMode":"acceptEdits"}
+{"type":"ai-title","aiTitle":"Add healthcheck"}
+{"type":"file-history-snapshot","snapshot":[]}
