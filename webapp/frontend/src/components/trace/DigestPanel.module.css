@@ -1,54 +1,93 @@
+/* DigestPanel — the AI summary card under the hero. Aligns to the same
+   header-width gutters as the outcome card + metaline below it, and reuses the
+   site's card / eyebrow / chip language so it stays correct in dark mode. */
+
+.wrap {
+  max-width: var(--header-width);
+  margin: 16px auto 0;
+  padding: 0 32px;
+}
+@media (max-width: 720px) {
+  .wrap {
+    padding: 0 16px;
+  }
+}
+
 .panel {
-  border: 1px solid var(--border-subtle, #e5e5e5);
-  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 16px 18px;
-  margin: 16px 0;
-  background: var(--bg-panel, #fafafa);
+}
+
+.eyebrow {
+  font: 10.5px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-bottom: 12px;
 }
 
 .bullets {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: 12px;
-  row-gap: 6px;
-  font-size: 14px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 8px;
+  font-size: 13.5px;
+}
+
+.row {
+  display: contents;
 }
 
 .label {
-  color: var(--text-muted, #666);
+  color: var(--text-muted);
   font-weight: 600;
 }
 
 .value {
-  color: var(--text-default, #111);
+  color: var(--text);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .rail {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border-subtle, #e5e5e5);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .railLabel {
-  font-size: 12px;
+  font: 10.5px/1 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted, #666);
-  margin-bottom: 6px;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .chapter {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font: 12.5px/1 var(--font-sans);
+  color: var(--accent-strong);
   cursor: pointer;
-  font-size: 14px;
-  color: var(--link, #2358d8);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .chapter:hover {
-  text-decoration: underline;
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
 }
