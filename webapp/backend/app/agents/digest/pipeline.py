@@ -4,9 +4,10 @@ The single public entry point is compute_digest. It:
   1. Distills the trace.
   2. Hashes the distilled string; if it matches trace.digest_input_hash,
      skip the LLM call entirely.
-  3. Calls OpenAI responses.create with json_object output.
-  4. Validates the JSON, drops chapters whose anchor_uuid isn't in the
-     distilled UUID surface, strips em-dashes.
+  3. Calls OpenAI responses.parse with the Digest schema (Structured
+     Outputs); the SDK returns an already-validated Digest.
+  4. Drops chapters whose anchor_uuid isn't in the distilled UUID
+     surface, strips em-dashes.
   5. Persists digest_json + digest_input_hash on the trace row.
   6. Records the run in agent_run via record_run().
 
@@ -15,7 +16,6 @@ Never raises. Returns the validated Digest on success, None otherwise.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import time
 
@@ -77,13 +77,13 @@ async def compute_digest(
     model = get_model()
     started = time.monotonic()
     try:
-        response = client.responses.create(
+        response = client.responses.parse(
             model=model,
             instructions=SYSTEM_PROMPT,
             input=distilled,
             max_output_tokens=_MAX_OUTPUT_TOKENS,
             reasoning={"effort": _REASONING_EFFORT},
-            text={"format": {"type": "json_object"}},
+            text_format=Digest,
         )
     except Exception as exc:  # noqa: BLE001
         latency_ms = int((time.monotonic() - started) * 1000)
@@ -98,17 +98,17 @@ async def compute_digest(
 
     in_tok = _safe_int(getattr(response, "usage", None), "input_tokens")
     out_tok = _safe_int(getattr(response, "usage", None), "output_tokens")
-    raw = response.output_text or ""
 
-    try:
-        parsed = json.loads(raw)
-        candidate = Digest.model_validate(parsed)
-    except (json.JSONDecodeError, ValidationError) as exc:
+    # Structured Outputs guarantees the shape, so output_parsed is a
+    # validated Digest. It's None only on a refusal or empty completion.
+    candidate = response.output_parsed
+    if candidate is None:
+        raw = getattr(response, "output_text", "") or ""
         await record_run(
             session, agent_name="digest", trace_id=trace.short_id,
             model=model, input_tokens=in_tok, output_tokens=out_tok,
             latency_ms=latency_ms, outcome=Outcome.FAIL_SCHEMA,
-            error_detail=f"{exc}\n--\n{raw[:500]}",
+            error_detail=f"output_parsed is None\n--\n{raw[:500]}",
         )
         return None
 

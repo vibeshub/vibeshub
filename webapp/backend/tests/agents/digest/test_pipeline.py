@@ -1,4 +1,3 @@
-import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,9 +10,13 @@ from app.storage.models import AgentRun, Trace
 
 
 def _ok_response(payload: dict):
-    """Mock the shape of an OpenAI responses.create result."""
+    """Mock the shape of an OpenAI responses.parse result.
+
+    The SDK returns an already-validated model on .output_parsed when the
+    request uses Structured Outputs (text_format=Digest).
+    """
     resp = MagicMock()
-    resp.output_text = json.dumps(payload)
+    resp.output_parsed = Digest.model_validate(payload)
     resp.usage = MagicMock(input_tokens=42, output_tokens=10)
     return resp
 
@@ -69,7 +72,7 @@ async def test_happy_path_persists_digest_and_records_run(
     monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
     monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
     mock_client = MagicMock()
-    mock_client.responses.create.return_value = _ok_response(VALID_PAYLOAD)
+    mock_client.responses.parse.return_value = _ok_response(VALID_PAYLOAD)
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -104,14 +107,14 @@ async def test_happy_path_persists_digest_and_records_run(
 
 
 @pytest.mark.asyncio
-async def test_call_uses_json_object_format(
+async def test_call_uses_structured_output_format(
     monkeypatch, db_session, _trace_blob, _seeded_trace,
 ):
     monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
     monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
     monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
     mock_client = MagicMock()
-    mock_client.responses.create.return_value = _ok_response(VALID_PAYLOAD)
+    mock_client.responses.parse.return_value = _ok_response(VALID_PAYLOAD)
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -119,11 +122,16 @@ async def test_call_uses_json_object_format(
         db_session, _seeded_trace,
         blob=_trace_blob, subagent_blobs={},
     )
-    kwargs = mock_client.responses.create.call_args.kwargs
-    assert kwargs["text"] == {"format": {"type": "json_object"}}
+    kwargs = mock_client.responses.parse.call_args.kwargs
+    # Structured Outputs: the Digest model drives a strict json_schema,
+    # so no manual text=json_object format and no "json" reminder needed.
+    assert kwargs["text_format"] is Digest
+    assert "text" not in kwargs
     assert kwargs["model"] == "gpt-5.5"
     assert "instructions" in kwargs
-    assert "input" in kwargs
+    # Input is the raw distilled trace, no appended json-keyword reminder.
+    assert isinstance(kwargs["input"], str) and kwargs["input"]
+    assert "matching the schema in the instructions" not in kwargs["input"]
 
 
 @pytest.mark.asyncio
@@ -152,7 +160,7 @@ async def test_call_failure_records_fail_call(
     monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
     monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
     mock_client = MagicMock()
-    mock_client.responses.create.side_effect = RuntimeError("502")
+    mock_client.responses.parse.side_effect = RuntimeError("502")
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -167,17 +175,21 @@ async def test_call_failure_records_fail_call(
 
 
 @pytest.mark.asyncio
-async def test_invalid_json_records_fail_schema(
+async def test_no_parsed_output_records_fail_schema(
     monkeypatch, db_session, _trace_blob, _seeded_trace,
 ):
+    # With Structured Outputs the shape is guaranteed, so the only way to
+    # get no usable Digest is a refusal / empty completion: output_parsed
+    # is None. The pipeline must record FAIL_SCHEMA, not crash.
     monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
     monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
     monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
     mock_client = MagicMock()
     bad = MagicMock()
-    bad.output_text = "this is not json"
+    bad.output_parsed = None
+    bad.output_text = "I can't help with that."
     bad.usage = MagicMock(input_tokens=10, output_tokens=2)
-    mock_client.responses.create.return_value = bad
+    mock_client.responses.parse.return_value = bad
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -188,7 +200,7 @@ async def test_invalid_json_records_fail_schema(
     assert result is None
     rows = (await db_session.execute(select(AgentRun))).scalars().all()
     assert rows[0].outcome == Outcome.FAIL_SCHEMA.value
-    assert "this is not json" in (rows[0].error_detail or "")
+    assert "I can't help with that." in (rows[0].error_detail or "")
 
 
 @pytest.mark.asyncio
@@ -201,7 +213,7 @@ async def test_em_dash_is_stripped_before_persist(
     payload = dict(VALID_PAYLOAD)
     payload["ask"] = "fix oauth — clean up scopes"
     mock_client = MagicMock()
-    mock_client.responses.create.return_value = _ok_response(payload)
+    mock_client.responses.parse.return_value = _ok_response(payload)
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -221,7 +233,7 @@ async def test_idempotency_skips_call_on_unchanged_input(
     monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
     monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
     mock_client = MagicMock()
-    mock_client.responses.create.return_value = _ok_response(VALID_PAYLOAD)
+    mock_client.responses.parse.return_value = _ok_response(VALID_PAYLOAD)
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock_client,
     )
@@ -230,14 +242,14 @@ async def test_idempotency_skips_call_on_unchanged_input(
         db_session, _seeded_trace,
         blob=_trace_blob, subagent_blobs={},
     )
-    assert mock_client.responses.create.call_count == 1
+    assert mock_client.responses.parse.call_count == 1
     assert first is not None
     # Second call with same blob: skipped
     second = await compute_digest(
         db_session, _seeded_trace,
         blob=_trace_blob, subagent_blobs={},
     )
-    assert mock_client.responses.create.call_count == 1  # no extra call
+    assert mock_client.responses.parse.call_count == 1  # no extra call
     assert second is not None
     assert second.ask == first.ask
     rows = (await db_session.execute(
