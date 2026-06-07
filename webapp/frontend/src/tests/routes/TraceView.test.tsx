@@ -548,8 +548,9 @@ describe("DigestPanel integration", () => {
     await waitFor(() => {
       expect(screen.getByText("test ask")).toBeInTheDocument();
     });
-    // The chapter title now renders in both the DigestPanel jump rail and the
-    // ChapterRail (Task 6 will drop the DigestPanel chips), so allow either.
+    // The chapter title renders in the ChapterRail (and, when the anchor
+    // resolves in the stream, the inline ChapterDivider). The DigestPanel
+    // no longer renders chapter chips.
     expect(screen.getAllByText("Frame").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -608,8 +609,8 @@ describe("DigestPanel integration", () => {
       ai_digest: digest,
     });
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
-    // The caption renders only inside ChapterDivider — the DigestPanel jump
-    // button shows the title alone (no caption tooltip).
+    // The caption renders only inside ChapterDivider. The title appears in
+    // both the ChapterRail and the ChapterDivider above the anchored event.
     await waitFor(() => {
       expect(
         screen.getByText("User opens the conversation."),
