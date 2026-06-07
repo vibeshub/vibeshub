@@ -1,0 +1,54 @@
+.panel {
+  border: 1px solid var(--border-subtle, #e5e5e5);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 16px 0;
+  background: var(--bg-panel, #fafafa);
+}
+
+.bullets {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  font-size: 14px;
+}
+
+.label {
+  color: var(--text-muted, #666);
+  font-weight: 600;
+}
+
+.value {
+  color: var(--text-default, #111);
+}
+
+.rail {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-subtle, #e5e5e5);
+}
+
+.railLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #666);
+  margin-bottom: 6px;
+}
+
+.chapter {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--link, #2358d8);
+}
+
+.chapter:hover {
+  text-decoration: underline;
+}
