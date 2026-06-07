@@ -179,9 +179,49 @@ def _tool_result_to_line(block: dict) -> str:
 def _summarize_subagent(
     block: dict, subagent_blobs: dict[str, bytes],
 ) -> str:
-    """Heuristic one-line summary of a subagent's outcome.
+    """Heuristic one-line outcome for a subagent dispatch.
 
-    Implementation is filled in by Task 3 (subagent collapse). For now this
-    returns an empty marker so the tier classifier compiles independently.
+    Strategy:
+    1. If we have the child's blob, take the LAST assistant_text and use
+       the first sentence (~120 chars).
+    2. Otherwise, fall back to "(N tool calls)" so the LLM at least sees
+       that something happened.
     """
+    tool_use_id = block.get("id") or ""
+    child = subagent_blobs.get(tool_use_id)
+    if child is None:
+        return ""
+    last_text: str | None = None
+    tool_call_count = 0
+    for raw in child.splitlines():
+        if not raw.strip():
+            continue
+        try:
+            ev = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") != "assistant":
+            continue
+        msg = ev.get("message") or {}
+        content = msg.get("content") or []
+        if not isinstance(content, list):
+            continue
+        for sub_block in content:
+            if not isinstance(sub_block, dict):
+                continue
+            btype = sub_block.get("type")
+            if btype == "text":
+                t = (sub_block.get("text") or "").strip()
+                if t:
+                    last_text = t
+            elif btype == "tool_use":
+                tool_call_count += 1
+    if last_text:
+        # First sentence, capped at 120 chars
+        sentence = last_text.split(". ")[0].strip()
+        if len(sentence) > 120:
+            sentence = sentence[:120] + "…"
+        return sentence
+    if tool_call_count:
+        return f"({tool_call_count} tool calls)"
     return ""

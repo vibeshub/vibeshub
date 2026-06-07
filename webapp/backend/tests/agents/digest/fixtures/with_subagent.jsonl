@@ -1,0 +1,4 @@
+{"type":"user","uuid":"u1","message":{"content":"Audit the auth code"}}
+{"type":"assistant","uuid":"a1","message":{"content":[{"type":"tool_use","id":"tu1","name":"Task","input":{"subagent_type":"code-reviewer","description":"Audit auth"}}]}}
+{"type":"user","uuid":"u2","message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"Found 2 issues"}]}}
+{"type":"assistant","uuid":"a2","message":{"content":[{"type":"text","text":"Patching both."}]}}

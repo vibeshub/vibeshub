@@ -85,3 +85,31 @@ def test_adjacent_duplicate_events_are_deduped():
     out = distill(blob, subagent_blobs={})
     # Only one line in the output
     assert out.count("Same payload") == 1
+
+
+def test_subagent_collapses_to_one_line():
+    parent = _read("with_subagent.jsonl")
+    child = _read("with_subagent_child.jsonl")
+    # The plugin's storage names subagent blobs by tool_use_id (see
+    # trace_service.create_or_update_trace). The distiller takes the
+    # same dict shape.
+    out = distill(parent, subagent_blobs={"tu1": child})
+    # One subagent line, not the child's three events
+    matches = [ln for ln in out.splitlines() if ln.startswith("[a1]")]
+    assert len(matches) == 1
+    line = matches[0]
+    assert "Subagent[code-reviewer]" in line
+    assert "Audit auth" in line
+    # The child's final assistant text is the summary
+    assert "Two issues" in line
+    # The child's interior is NEVER inlined
+    assert "webapp/backend/app/auth/oauth.py" not in out
+
+
+def test_subagent_missing_blob_falls_back_to_action_count():
+    parent = _read("with_subagent.jsonl")
+    out = distill(parent, subagent_blobs={})  # no child blob given
+    line = next(ln for ln in out.splitlines() if ln.startswith("[a1]"))
+    # Falls back to a non-empty descriptor so the LLM has SOMETHING to read
+    assert "Subagent[code-reviewer]" in line
+    assert "Audit auth" in line
