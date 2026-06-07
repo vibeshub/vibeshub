@@ -25,21 +25,47 @@ _SCRATCH_TOOLS = {"TodoWrite"}
 _TOOL_RESULT_PREFIX = 80
 _TOOL_RESULT_ERROR_PREFIX = 400
 _BASH_COMMAND_MAX = 120
+_DEFAULT_TARGET_TOKENS = 60_000
+_DEFAULT_HARDCAP_TOKENS = 200_000
+_EXPLORATION_RUN_MIN = 6
+_TOKENS_PER_CHAR = 0.4  # rough estimate; good enough for budget gating
 
 
-def distill(blob: bytes, *, subagent_blobs: dict[str, bytes]) -> str:
+def distill(
+    blob: bytes, *, subagent_blobs: dict[str, bytes],
+    target_tokens: int = _DEFAULT_TARGET_TOKENS,
+    hard_cap_tokens: int = _DEFAULT_HARDCAP_TOKENS,
+) -> str:
     """Return a compact text form of `blob` ready for the LLM call."""
-    text, _ = distill_with_uuids(blob, subagent_blobs=subagent_blobs)
+    text, _ = distill_with_uuids(
+        blob, subagent_blobs=subagent_blobs,
+        target_tokens=target_tokens, hard_cap_tokens=hard_cap_tokens,
+    )
     return text
 
 
 def distill_with_uuids(
     blob: bytes, *, subagent_blobs: dict[str, bytes],
+    target_tokens: int = _DEFAULT_TARGET_TOKENS,
+    hard_cap_tokens: int = _DEFAULT_HARDCAP_TOKENS,
 ) -> tuple[str, set[str]]:
     """Like `distill`, but also returns the set of event UUIDs that appear
     in the output. Callers use this to validate chapter anchor_uuids
     against the actual anchorable surface.
     """
+    lines, uuids = _classify(blob, subagent_blobs)
+    if _est_tokens(lines) > target_tokens:
+        lines = _collapse_exploration_runs(lines)
+    if _est_tokens(lines) > hard_cap_tokens:
+        lines = _truncate_middle(lines, hard_cap_tokens)
+    return "\n".join(lines), uuids
+
+
+def _classify(
+    blob: bytes, subagent_blobs: dict[str, bytes],
+) -> tuple[list[str], set[str]]:
+    """Walk the JSONL once, applying the four-tier classifier, and return
+    the rendered lines plus the set of anchorable event UUIDs."""
     lines: list[str] = []
     uuids: set[str] = set()
     prev: str | None = None
@@ -61,7 +87,7 @@ def distill_with_uuids(
         if uuid:
             uuids.add(uuid)
         lines.append(prefix + body)
-    return "\n".join(lines), uuids
+    return lines, uuids
 
 
 def _render(
@@ -225,3 +251,89 @@ def _summarize_subagent(
     if tool_call_count:
         return f"({tool_call_count} tool calls)"
     return ""
+
+
+def _est_tokens(lines: list[str]) -> float:
+    return sum(len(ln) for ln in lines) * _TOKENS_PER_CHAR
+
+
+def _is_tool_line(line: str) -> bool:
+    """A 'tool action' line — a [uuid]-prefixed line whose payload is a
+    bare tool call (no ASSISTANT: text, no USER: text)."""
+    if not line.startswith("["):
+        return False
+    after = line.split("] ", 1)
+    if len(after) != 2:
+        return False
+    body = after[1]
+    if body.startswith("ASSISTANT:") or body.startswith("USER:"):
+        return False
+    return True
+
+
+def _collapse_exploration_runs(lines: list[str]) -> list[str]:
+    """Replace runs of >= _EXPLORATION_RUN_MIN consecutive tool-action
+    lines with a single '[exploration: N tools]' summary.
+
+    Counts the tools that get collapsed for a more useful summary."""
+    out: list[str] = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        if _is_tool_line(lines[i]):
+            j = i
+            while j < n and _is_tool_line(lines[j]):
+                j += 1
+            run = lines[i:j]
+            if len(run) >= _EXPLORATION_RUN_MIN:
+                out.append(_summarize_run(run))
+            else:
+                out.extend(run)
+            i = j
+        else:
+            out.append(lines[i])
+            i += 1
+    return out
+
+
+def _summarize_run(run: list[str]) -> str:
+    """One-line summary of a collapsed exploration run."""
+    from collections import Counter
+    counter: Counter[str] = Counter()
+    for line in run:
+        body = line.split("] ", 1)[1] if "] " in line else line
+        tool = body.split(" ", 1)[0].rstrip(":")
+        counter[tool] += 1
+    parts = ", ".join(f"{n} {t.lower()}{'s' if n != 1 else ''}"
+                      for t, n in counter.most_common())
+    return f"[exploration: {parts}]"
+
+
+def _truncate_middle(lines: list[str], hard_cap_tokens: int) -> list[str]:
+    """Head/tail truncation. Always keep first and last events; fit as many
+    additional head/tail lines as the budget allows."""
+    if len(lines) <= 2:
+        return lines
+    target_chars = int(hard_cap_tokens / _TOKENS_PER_CHAR)
+    head_budget = max(int(target_chars * 0.5), len(lines[0]) + 1)
+    tail_budget = max(int(target_chars * 0.5), len(lines[-1]) + 1)
+    head: list[str] = [lines[0]]
+    head_chars = len(lines[0]) + 1
+    for line in lines[1:-1]:
+        head_chars += len(line) + 1
+        if head_chars > head_budget:
+            break
+        head.append(line)
+    tail: list[str] = [lines[-1]]
+    tail_chars = len(lines[-1]) + 1
+    for line in reversed(lines[len(head):-1]):
+        tail_chars += len(line) + 1
+        if tail_chars > tail_budget:
+            break
+        tail.append(line)
+    tail.reverse()
+    elided = len(lines) - len(head) - len(tail)
+    if elided <= 0:
+        return head + tail
+    marker = f"[… elided {elided} events …]"
+    return head + [marker] + tail

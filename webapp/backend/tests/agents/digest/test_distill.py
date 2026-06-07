@@ -113,3 +113,81 @@ def test_subagent_missing_blob_falls_back_to_action_count():
     # Falls back to a non-empty descriptor so the LLM has SOMETHING to read
     assert "Subagent[code-reviewer]" in line
     assert "Audit auth" in line
+
+
+def _synth_exploration_blob(reads: int, greps: int) -> bytes:
+    """Synthesize a JSONL with N reads + M greps, no intervening text."""
+    import json as _json
+    lines: list[str] = []
+    lines.append(_json.dumps({
+        "type": "user", "uuid": "uStart",
+        "message": {"content": "Find the auth handler"},
+    }))
+    for i in range(reads):
+        lines.append(_json.dumps({
+            "type": "assistant", "uuid": f"r{i}",
+            "message": {"content": [{
+                "type": "tool_use", "id": f"tr{i}", "name": "Read",
+                "input": {"file_path": f"webapp/backend/app/file_{i}.py"},
+            }]},
+        }))
+    for i in range(greps):
+        lines.append(_json.dumps({
+            "type": "assistant", "uuid": f"g{i}",
+            "message": {"content": [{
+                "type": "tool_use", "id": f"tg{i}", "name": "Grep",
+                "input": {"pattern": "handler", "path": "webapp/backend"},
+            }]},
+        }))
+    lines.append(_json.dumps({
+        "type": "assistant", "uuid": "aEnd",
+        "message": {"content": [{
+            "type": "text", "text": "Found it in oauth.py.",
+        }]},
+    }))
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def test_short_exploration_run_not_collapsed():
+    # 5 reads is BELOW the threshold of 6
+    blob = _synth_exploration_blob(reads=5, greps=0)
+    out = distill(blob, subagent_blobs={})
+    # All 5 reads still appear individually
+    assert out.count("Read webapp/backend/app/file_") == 5
+    assert "[exploration:" not in out
+
+
+def test_long_exploration_run_is_collapsed():
+    # 12 reads + 3 greps = 15 consecutive tool calls
+    blob = _synth_exploration_blob(reads=12, greps=3)
+    out = distill(blob, subagent_blobs={}, target_tokens=200)
+    # The individual Reads are gone, replaced with one collapse line
+    assert out.count("Read webapp/backend/app/file_") == 0
+    assert "[exploration:" in out
+    # Spine survives
+    assert "Find the auth handler" in out
+    assert "Found it in oauth.py." in out
+
+
+def test_distill_carries_target_and_hardcap_kwargs():
+    # Smoke test that the signature accepts the new kwargs
+    blob = _synth_exploration_blob(reads=1, greps=0)
+    out = distill(
+        blob, subagent_blobs={}, target_tokens=60_000, hard_cap_tokens=200_000,
+    )
+    assert isinstance(out, str)
+
+
+def test_truncation_when_over_hardcap_keeps_head_and_tail():
+    blob = _synth_exploration_blob(reads=200, greps=0)
+    # Force the hard cap to trip by setting an absurdly small cap; the
+    # adaptive collapse won't help because every event collapses to one line
+    # already after the exploration pass. We bypass collapse by setting the
+    # target VERY low and the hard cap also low.
+    out = distill(
+        blob, subagent_blobs={}, target_tokens=10, hard_cap_tokens=20,
+    )
+    assert "[… elided" in out
+    # First and last events still present
+    assert "Find the auth handler" in out
+    assert "Found it in oauth.py." in out
