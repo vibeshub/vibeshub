@@ -39,7 +39,6 @@ export function DigestPanel({ digest }: Props) {
               key={c.anchor_uuid}
               className={styles.chapter}
               onClick={() => onJump(c.anchor_uuid)}
-              title={c.caption}
             >
               {c.title}
             </button>

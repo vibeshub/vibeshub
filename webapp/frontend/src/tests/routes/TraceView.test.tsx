@@ -607,7 +607,7 @@ describe("DigestPanel integration", () => {
     });
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
     // The caption renders only inside ChapterDivider — the DigestPanel jump
-    // button shows the title alone, with caption in a title attribute.
+    // button shows the title alone (no caption tooltip).
     await waitFor(() => {
       expect(
         screen.getByText("User opens the conversation."),
