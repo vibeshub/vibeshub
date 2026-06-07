@@ -2,7 +2,8 @@
 
 Mirrors the pattern in polybot/storybot/twitter_pipeline.py:1928 — a
 single OpenAI Python SDK client pointed at the configured endpoint.
-The endpoint is Azure-shaped today (responses.create with json_object).
+The endpoint is Azure-shaped today (responses.parse with Structured
+Outputs / a json_schema derived from the Digest model).
 
 `get_client()` reads env vars at call time (not import time) so that
 test fixtures can patch them with monkeypatch.setenv. Returns None when

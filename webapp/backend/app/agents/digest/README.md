@@ -15,11 +15,13 @@ PR comment body posted by the plugin.
 3. `pipeline.compute_digest` computes `sha256(distilled)` and compares
    to `trace.digest_input_hash`. Match → reuse persisted digest,
    `outcome=skip_unchanged`, no LLM call.
-4. Otherwise: calls OpenAI `responses.create` with
-   `text={"format": {"type": "json_object"}}` and `reasoning.effort=low`.
-5. Validates the response with `Digest` (Pydantic). Drops chapters whose
-   `anchor_uuid` isn't in the distilled UUID surface. Strips em-dashes
-   from every string field.
+4. Otherwise: calls OpenAI `responses.parse` with `text_format=Digest`
+   (Structured Outputs, so the schema is enforced server-side) and
+   `reasoning.effort=low`.
+5. Reads the already-validated `Digest` from `response.output_parsed`
+   (None → `outcome=fail_schema`). Drops chapters whose `anchor_uuid`
+   isn't in the distilled UUID surface. Strips em-dashes from every
+   string field.
 6. Persists `digest_json` and `digest_input_hash` on the Trace row.
 7. Records the run in `agent_run` via `record_run`.
 
