@@ -180,6 +180,7 @@ def _to_summary(t: Trace) -> TraceSummary:
         message_count=t.message_count,
         created_at=t.created_at.isoformat(),
         is_private=t.is_private,
+        ai_digest=t.digest_json,
         agent_count=t.agent_count or 0,
         agents=[AgentSummary(**a) for a in (t.agents or [])],
     )

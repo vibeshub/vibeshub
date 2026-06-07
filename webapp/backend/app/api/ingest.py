@@ -121,4 +121,5 @@ async def ingest(
         short_id=result.trace.short_id,
         trace_url=_trace_url(settings, result.trace.short_id),
         created=result.created,
+        ai_digest=result.trace.digest_json,
     )

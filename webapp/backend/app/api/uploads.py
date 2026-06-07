@@ -163,4 +163,5 @@ async def create_upload(
         trace_url=_trace_url(settings, result.trace.short_id),
         created=result.created,
         claim_token=claim_token,
+        ai_digest=result.trace.digest_json,
     )

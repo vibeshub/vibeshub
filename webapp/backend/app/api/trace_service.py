@@ -193,6 +193,18 @@ async def create_or_update_trace(
         )
         session.add(trace)
 
+    # Trace digest agent — best-effort, never raises.
+    from app.agents.digest import compute_digest
+    await compute_digest(
+        session,
+        trace,
+        blob=unpacked.main_bytes,
+        subagent_blobs={
+            a.meta.get("toolUseId", a.agent_id): a.jsonl_bytes
+            for a in unpacked.agents
+        },
+    )
+
     return TraceWriteResult(trace=trace, created=created)
 
 
