@@ -8,8 +8,6 @@ interface Props {
 const BULLETS: Array<{ key: keyof Omit<TraceDigest, "chapters">; label: string }> = [
   { key: "ask", label: "Ask" },
   { key: "decisions", label: "Key decisions" },
-  { key: "files", label: "Files touched" },
-  { key: "tests", label: "Tests added" },
   { key: "dead_ends", label: "Dead ends" },
 ];
 
