@@ -38,6 +38,21 @@ const BROWSE_REPO = "vibeshub";
 const BROWSE_FULL = `${BROWSE_OWNER}/${BROWSE_REPO}`;
 const BROWSE_MAX = 6;
 
+// schema.org SoftwareApplication for the homepage. Mirrors the JSON-LD baked
+// into index.html (which SeoHead strips on hydration), so search engines keep
+// the structured data once React takes over. Keep the two in sync.
+const LANDING_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "vibeshub",
+  url: "https://vibeshub.ai",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS, Linux, Windows",
+  description:
+    "Turn your Claude Code and Codex sessions, including every subagent they spawn, into shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
+
 function useCopy() {
   const [copied, setCopied] = useState<string | null>(null);
   const copy = (key: string, text: string) => {
@@ -113,6 +128,7 @@ export function Landing() {
         description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
         path="/"
         bareTitle
+        jsonLd={LANDING_JSONLD}
       />
       <header className="topbar">
         <div className="topbar-inner">
@@ -120,23 +136,22 @@ export function Landing() {
             <span className="brand-mark">v</span>
             <span>vibeshub</span>
           </Link>
-          <span className={`brand-sep ${styles.taglineSep}`}>/</span>
-          <span className={styles.tagline}>git for your vibes</span>
 
           <div className="topbar-spacer" />
 
+          {/* Just the product story + the live viewer up top; Blog/FAQ/Privacy
+              live in the footer so the header stays calm. */}
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
             <a href="#ways">Workflows</a>
             <a href="#teams">Teams</a>
             <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
-            <Link to="/blog">Blog</Link>
-            <Link to="/faq">FAQ</Link>
-            <a href="#privacy">Privacy</a>
-            <a href="#install">Install</a>
           </nav>
 
           <div className="topbar-actions">
+            <a className="iconbtn cta-install" href="#install">
+              Install
+            </a>
             <AuthWidget />
             <button
               className="iconbtn"

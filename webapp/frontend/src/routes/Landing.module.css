@@ -5,13 +5,6 @@
   min-height: 100vh;
 }
 
-.tagline {
-  color: var(--text-faint);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.01em;
-}
-
 .navLinks {
   display: flex;
   align-items: center;
@@ -45,6 +38,22 @@
   background: oklch(from var(--text-strong) calc(l + 0.08) c h);
   border-color: oklch(from var(--text-strong) calc(l + 0.08) c h);
   color: var(--bg-elevated);
+}
+
+/* Install is the header's one focal action: a warm accent button (same accent
+   as the brand mark) lifted out of the flat link row to give the bar hierarchy. */
+.shell :global(.topbar-actions .iconbtn.cta-install) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+  padding: 0 14px;
+  text-decoration: none;
+}
+.shell :global(.topbar-actions .iconbtn.cta-install:hover) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-fg);
 }
 
 /* ---------- container ---------- */
@@ -2184,12 +2193,6 @@
     grid-template-columns: 1fr 1fr;
   }
   .navLinks {
-    display: none;
-  }
-  /* The "git for your vibes" tagline (and its leading slash) gets squeezed and
-     wraps one word per line in the narrow header; drop it on phones. */
-  .taglineSep,
-  .tagline {
     display: none;
   }
   /* Browse cards: the date + short-id right column forces the title's 1fr track
