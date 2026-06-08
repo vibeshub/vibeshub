@@ -93,6 +93,41 @@ describe("SeoHead", () => {
     expect(stale).toEqual([]);
   });
 
+  it("injects a JSON-LD script with the serialized structured data", () => {
+    const data = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "vibeshub",
+    };
+    render(<SeoHead title="A" description="B" jsonLd={data} />);
+
+    const script = document.head.querySelector<HTMLScriptElement>(
+      'script[type="application/ld+json"]',
+    );
+    expect(script).not.toBeNull();
+    expect(JSON.parse(script!.textContent ?? "{}")).toEqual(data);
+  });
+
+  it("renders no JSON-LD script when jsonLd is omitted", () => {
+    render(<SeoHead title="A" description="B" />);
+    expect(
+      document.head.querySelector('script[type="application/ld+json"]'),
+    ).toBeNull();
+  });
+
+  it("removes the injected JSON-LD script on unmount", () => {
+    const { unmount } = render(
+      <SeoHead title="A" description="B" jsonLd={{ "@type": "Thing" }} />,
+    );
+    expect(
+      document.head.querySelector('script[type="application/ld+json"]'),
+    ).not.toBeNull();
+    unmount();
+    expect(
+      document.head.querySelector('script[type="application/ld+json"]'),
+    ).toBeNull();
+  });
+
   it("does not throw on first unmount when SSR tags are present", () => {
     // The original useEffect-only recipe crashed here: React 19's title
     // hoist adopts the SSR <title> node, and the strip effect removed it

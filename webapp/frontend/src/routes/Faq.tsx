@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { isValidElement, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageTopbar } from "../components/PageTopbar";
 import { SeoHead } from "../components/SeoHead";
@@ -288,6 +288,44 @@ AWS_SECRET=aQF/9qZxV7…[redacted:aws]`}
   },
 ];
 
+// Block-level tags get whitespace around their flattened text so paragraphs
+// and list items don't run together when an answer's JSX is collapsed into the
+// single plain string that schema.org's Answer.text requires.
+const BLOCK_TAGS = new Set(["p", "li", "ul", "ol", "pre", "br", "div"]);
+
+function nodeToText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) return node.map(nodeToText).join("");
+  if (isValidElement(node)) {
+    const inner = nodeToText(
+      (node.props as { children?: React.ReactNode }).children,
+    );
+    return typeof node.type === "string" && BLOCK_TAGS.has(node.type)
+      ? ` ${inner} `
+      : inner;
+  }
+  return "";
+}
+
+// schema.org FAQPage built from the same FAQ_GROUPS the page renders, so the
+// structured-data answers always match the visible ones. This makes /faq
+// eligible for FAQ rich results in search.
+const FAQ_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_GROUPS.flatMap((group) => group.items).map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: nodeToText(item.answer).replace(/\s+/g, " ").trim(),
+    },
+  })),
+};
+
 function IconChevronDown() {
   return (
     <svg
@@ -356,6 +394,7 @@ export function Faq() {
         title="FAQ"
         description="Answers to common questions about vibeshub: how it works with Claude Code and Codex, what happens to your traces and secrets, how visibility mirrors GitHub, and how to manage or delete a shared session."
         path="/faq"
+        jsonLd={FAQ_JSONLD}
       />
       <PageTopbar crumbs={[{ label: "FAQ", current: true }]} />
 

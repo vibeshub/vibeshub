@@ -59,4 +59,39 @@ describe("Faq", () => {
       screen.getByText(/shareable, replayable traces/i),
     ).toBeInTheDocument();
   });
+
+  it("injects FAQPage structured data with a non-empty answer per question", () => {
+    renderFaq();
+    const script = document.head.querySelector<HTMLScriptElement>(
+      'script[type="application/ld+json"]',
+    );
+    expect(script).not.toBeNull();
+    const data = JSON.parse(script!.textContent ?? "{}");
+    expect(data["@type"]).toBe("FAQPage");
+
+    const names = data.mainEntity.map((q: { name: string }) => q.name);
+    expect(names).toContain("What is vibeshub?");
+    for (const entry of data.mainEntity) {
+      expect(entry["@type"]).toBe("Question");
+      expect(entry.acceptedAnswer.text.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("flattens multi-block answers without running words together", () => {
+    renderFaq();
+    const data = JSON.parse(
+      document.head.querySelector('script[type="application/ld+json"]')
+        ?.textContent ?? "{}",
+    );
+    const ways = data.mainEntity.find(
+      (q: { name: string }) =>
+        q.name === "What are the ways to share a session?",
+    );
+    // The intro <p>, the <li>s, and the closing <p> must stay separated when
+    // collapsed to one string — no "upload:Automatic" run-together.
+    expect(ways.acceptedAnswer.text).not.toMatch(/upload:Automatic/);
+    expect(ways.acceptedAnswer.text).toContain(
+      "They all land in the same place",
+    );
+  });
 });

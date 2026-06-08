@@ -12,6 +12,10 @@ import { useEffect, useState } from "react";
 const SITE_URL = "https://vibeshub.ai";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
+// A schema.org JSON-LD node (or list of nodes). Kept loose on purpose —
+// callers build the object literally and we just serialize it.
+export type JsonLd = Record<string, unknown> | Record<string, unknown>[];
+
 export interface SeoHeadProps {
   title: string;
   description: string;
@@ -20,6 +24,7 @@ export interface SeoHeadProps {
   ogType?: "website" | "article" | "profile";
   bareTitle?: boolean;
   noindex?: boolean;
+  jsonLd?: JsonLd;
 }
 
 export function SeoHead({
@@ -30,6 +35,7 @@ export function SeoHead({
   ogType = "website",
   bareTitle = false,
   noindex = false,
+  jsonLd,
 }: SeoHeadProps) {
   const fullTitle = bareTitle ? title : `${title} · vibeshub`;
   const canonical = path ? `${SITE_URL}${path}` : undefined;
@@ -68,6 +74,22 @@ export function SeoHead({
       if (n.parentNode) n.remove();
     }
   }, [staleNodes]);
+
+  // React 19 hoists <title>/<meta>/<link> but NOT inline <script>, so JSON-LD
+  // is injected into <head> imperatively. Depend on the serialized string so
+  // the effect only re-runs when the structured data actually changes, not on
+  // every render (callers pass a fresh object literal each time).
+  const jsonLdStr = jsonLd ? JSON.stringify(jsonLd) : null;
+  useEffect(() => {
+    if (typeof document === "undefined" || !jsonLdStr) return;
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.textContent = jsonLdStr;
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [jsonLdStr]);
 
   return (
     <>
