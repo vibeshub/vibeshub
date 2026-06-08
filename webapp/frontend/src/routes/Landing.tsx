@@ -139,13 +139,13 @@ export function Landing() {
 
           <div className="topbar-spacer" />
 
-          {/* Just the product story + the live viewer up top; Blog/FAQ/Privacy
-              live in the footer so the header stays calm. */}
+          {/* Real destinations only: the live viewer plus Blog/FAQ (our SEO
+              assets, promoted out of the footer). No in-page anchors up here.
+              Privacy/Contact stay in the footer. */}
           <nav className={`${styles.navLinks} ${styles.hideSm}`}>
-            <a href="#ways">Workflows</a>
-            <a href="#teams">Teams</a>
-            <a href="#browse">Browse</a>
             <Link to="/vibeviewer">Viewer</Link>
+            <Link to="/blog">Blog</Link>
+            <Link to="/faq">FAQ</Link>
           </nav>
 
           <div className="topbar-actions">
