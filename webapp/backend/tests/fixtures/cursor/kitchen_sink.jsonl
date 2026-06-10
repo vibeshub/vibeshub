@@ -9,3 +9,5 @@ not json at all
 {"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Jun 1, 2026, 9:20 AM (UTC+5:30)</timestamp> Now add tests."},{"type":"text","text":"Cover the redirect case."}]}}
 {"role":"assistant","message":{"content":[{"type":"tool_use","name":"Subagent","input":{"subagent_type":"test-writer","description":"Write settings tests","prompt":"Add tests."}}]}}
 {"role":"assistant","message":{"content":[{"type":"text","text":"Done. Lint and tests pass."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Tuesday, Sep 15, 2026, 11:45 PM (UTC-3:30)</timestamp>\n<user_query>\nCheck the negative offset.\n</user_query>"}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Wednesday, September 16, 2026, 8:00 AM (UTC+0)</timestamp>\n<user_query>\nAnd the full month name.\n</user_query>"}]}}
