@@ -54,6 +54,9 @@ describe("Landing", () => {
     expect(
       screen.getByText(/Reuse digest anchors as the nav spine/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/start from the story, not message one/i),
+    ).toBeInTheDocument();
   });
 
   it("drops the solo brag-post framing from the front page", () => {

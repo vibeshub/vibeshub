@@ -302,9 +302,9 @@ export function Landing() {
                   <div>
                     <span className={styles.heroFlowNum}>03 · It posts itself</span>
                     <p className={styles.heroFlowText}>
-                      The trace uploads and the PR updates with the link,
-                      automatically. Reviewers see how you built it before they
-                      read the diff.
+                      The trace uploads and the PR comment arrives with an AI
+                      digest and the link, automatically. Reviewers start from
+                      the story, not message one of 257.
                     </p>
                   </div>
                 </li>
