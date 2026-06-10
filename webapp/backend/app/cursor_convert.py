@@ -69,6 +69,8 @@ def _parse_cursor_timestamp(raw: str) -> str | None:
     if m is None:
         return None
     date_s, hm, ap, off_h, off_m = m.groups()
+    # JS Date.parse also accepts the 4-letter "Sept" form; %b/%B do not.
+    date_s = re.sub(r"^Sept\b", "Sep", date_s)
     wall = None
     # JS Date.parse accepts both "Jun" and "June"; try both formats.
     for fmt in ("%b %d, %Y %I:%M %p", "%B %d, %Y %I:%M %p"):
@@ -160,7 +162,9 @@ def cursor_to_claude_jsonl(blob: bytes) -> bytes:
                 if iso:
                     last_ts = iso
             q = _QUERY_RE.search(raw_text)
-            clean = (q.group(1) if q else _TS_RE.sub("", raw_text)).strip()
+            clean = (
+                q.group(1) if q else _TS_RE.sub("", raw_text, count=1)
+            ).strip()
             records.append({
                 "type": "user", "uuid": uuid(), "timestamp": last_ts,
                 "message": {"content": clean},

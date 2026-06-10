@@ -88,3 +88,31 @@ def test_looks_like_cursor_rejects_garbage():
     assert not looks_like_cursor(
         b'{"role":"user","message":{"content":"x"}}\n'
     )
+
+
+def test_only_first_timestamp_tag_is_stripped():
+    # JS String.replace without the g flag strips only the first match;
+    # later <timestamp> tags survive into the user text verbatim.
+    raw = (
+        b'{"role":"user","message":{"content":[{"type":"text","text":'
+        b'"<timestamp>Monday, Jun 1, 2026, 9:05 AM (UTC+0)</timestamp>'
+        b' keep <timestamp>second</timestamp> tail"}]}}\n'
+    )
+    recs = _records(cursor_to_claude_jsonl(raw))
+    user = [r for r in recs if r["type"] == "user"][0]
+    assert user["message"]["content"] == (
+        "keep <timestamp>second</timestamp> tail"
+    )
+
+
+def test_sept_month_form_parses():
+    # JS Date.parse accepts "Sept"; strptime %b/%B do not, so the port
+    # normalizes it rather than silently dropping the timestamp.
+    raw = (
+        b'{"role":"user","message":{"content":[{"type":"text","text":'
+        b'"<timestamp>Tuesday, Sept 15, 2026, 1:00 PM (UTC+0)</timestamp>'
+        b'\\n<user_query>q</user_query>"}]}}\n'
+    )
+    recs = _records(cursor_to_claude_jsonl(raw))
+    user = [r for r in recs if r["type"] == "user"][0]
+    assert user["timestamp"] == "2026-09-15T13:00:00.000Z"
