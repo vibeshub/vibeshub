@@ -49,7 +49,7 @@ const LANDING_JSONLD = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS, Linux, Windows",
   description:
-    "Turn your Claude Code and Codex sessions, including every subagent they spawn, into shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
+    "Turn your Claude Code and Codex sessions, including every subagent they spawn, into shareable, replayable traces, each with an AI digest of the session. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
@@ -125,7 +125,7 @@ export function Landing() {
     <div className={`page-shell ${styles.shell}`}>
       <SeoHead
         title="vibeshub · share Claude Code & Codex sessions as replayable traces"
-        description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
+        description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces, each with an AI digest of the session. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
         path="/"
         bareTitle
         jsonLd={LANDING_JSONLD}
@@ -302,9 +302,9 @@ export function Landing() {
                   <div>
                     <span className={styles.heroFlowNum}>03 · It posts itself</span>
                     <p className={styles.heroFlowText}>
-                      The trace uploads and the PR updates with the link,
-                      automatically. Reviewers see how you built it before they
-                      read the diff.
+                      The trace uploads and the PR comment arrives with an AI
+                      digest and the link, automatically. Reviewers start from
+                      the story, not message one of 257.
                     </p>
                   </div>
                 </li>
@@ -506,6 +506,27 @@ export function Landing() {
                 <div className={styles.prTitle}>
                   Claude Code session for this PR
                 </div>
+                {/* Mirrors the digest rows build_comment_body posts on real PRs. */}
+                <div className={styles.prDigest}>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Ask</span>
+                    <span className={styles.prDigestVal}>
+                      Add chapter navigation to the trace viewer
+                    </span>
+                  </div>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Key decisions</span>
+                    <span className={styles.prDigestVal}>
+                      Reuse digest anchors as the nav spine
+                    </span>
+                  </div>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Dead ends</span>
+                    <span className={styles.prDigestVal}>
+                      IntersectionObserver thrashed, switched to scroll math
+                    </span>
+                  </div>
+                </div>
                 <div className={styles.prStats}>
                   <span>
                     <strong>257</strong> messages
@@ -550,9 +571,10 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Faster, deeper review.</strong> Reviewers open the
-                    actual run, the prompts, tool calls, and reasoning, before
-                    they read the diff. Less guessing, fewer round-trips.
+                    <strong>Review starts from intent.</strong> Every trace
+                    lands with an AI digest, the ask, key decisions, and dead
+                    ends, plus chapters that jump straight to the moment.
+                    Reviewers get the story before the diff.
                   </span>
                 </li>
                 <li>

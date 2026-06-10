@@ -17,14 +17,14 @@ const sampleDigest: TraceDigest = {
 };
 
 describe("DigestPanel", () => {
-  it("renders all five bullets", () => {
+  it("renders the ask, decisions, and dead ends rows, not the dropped ones", () => {
     render(<DigestPanel digest={sampleDigest} />);
     expect(screen.getByText(/Ask/i)).toBeInTheDocument();
     expect(screen.getByText("Add /healthcheck")).toBeInTheDocument();
     expect(screen.getByText("Inline in main.py")).toBeInTheDocument();
-    expect(screen.getByText("webapp/backend/app/main.py")).toBeInTheDocument();
-    expect(screen.getByText("test_health.py")).toBeInTheDocument();
     expect(screen.getByText("Considered a new router; YAGNI")).toBeInTheDocument();
+    expect(screen.queryByText("webapp/backend/app/main.py")).not.toBeInTheDocument();
+    expect(screen.queryByText("test_health.py")).not.toBeInTheDocument();
   });
 
   it("does not render chapter jump chips (owned by the rail now)", () => {
