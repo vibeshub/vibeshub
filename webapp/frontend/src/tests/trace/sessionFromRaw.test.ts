@@ -1,0 +1,49 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { buildSessionFromRaw } from "../../components/trace/sessionFromRaw";
+
+const FIXTURES = join(__dirname, "..", "fixtures");
+const read = (name: string) =>
+  readFileSync(join(FIXTURES, name), "utf8");
+
+// The backend serves Claude-shaped jsonl for every format (codex/cursor
+// converted server-side at ingest); buildSessionFromRaw must render the
+// converted output with no frontend converter in the loop.
+describe("buildSessionFromRaw pass-through", () => {
+  it("renders server-converted codex jsonl", () => {
+    const session = buildSessionFromRaw(read("sample-codex-converted.jsonl"));
+    expect(session.meta.sourceFormat).toBe("codex");
+    expect(session.stream.length).toBeGreaterThan(0);
+  });
+
+  it("renders server-converted cursor jsonl", () => {
+    const session = buildSessionFromRaw(read("sample-cursor-converted.jsonl"));
+    expect(session.meta.sourceFormat).toBe("cursor");
+    expect(session.stream.length).toBeGreaterThan(0);
+  });
+
+  it("renders claude jsonl unchanged", () => {
+    const session = buildSessionFromRaw(read("sample-session.jsonl"));
+    expect(session.meta.sourceFormat).toBeNull();
+    expect(session.stream.length).toBeGreaterThan(0);
+  });
+
+  it("does not misroute converted jsonl mentioning Claude Code versions", () => {
+    // Real Codex rollouts whose assistant text cites "Claude Code v..."
+    // used to false-positive the terminal-export net.
+    const codex = read("sample-codex-converted.jsonl");
+    const poisoned = codex.replace(
+      '"type":"text","text":"',
+      '"type":"text","text":"Claude Code v2.1.156 ',
+    );
+    const session = buildSessionFromRaw(poisoned);
+    expect(session.meta.sourceFormat).toBe("codex");
+  });
+
+  it("still converts raw terminal exports", () => {
+    const terminal = read("sample-terminal-export.txt");
+    const session = buildSessionFromRaw(terminal);
+    expect(session.meta.sourceFormat).toBe("terminal");
+  });
+});

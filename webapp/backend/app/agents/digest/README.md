@@ -9,14 +9,17 @@ PR comment body posted by the plugin.
 1. Backend calls `compute_digest(session, trace, blob, subagent_blobs)`
    from `app/api/trace_service.py::create_or_update_trace`, after the
    blob is written, before the transaction is committed.
-2. Codex rollouts (stored in native `session_meta`/`response_item`
-   format) are first converted to Claude-shaped records by
-   `app/codex_convert.py`, the backend mirror of the frontend's
-   `codexExport.ts`. Both converters must assign identical synthetic
-   `codex-rec-<n>` uuids, or chapter anchors break in the viewer; the
-   parity contract is pinned by `tests/test_codex_convert.py` against
-   goldens captured from the frontend converter. Codex-shaped subagent
-   blobs are converted the same way.
+2. Codex rollouts and Cursor transcripts are converted to Claude-shaped
+   records at ingest by `app/codex_convert.py` / `app/cursor_convert.py`
+   (`app/api/trace_service.py` stores the result as
+   `{blob_prefix}converted.jsonl` and passes it here), so the distiller
+   always sees Claude-shaped records. The synthetic uuids
+   (`codex-rec-<n>`, `cursor-rec-<n>`) are the digest's chapter anchor
+   surface, and the viewer resolves anchors against the same converted
+   blob served by `GET /api/traces/{id}/session`; converter determinism
+   is pinned by `tests/test_codex_convert.py` and
+   `tests/test_cursor_convert.py`. Subagent blobs are converted the same
+   way.
 3. `distill_with_uuids` (in `distill.py`) walks the JSONL once and
    classifies every event into a tier (see spec §5). Output is a single
    string with each retained event prefixed by `[uuid]`.

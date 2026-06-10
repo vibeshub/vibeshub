@@ -235,3 +235,41 @@ def test_codex_update_plan_is_dropped_as_scratchpad():
     )
     out = distill(blob, subagent_blobs={})
     assert "update_plan" not in out
+
+
+def test_cursor_shell_renders_command_like_bash():
+    # cursor_convert passes Cursor tool names through unchanged; Shell
+    # carries the same input keys as Bash, so the command must survive.
+    blob = (
+        b'{"type":"assistant","uuid":"a1","message":{"content":[{"type":'
+        b'"tool_use","id":"cursor-tool-1","name":"Shell","input":{'
+        b'"command":"npm test --silent"}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert "Shell: npm test --silent" in out
+
+
+def test_cursor_subagent_dispatch_renders_like_task():
+    # Cursor's Subagent tool uses the same input keys the Task branch
+    # reads (subagent_type, description).
+    blob = (
+        b'{"type":"assistant","uuid":"a2","message":{"content":[{"type":'
+        b'"tool_use","id":"cursor-agent-0","name":"Subagent","input":{'
+        b'"subagent_type":"explore","description":"Frontend bug sweep",'
+        b'"prompt":"Review the frontend."}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert "Subagent[explore]: Frontend bug sweep" in out
+
+
+def test_cursor_readfile_renders_path():
+    # Cursor's ReadFile/Read carry path, not file_path; without the path
+    # fallback this rendered as a bare tool name.
+    blob = (
+        b'{"type":"assistant","uuid":"a3","message":{"content":[{"type":'
+        b'"tool_use","id":"cursor-tool-2","name":"ReadFile","input":{'
+        b'"path":"/repo/src/router.tsx","limit":120}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert "ReadFile /repo/src/router.tsx" in out
+    assert "120" not in out  # extra input keys (limit) must not leak

@@ -24,13 +24,14 @@ _DROPPED_TYPES = {
 _SCRATCH_TOOLS = {"TodoWrite", "update_plan"}
 
 # Shell-style tools: render as "<name>: <command>". Bash is Claude Code's;
-# shell is what codex_convert emits, with the same input keys.
-_SHELL_TOOLS = {"Bash", "shell"}
+# shell is what codex_convert emits, Shell is Cursor's. All carry the same
+# input keys.
+_SHELL_TOOLS = {"Bash", "shell", "Shell"}
 
-# Subagent dispatch tools: Claude Code's Task, and the spawn_agent calls
-# that codex_convert emits with the same input keys (subagent_type,
-# description).
-_SUBAGENT_TOOLS = {"Task", "spawn_agent"}
+# Subagent dispatch tools: Claude Code's Task, the spawn_agent calls that
+# codex_convert emits, and Cursor's Subagent. All carry the same input
+# keys (subagent_type, description).
+_SUBAGENT_TOOLS = {"Task", "spawn_agent", "Subagent"}
 
 _TOOL_RESULT_PREFIX = 80
 _TOOL_RESULT_ERROR_PREFIX = 400
@@ -191,6 +192,9 @@ def _tool_use_to_line(
     path = inp.get("path") or ""
     if pattern:
         return f'{name} "{pattern}"' + (f" in {path}" if path else "")
+    if isinstance(path, str) and path:
+        # Cursor's ReadFile/Read carry path instead of file_path.
+        return f"{name} {path}"
     return name
 
 

@@ -1,0 +1,13 @@
+{"type":"cursor-meta","source":"cursor","uuid":"cursor-rec-0","timestamp":"","sessionId":null,"cwd":null}
+{"type":"user","uuid":"cursor-rec-1","timestamp":"2026-06-01T03:35:00.000Z","message":{"content":"Wire up the settings page."}}
+{"type":"assistant","uuid":"cursor-rec-2","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-3","model":null,"content":[{"type":"thinking","thinking":"Plan: read the router first."}]}}
+{"type":"assistant","uuid":"cursor-rec-3","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-4","model":null,"content":[{"type":"text","text":"Looking at the routes."}]}}
+{"type":"assistant","uuid":"cursor-rec-4","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-5","model":null,"content":[{"type":"tool_use","id":"cursor-agent-0","name":"Task","input":{"subagent_type":"explore","description":"Map the router","prompt":"Find route definitions."}}]}}
+{"type":"assistant","uuid":"cursor-rec-5","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-6","model":null,"content":[{"type":"tool_use","id":"cursor-tool-5","name":"ReadFile","input":{"path":"/repo/src/router.tsx","limit":120}}]}}
+{"type":"assistant","uuid":"cursor-rec-6","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-7","model":null,"content":[{"type":"tool_use","id":"cursor-tool-6","name":"Shell","input":{"command":"npm run lint"}}]}}
+{"type":"assistant","uuid":"cursor-rec-7","timestamp":"2026-06-01T03:35:00.000Z","message":{"id":"cursor-msg-8","model":null,"content":[{"type":"tool_use","id":"cursor-tool-7","name":"AwaitShell","input":{"id":"sh-1"}}]}}
+{"type":"user","uuid":"cursor-rec-8","timestamp":"2026-06-01T03:50:00.000Z","message":{"content":"Now add tests.\nCover the redirect case."}}
+{"type":"assistant","uuid":"cursor-rec-9","timestamp":"2026-06-01T03:50:00.000Z","message":{"id":"cursor-msg-10","model":null,"content":[{"type":"tool_use","id":"cursor-agent-1","name":"Subagent","input":{"subagent_type":"test-writer","description":"Write settings tests","prompt":"Add tests."}}]}}
+{"type":"assistant","uuid":"cursor-rec-10","timestamp":"2026-06-01T03:50:00.000Z","message":{"id":"cursor-msg-11","model":null,"content":[{"type":"text","text":"Done. Lint and tests pass."}]}}
+{"type":"user","uuid":"cursor-rec-11","timestamp":"2026-09-16T03:15:00.000Z","message":{"content":"Check the negative offset."}}
+{"type":"user","uuid":"cursor-rec-12","timestamp":"2026-09-16T08:00:00.000Z","message":{"content":"And the full month name."}}

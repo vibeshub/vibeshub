@@ -131,3 +131,127 @@ async def test_upload_without_env_persists_no_digest(client, respx_mock):
     summary = client.get(f"/api/traces/{short_id}")
     assert summary.status_code == 200
     assert summary.json().get("ai_digest") is None
+
+
+# --- Digest chapter anchors resolve against /session (codex + cursor) ---
+#
+# Ingest converts codex/cursor uploads server-side and feeds the converted
+# bytes to the digest, so chapter anchor_uuids are the synthetic
+# codex-rec-<n> / cursor-rec-<n> uuids. The viewer jumps to records by
+# uuid in the jsonl /session serves (also the converted blob). These tests
+# pin the full loop: ingest -> digest (mocked LLM) -> persisted chapters
+# -> /session records carry those exact uuids.
+
+from pathlib import Path  # noqa: E402
+
+_FIXTURES = Path(__file__).parent.parent / "fixtures"
+
+
+def _platform_headers(pr_url: str, platform: str) -> dict[str, str]:
+    headers = dict(_ingest_headers(pr_url))
+    headers["X-Vibeshub-Platform"] = platform
+    return headers
+
+
+def _install_digest_mock(monkeypatch, chapters: list[dict]) -> MagicMock:
+    """Patch the OpenAI client like _patch_llm, but with given chapters."""
+    from app.agents.digest.schema import Digest
+
+    mock = MagicMock()
+    payload = {
+        "ask": "test ask", "decisions": "test decisions",
+        "files": "test files", "tests": "test tests",
+        "dead_ends": "test dead_ends", "chapters": chapters,
+    }
+    resp = MagicMock()
+    resp.output_parsed = Digest.model_validate(payload)
+    resp.output_text = json.dumps(payload)
+    resp.usage = MagicMock(input_tokens=5, output_tokens=3)
+    mock.responses.parse.return_value = resp
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock,
+    )
+    return mock
+
+
+def _session_uuids(client, sid):
+    text = client.get(f"/api/traces/{sid}/session").text
+    return {
+        json.loads(line)["uuid"]
+        for line in text.splitlines() if line.strip()
+    }
+
+
+@pytest.mark.asyncio
+async def test_codex_digest_anchors_resolve_against_session(
+    client, respx_mock, _digest_env, monkeypatch,
+):
+    """A codex upload's digest chapter anchors (codex-rec-<n>) must point
+    at records the /session endpoint actually serves."""
+    _mock_alice_pr(respx_mock, "alice", "repo", 30)
+    mock = _install_digest_mock(monkeypatch, [
+        {"anchor_uuid": "codex-rec-1", "title": "Frame the change",
+         "caption": "User asks for a helper."},
+    ])
+    rollout = (_FIXTURES / "codex" / "rollout.jsonl").read_bytes()
+    r = client.post(
+        "/api/ingest",
+        content=_make_bundle({"main.jsonl": rollout}),
+        headers=_platform_headers(
+            "https://github.com/alice/repo/pull/30", "codex",
+        ),
+    )
+    assert r.status_code == 201, r.text
+    sid = r.json()["short_id"]
+
+    head = client.get(f"/api/traces/{sid}").json()
+    chapters = head["ai_digest"]["chapters"]
+    anchors = [c["anchor_uuid"] for c in chapters]
+    # Assert equality first: a chapter whose anchor falls outside the
+    # distilled uuid surface is silently dropped, so an empty list here
+    # would be a real failure, not a tolerated case.
+    assert anchors == ["codex-rec-1"], (
+        "anchor dropped; distilled input was:\n"
+        + mock.responses.parse.call_args.kwargs["input"]
+    )
+    # The viewer resolves anchors against /session records.
+    assert set(anchors) <= _session_uuids(client, sid)
+
+
+@pytest.mark.asyncio
+async def test_cursor_digest_anchors_resolve_against_session(
+    client, respx_mock, _digest_env, monkeypatch,
+):
+    """A cursor upload gets a digest for the first time (ingest converts
+    it server-side). Its chapter anchors (cursor-rec-<n>) must resolve
+    against /session, and distill must have handled Cursor tool names."""
+    _mock_alice_pr(respx_mock, "alice", "repo", 31)
+    mock = _install_digest_mock(monkeypatch, [
+        {"anchor_uuid": "cursor-rec-1", "title": "Frame the change",
+         "caption": "User asks for a bug review."},
+    ])
+    transcript = (_FIXTURES / "cursor" / "transcript.jsonl").read_bytes()
+    r = client.post(
+        "/api/ingest",
+        content=_make_bundle({"main.jsonl": transcript}),
+        headers=_platform_headers(
+            "https://github.com/alice/repo/pull/31", "cursor",
+        ),
+    )
+    assert r.status_code == 201, r.text
+    sid = r.json()["short_id"]
+
+    head = client.get(f"/api/traces/{sid}").json()
+    chapters = head["ai_digest"]["chapters"]
+    anchors = [c["anchor_uuid"] for c in chapters]
+    assert anchors == ["cursor-rec-1"], (
+        "anchor dropped; distilled input was:\n"
+        + mock.responses.parse.call_args.kwargs["input"]
+    )
+    assert set(anchors) <= _session_uuids(client, sid)
+
+    # Distill handled Cursor's native shape end-to-end: the user line and
+    # the Subagent dispatch (subagent_type "explore") both surface.
+    sent = mock.responses.parse.call_args.kwargs["input"]
+    assert "USER: Review the frontend for likely bugs." in sent
+    assert "Subagent[explore]:" in sent

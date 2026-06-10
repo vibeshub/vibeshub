@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ApiError, fetchRawJsonl, fetchTrace } from "../api";
+import { ApiError, fetchSessionJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
@@ -54,7 +54,7 @@ export function TraceView() {
   useEffect(() => {
     if (!shortId) return;
     setBody({ kind: "loading" });
-    fetchRawJsonl(shortId)
+    fetchSessionJsonl(shortId)
       .then((jsonl) => setBody({ kind: "ready", jsonl }))
       .catch((e) => setBody({ kind: "error", message: String(e) }));
   }, [shortId]);

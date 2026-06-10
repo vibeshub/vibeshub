@@ -7,9 +7,9 @@ blocks that carry NO id, and the child files carry NO on-disk meta.json. We:
   - match each dispatch to a child by prompt-prefix, tie-breaking identical
     prompts by file order (mtime, then name),
   - assign each child a deterministic tool_use_id = "cursor-agent-<ordinal>",
-    where <ordinal> is the dispatch's document position. The frontend converter
-    (cursorExport.ts) assigns the SAME id to the Nth Task/Subagent block, so the
-    viewer nests the subagent under its spawning card.
+    where <ordinal> is the dispatch's document position. The backend converter
+    (webapp/backend/app/cursor_convert.py) assigns the SAME id to the Nth
+    Task/Subagent block, so the viewer nests the subagent under its spawning card.
 Meta is synthesized in-memory (no .meta.json), as the Codex linker does;
 bundle.py honors AgentEntry.meta when present.
 """

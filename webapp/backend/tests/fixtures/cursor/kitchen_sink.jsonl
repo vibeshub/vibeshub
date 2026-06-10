@@ -1,0 +1,13 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Jun 1, 2026, 9:05 AM (UTC+5:30)</timestamp>\n<user_query>\nWire up the settings page.\n</user_query>"}]}}
+
+{"role":"assistant","message":{"content":[{"type":"thinking","thinking":"Plan: read the router first."},{"type":"text","text":"Looking at the routes."},{"type":"tool_use","name":"Task","input":{"subagent_type":"explore","description":"Map the router","prompt":"Find route definitions."}}]}}
+not json at all
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"ReadFile","input":{"path":"/repo/src/router.tsx","limit":120}},{"type":"image","src":"x.png"},"stray-string"]}}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Shell","input":{"command":"npm run lint"}},{"type":"tool_use","name":"AwaitShell","input":{"id":"sh-1"}}]}}
+{"role":"system","message":{"content":[{"type":"text","text":"ignored"}]}}
+{"role":"user","message":{"content":"plain string content"}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Jun 1, 2026, 9:20 AM (UTC+5:30)</timestamp> Now add tests."},{"type":"text","text":"Cover the redirect case."}]}}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Subagent","input":{"subagent_type":"test-writer","description":"Write settings tests","prompt":"Add tests."}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Done. Lint and tests pass."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Tuesday, Sep 15, 2026, 11:45 PM (UTC-3:30)</timestamp>\n<user_query>\nCheck the negative offset.\n</user_query>"}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Wednesday, September 16, 2026, 8:00 AM (UTC+0)</timestamp>\n<user_query>\nAnd the full month name.\n</user_query>"}]}}

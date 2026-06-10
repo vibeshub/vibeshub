@@ -1,4 +1,6 @@
 """Unit tests for app.api.trace_service.create_or_update_trace."""
+import json
+
 import pytest
 from sqlalchemy import select
 
@@ -199,6 +201,190 @@ async def test_standalone_upsert_keys_on_session_id_alone(tmp_path):
         )).scalars().all()
     assert len(rows) == 1
     assert rows[0].repo_full_name is None
+
+
+def _kwargs(**overrides):
+    base = dict(
+        owner_login="alice", platform="claude-code", plugin_version="0.2.0",
+        session_id=None, redaction_count_client=0, repo_full_name=None,
+        pr_number=None, pr_url=None, pr_title=None, is_private=False,
+    )
+    base.update(overrides)
+    return base
+
+
+CODEX_MAIN = (
+    b'{"type":"session_meta","payload":{"id":"019e7ed1","cwd":"/x"}}\n'
+    b'{"type":"event_msg","payload":{"type":"user_message",'
+    b'"message":"Add a greet function"}}\n'
+    b'{"type":"response_item","payload":{"type":"message","role":"assistant",'
+    b'"content":[{"type":"output_text","text":"on it"}]}}\n'
+)
+
+CURSOR_MAIN = (
+    b'{"role":"user","message":{"content":[{"type":"text",'
+    b'"text":"<user_query>do a sweep</user_query>"}]}}\n'
+    b'{"role":"assistant","message":{"content":[{"type":"text",'
+    b'"text":"on it"}]}}\n'
+)
+
+
+@pytest.mark.asyncio
+async def test_codex_upload_stores_converted_copy_and_source_format(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+    bundle = UnpackedBundle(
+        main_bytes=CODEX_MAIN, agents=[], total_redactions=0,
+    )
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=bundle,
+            **_kwargs(platform="codex"),
+        )
+        await session.commit()
+
+    prefix = f"traces/{result.trace.short_id}/"
+    assert result.trace.source_format == "codex"
+    # The raw original is stored untouched.
+    assert await blob_store.get(f"{prefix}main.jsonl") == CODEX_MAIN
+    converted = await blob_store.get(f"{prefix}converted.jsonl")
+    assert json.loads(converted.splitlines()[0])["type"] == "codex-meta"
+
+
+@pytest.mark.asyncio
+async def test_cursor_upload_stores_converted_copy_and_source_format(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+    bundle = UnpackedBundle(
+        main_bytes=CURSOR_MAIN, agents=[], total_redactions=0,
+    )
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=bundle,
+            **_kwargs(platform="cursor"),
+        )
+        await session.commit()
+
+    prefix = f"traces/{result.trace.short_id}/"
+    assert result.trace.source_format == "cursor"
+    converted = await blob_store.get(f"{prefix}converted.jsonl")
+    assert json.loads(converted.splitlines()[0])["type"] == "cursor-meta"
+
+
+@pytest.mark.asyncio
+async def test_claude_upload_gets_no_converted_copy(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=_bundle(),
+            **_kwargs(),
+        )
+        await session.commit()
+
+    prefix = f"traces/{result.trace.short_id}/"
+    assert result.trace.source_format is None
+    with pytest.raises(FileNotFoundError):
+        await blob_store.get(f"{prefix}converted.jsonl")
+
+
+@pytest.mark.asyncio
+async def test_terminal_source_format_is_not_overwritten(tmp_path):
+    # Terminal uploads arrive already converted to Claude-shaped jsonl;
+    # the sniff must not clobber the caller-provided source_format.
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=_bundle(),
+            source_format="terminal", **_kwargs(platform="web"),
+        )
+        await session.commit()
+
+    prefix = f"traces/{result.trace.short_id}/"
+    assert result.trace.source_format == "terminal"
+    with pytest.raises(FileNotFoundError):
+        await blob_store.get(f"{prefix}converted.jsonl")
+
+
+@pytest.mark.asyncio
+async def test_codex_subagent_gets_converted_copy(tmp_path):
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+    aid = "019e7f09-bca2-7150-ac2b-54f7b075a2ea"
+    bundle = UnpackedBundle(
+        main_bytes=CODEX_MAIN,
+        agents=[AgentPiece(
+            agent_id=aid,
+            jsonl_bytes=(
+                b'{"type":"session_meta","payload":{"id":"019e7f09"}}\n'
+            ),
+            meta={
+                "agentType": "default", "description": "d",
+                "toolUseId": "call_spawn",
+            },
+        )],
+        total_redactions=0,
+    )
+
+    async with SessionLocal() as session:
+        result = await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=bundle,
+            **_kwargs(platform="codex"),
+        )
+        await session.commit()
+
+    prefix = f"traces/{result.trace.short_id}/"
+    converted = await blob_store.get(
+        f"{prefix}agents/{aid}.converted.jsonl"
+    )
+    assert json.loads(converted.splitlines()[0])["type"] == "codex-meta"
+
+
+@pytest.mark.asyncio
+async def test_digest_receives_converted_bytes(tmp_path, monkeypatch):
+    captured = {}
+
+    async def fake_digest(session, trace, *, blob, subagent_blobs):
+        captured["blob"] = blob
+        captured["subagent_blobs"] = subagent_blobs
+        return None
+
+    monkeypatch.setattr("app.agents.digest.compute_digest", fake_digest)
+
+    SessionLocal = await _fresh_db()
+    blob_store = LocalDirBlobStore(tmp_path / "blobs")
+    aid = "019e7f09-bca2-7150-ac2b-54f7b075a2ea"
+    bundle = UnpackedBundle(
+        main_bytes=CODEX_MAIN,
+        agents=[AgentPiece(
+            agent_id=aid,
+            jsonl_bytes=(
+                b'{"type":"session_meta","payload":{"id":"019e7f09"}}\n'
+            ),
+            meta={
+                "agentType": "default", "description": "d",
+                "toolUseId": "call_spawn",
+            },
+        )],
+        total_redactions=0,
+    )
+
+    async with SessionLocal() as session:
+        await create_or_update_trace(
+            session=session, blob_store=blob_store, unpacked=bundle,
+            **_kwargs(platform="codex"),
+        )
+        await session.commit()
+
+    main = captured["blob"]
+    assert json.loads(main.splitlines()[0])["type"] == "codex-meta"
+    child = captured["subagent_blobs"]["call_spawn"]
+    assert json.loads(child.splitlines()[0])["type"] == "codex-meta"
 
 
 # --- resolve_association tests ---
