@@ -25,7 +25,21 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from app.codex_convert import _s
+
+# Duplicated from codex_convert._s rather than imported: small private
+# helpers are copied across modules here (message_count.py does the same
+# with its format sniffers), and each converter's golden tests pin its
+# behavior independently.
+def _s(value, default: str = "") -> str:
+    """String(value ?? default) for the JS-shaped fields we copy."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
 
 _TS_RE = re.compile(r"<timestamp>(.*?)</timestamp>", re.DOTALL)
 _QUERY_RE = re.compile(r"<user_query>\s*(.*?)\s*</user_query>", re.DOTALL)
@@ -187,6 +201,9 @@ def cursor_to_claude_jsonl(blob: bytes) -> bytes:
                         last_ts,
                     )
                 elif btype == "tool_use":
+                    # Task/Subagent ids come from their own counter so
+                    # subagents nest deterministically; other tools just
+                    # need uniqueness, keyed off the record counter.
                     if b.get("name") in ("Task", "Subagent"):
                         tool_id = f"cursor-agent-{agent_n}"
                         agent_n += 1
