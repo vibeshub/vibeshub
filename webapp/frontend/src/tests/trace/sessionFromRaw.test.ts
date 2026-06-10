@@ -28,4 +28,22 @@ describe("buildSessionFromRaw pass-through", () => {
     expect(session.meta.sourceFormat).toBeNull();
     expect(session.stream.length).toBeGreaterThan(0);
   });
+
+  it("does not misroute converted jsonl mentioning Claude Code versions", () => {
+    // Real Codex rollouts whose assistant text cites "Claude Code v..."
+    // used to false-positive the terminal-export net.
+    const codex = read("sample-codex-converted.jsonl");
+    const poisoned = codex.replace(
+      '"type":"text","text":"',
+      '"type":"text","text":"Claude Code v2.1.156 ',
+    );
+    const session = buildSessionFromRaw(poisoned);
+    expect(session.meta.sourceFormat).toBe("codex");
+  });
+
+  it("still converts raw terminal exports", () => {
+    const terminal = read("sample-terminal-export.txt");
+    const session = buildSessionFromRaw(terminal);
+    expect(session.meta.sourceFormat).toBe("terminal");
+  });
 });
