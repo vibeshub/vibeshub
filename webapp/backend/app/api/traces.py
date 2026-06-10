@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 import secrets
 from typing import Annotated
 
@@ -12,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AgentSummary, ClaimRequest, TraceSummary
 from app.api.trace_service import resolve_association
+from app.convert import IMPORTED_FORMATS, convert_imported
+from app.redact.bundle import AGENT_ID_RE
 from app.auth.crypto import TokenCipher
 from app.auth.scopes import has_repo_scope
 from app.auth.github import GitHubAuthError, GitHubClient
@@ -31,9 +32,6 @@ from app.storage.models import Trace, User, utcnow
 
 
 router = APIRouter()
-
-
-_AGENT_ID_RE = re.compile(r"^a[0-9a-f]{16}$")
 
 
 class TracePatch(BaseModel):
@@ -394,6 +392,30 @@ async def claim_trace(
     return _to_summary(trace)
 
 
+async def _claude_shaped(
+    blob_store: BlobStore,
+    *,
+    raw_key: str,
+    converted_key: str,
+    source_format: str | None,
+) -> bytes:
+    """Claude-shaped bytes for the viewer.
+
+    Imported formats serve the stored converted copy. Traces uploaded
+    before converted copies existed have neither the blob nor (usually)
+    a source_format, so fall through to an in-memory conversion: sniff
+    the raw bytes and convert, no storage writes. Everything else is
+    already Claude-shaped and serves raw.
+    """
+    if source_format in IMPORTED_FORMATS:
+        try:
+            return await blob_store.get(converted_key)
+        except FileNotFoundError:
+            pass
+    raw = await blob_store.get(raw_key)
+    return convert_imported(raw) or raw
+
+
 @router.get("/api/traces/{short_id}/raw")
 async def get_trace_raw(
     short_id: str,
@@ -425,6 +447,44 @@ async def get_trace_raw(
     )
 
 
+@router.get("/api/traces/{short_id}/session")
+async def get_trace_session(
+    short_id: str,
+    session: AsyncSession = Depends(get_session),
+    blob_store: BlobStore = Depends(get_blob_store),
+    user: User | None = Depends(get_current_user),
+    settings: Settings = Depends(get_app_settings),
+    access: RepoAccessChecker = Depends(get_repo_access),
+):
+    """The Claude-shaped jsonl the viewer renders: the converted copy for
+    imported formats (codex, cursor), the raw blob otherwise. /raw keeps
+    serving the native original for the Raw JSONL download."""
+    if not looks_like_short_id(short_id):
+        raise HTTPException(status_code=404, detail="not found")
+    stmt = select(Trace).where(
+        Trace.short_id == short_id,
+        Trace.deleted_at.is_(None),
+    )
+    trace = (await session.execute(stmt)).scalar_one_or_none()
+    if trace is None:
+        raise HTTPException(status_code=404, detail="not found")
+    await _require_trace_access(trace, user, settings, access)
+    if trace.blob_prefix is None:
+        raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
+    data = await _claude_shaped(
+        blob_store,
+        raw_key=f"{trace.blob_prefix}main.jsonl",
+        converted_key=f"{trace.blob_prefix}converted.jsonl",
+        source_format=trace.source_format,
+    )
+    headers = (
+        {"Cache-Control": "private, no-store"} if trace.is_private else None
+    )
+    return Response(
+        content=data, media_type="application/x-ndjson", headers=headers
+    )
+
+
 @router.get("/api/traces/{short_id}/agents/{agent_id}")
 async def get_agent_raw(
     short_id: str,
@@ -437,7 +497,7 @@ async def get_agent_raw(
 ):
     if not looks_like_short_id(short_id):
         raise HTTPException(status_code=404, detail="not found")
-    if not _AGENT_ID_RE.match(agent_id):
+    if not AGENT_ID_RE.match(agent_id):
         raise HTTPException(status_code=404, detail="not found")
 
     stmt = select(Trace).where(
@@ -455,7 +515,12 @@ async def get_agent_raw(
     if agent_id not in known_ids:
         raise HTTPException(status_code=404, detail="agent not found")
 
-    data = await blob_store.get(f"{trace.blob_prefix}agents/{agent_id}.jsonl")
+    data = await _claude_shaped(
+        blob_store,
+        raw_key=f"{trace.blob_prefix}agents/{agent_id}.jsonl",
+        converted_key=f"{trace.blob_prefix}agents/{agent_id}.converted.jsonl",
+        source_format=trace.source_format,
+    )
     headers = (
         {"Cache-Control": "private, no-store"} if trace.is_private else None
     )
@@ -509,8 +574,11 @@ async def delete_trace(
     keys_to_delete = []
     if trace.blob_prefix:
         keys_to_delete.append(f"{trace.blob_prefix}main.jsonl")
+        keys_to_delete.append(f"{trace.blob_prefix}converted.jsonl")
+        keys_to_delete.append(f"{trace.blob_prefix}source_export.txt")
         for a in (trace.agents or []):
             keys_to_delete.append(f"{trace.blob_prefix}agents/{a['agent_id']}.jsonl")
+            keys_to_delete.append(f"{trace.blob_prefix}agents/{a['agent_id']}.converted.jsonl")
             keys_to_delete.append(f"{trace.blob_prefix}agents/{a['agent_id']}.meta.json")
     elif trace.blob_path:
         keys_to_delete.append(trace.blob_path)
