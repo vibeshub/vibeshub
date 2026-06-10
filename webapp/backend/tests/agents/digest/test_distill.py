@@ -272,3 +272,4 @@ def test_cursor_readfile_renders_path():
     )
     out = distill(blob, subagent_blobs={})
     assert "ReadFile /repo/src/router.tsx" in out
+    assert "120" not in out  # extra input keys (limit) must not leak
