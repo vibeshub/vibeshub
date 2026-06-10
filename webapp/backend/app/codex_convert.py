@@ -1,20 +1,18 @@
-"""Convert a raw OpenAI Codex CLI rollout (.jsonl) into the synthetic
-Claude-shaped records the digest distiller consumes.
+"""Convert raw Codex rollouts to Claude-shaped JSONL.
 
-Backend mirror of `webapp/frontend/src/components/trace/codexExport.ts`,
-the same way `message_count.py` mirrors `parser.ts`. Pure: bytes in,
-bytes out, no I/O.
+Originally the backend mirror of the frontend's codexExport.ts, which
+died when conversion moved server-side: ingest now stores this module's
+output as {blob_prefix}converted.jsonl and the API serves it to the
+viewer. Pure: bytes in, bytes out, no I/O.
 
-Parity contract: this module and codexExport.ts must emit the same
-records in the same order with the same synthetic uuids (codex-rec-<n>).
-Digest chapter anchor_uuids are generated against THIS conversion but
-resolved against the frontend's render-time conversion; if the two
-drift, chapter jump targets silently break. The contract is pinned by
-tests/test_codex_convert.py, which compares this converter's output to
-*.golden.jsonl fixtures captured from the real frontend converter. When
-changing either converter, regenerate the goldens (run codexToJsonl over
-tests/fixtures/codex/*.jsonl in a scratch vitest test and save the
-output) and keep both test suites green.
+The synthetic uuids (codex-rec-<n>) are load-bearing: digest chapter
+anchor_uuids are generated against this conversion and resolved against
+the same converted jsonl the API serves, and digests computed before
+the converted-copy era already reference these uuids. Changing the uuid
+scheme or record order breaks chapter jumps on existing digests.
+tests/test_codex_convert.py pins the output against goldens (originally
+captured from the frontend converter) as a determinism/regression
+contract.
 """
 from __future__ import annotations
 
@@ -30,8 +28,8 @@ _OUTPUT_MARKER = "\nOutput:\n"
 
 def looks_like_codex(blob: bytes) -> bool:
     """True when the first line is a Codex session_meta record. Reads the
-    whole first line (Codex >= 0.135 pushes it past 32 KB), matching
-    looksLikeCodex in codexExport.ts."""
+    whole first line (Codex >= 0.135 pushes it past 32 KB), matching the
+    former codexExport.ts looksLikeCodex."""
     nl = blob.find(b"\n")
     first = (blob if nl == -1 else blob[:nl]).strip()
     if not first:
@@ -160,7 +158,7 @@ def _map_tool_call(
 def codex_to_claude_jsonl(blob: bytes) -> bytes:
     """Walk the rollout once and emit Claude-shaped JSONL. One content
     block per assistant record, a unique truthy top-level uuid on every
-    record, mirroring codexToJsonl in codexExport.ts."""
+    record, mirroring the former codexExport.ts codexToJsonl."""
     records: list[dict] = []
     rec_n = 0
     model: str | None = None
@@ -177,8 +175,9 @@ def codex_to_claude_jsonl(blob: bytes) -> bytes:
         nonlocal last_assistant
         rec = {
             "type": "assistant", "uuid": uuid(), "timestamp": ts,
-            # rec_n was just bumped by uuid(); codexExport.ts has the same
-            # post-increment quirk, so codex-rec-N carries codex-msg-N+1.
+            # rec_n was just bumped by uuid(); the former codexExport.ts had
+            # the same post-increment quirk, so codex-rec-N carries
+            # codex-msg-N+1.
             "message": {"id": f"codex-msg-{rec_n}", "model": model,
                         "content": [block]},
         }

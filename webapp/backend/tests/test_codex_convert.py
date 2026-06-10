@@ -1,14 +1,11 @@
-"""Tests for app.codex_convert, the backend mirror of the frontend's
-codexExport.ts converter.
+"""Tests for app.codex_convert.
 
-The *.golden.jsonl fixtures are the actual output of the frontend
-converter (codexToJsonl) over the matching *.jsonl rollout, captured via
-a one-shot vitest run. They pin the cross-language parity contract: both
-converters must emit the same records in the same order with the same
-synthetic uuids, because digest chapter anchor_uuids are produced against
-the backend conversion but resolved against the frontend's render-time
-conversion. Regenerate by running codexToJsonl over the fixtures and
-saving the output (see the "Parity" note in app/codex_convert.py).
+The *.golden.jsonl fixtures were captured from the frontend's former
+codexExport.ts converter (deleted when conversion moved server-side).
+They now pin determinism: digest chapter anchor_uuids reference the
+synthetic codex-rec-<n> uuids, and the viewer resolves them against the
+same converted jsonl this module produces, so record order and uuid
+assignment must never drift.
 """
 import json
 from pathlib import Path
@@ -27,7 +24,7 @@ def _records(blob: bytes) -> list[dict]:
 @pytest.mark.parametrize(
     "name", ["rollout", "rollout_subagent", "kitchen_sink"],
 )
-def test_conversion_matches_frontend_golden(name):
+def test_conversion_matches_golden(name):
     raw = (FIXTURES / f"{name}.jsonl").read_bytes()
     golden = (FIXTURES / f"{name}.golden.jsonl").read_bytes()
     assert _records(codex_to_claude_jsonl(raw)) == _records(golden)

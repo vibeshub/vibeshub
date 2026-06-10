@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.agents._usage import Outcome
 from app.agents.digest.pipeline import compute_digest
 from app.agents.digest.schema import Digest
+from app.codex_convert import codex_to_claude_jsonl
 from app.storage.models import AgentRun, Trace
 
 
@@ -270,7 +271,7 @@ def _codex_blob():
 
 
 @pytest.mark.asyncio
-async def test_codex_rollout_is_converted_and_digested(
+async def test_converted_codex_blob_digests_with_codex_rec_anchors(
     monkeypatch, db_session, _codex_blob, _seeded_trace,
 ):
     monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
@@ -289,14 +290,14 @@ async def test_codex_rollout_is_converted_and_digested(
 
     digest = await compute_digest(
         db_session, _seeded_trace,
-        blob=_codex_blob, subagent_blobs={},
+        blob=codex_to_claude_jsonl(_codex_blob), subagent_blobs={},
     )
 
     assert digest is not None
     sent = mock_client.responses.parse.call_args.kwargs["input"]
-    # The rollout was converted before distillation: the genuine ask is a
-    # USER line and the anchor surface uses the synthetic codex-rec uuids
-    # the frontend converter will also assign at render time.
+    # trace_service converts at ingest; the anchor surface uses the
+    # synthetic codex-rec uuids the viewer resolves against the served
+    # converted blob.
     assert "USER: Add a greet function" in sent
     assert "[codex-rec-1]" in sent
     assert [c.anchor_uuid for c in digest.chapters] == ["codex-rec-1"]
@@ -304,7 +305,7 @@ async def test_codex_rollout_is_converted_and_digested(
 
 
 @pytest.mark.asyncio
-async def test_codex_subagent_blob_is_converted_for_summary(
+async def test_converted_codex_subagent_blob_is_summarized(
     monkeypatch, db_session, _codex_blob, _seeded_trace,
 ):
     from pathlib import Path
@@ -323,7 +324,8 @@ async def test_codex_subagent_blob_is_converted_for_summary(
 
     await compute_digest(
         db_session, _seeded_trace,
-        blob=_codex_blob, subagent_blobs={"c_spawn": child},
+        blob=codex_to_claude_jsonl(_codex_blob),
+        subagent_blobs={"c_spawn": codex_to_claude_jsonl(child)},
     )
 
     sent = mock_client.responses.parse.call_args.kwargs["input"]
@@ -331,6 +333,28 @@ async def test_codex_subagent_blob_is_converted_for_summary(
     # Tier-3 heuristic finds its final assistant text.
     assert "Subagent[default]: Review src/util.ts" in sent
     assert "The greet helper handles the common case" in sent
+
+
+@pytest.mark.asyncio
+async def test_raw_codex_blob_is_no_longer_converted_by_pipeline(
+    monkeypatch, db_session, _codex_blob, _seeded_trace,
+):
+    # Conversion moved to ingest (trace_service); a raw codex blob fed
+    # straight to the pipeline distills to nothing and records skip_empty.
+    monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
+    monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
+    monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
+    mock_client = MagicMock()
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock_client,
+    )
+
+    result = await compute_digest(
+        db_session, _seeded_trace, blob=_codex_blob, subagent_blobs={},
+    )
+
+    assert result is None
+    assert mock_client.responses.parse.call_count == 0
 
 
 @pytest.mark.asyncio

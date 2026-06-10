@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pr_url import parse_pr_url
 from app.auth.github import GitHubAPIError, GitHubClient
+from app.convert import IMPORTED_FORMATS, convert_imported, sniff_import_format
 from app.message_count import count_messages
 from app.redact.bundle import UnpackedBundle
 from app.short_id import generate
@@ -127,12 +128,35 @@ async def create_or_update_trace(
             f"{blob_prefix}source_export.txt", source_export_bytes
         )
 
+    # Imported formats (Codex rollouts, Cursor transcripts) additionally get
+    # a Claude-shaped converted copy stored next to the raw original. The
+    # viewer and the digest read the converted copy; the raw stays the
+    # canonical original. Bytes here are already redacted (bundle unpack
+    # redacts before this function runs), so the converted copy is too.
+    if source_format is None:
+        source_format = sniff_import_format(unpacked.main_bytes)
+    converted_main: bytes | None = None
+    if source_format in IMPORTED_FORMATS:
+        converted_main = convert_imported(unpacked.main_bytes)
+    if converted_main is not None:
+        await blob_store.put(f"{blob_prefix}converted.jsonl", converted_main)
+
     agent_summaries: list[dict] = []
+    converted_agents: dict[str, bytes] = {}
     for agent in unpacked.agents:
         await blob_store.put(
             f"{blob_prefix}agents/{agent.agent_id}.jsonl",
             agent.jsonl_bytes,
         )
+        # Sniffed per blob: a codex/cursor trace's subagent threads are
+        # stored in the same native format as its main transcript.
+        converted = convert_imported(agent.jsonl_bytes)
+        if converted is not None:
+            converted_agents[agent.agent_id] = converted
+            await blob_store.put(
+                f"{blob_prefix}agents/{agent.agent_id}.converted.jsonl",
+                converted,
+            )
         await blob_store.put(
             f"{blob_prefix}agents/{agent.agent_id}.meta.json",
             json.dumps(agent.meta, ensure_ascii=False).encode("utf-8"),
@@ -202,9 +226,13 @@ async def create_or_update_trace(
         await compute_digest(
             session,
             trace,
-            blob=unpacked.main_bytes,
+            blob=(
+                converted_main
+                if converted_main is not None else unpacked.main_bytes
+            ),
             subagent_blobs={
-                a.meta.get("toolUseId", a.agent_id): a.jsonl_bytes
+                a.meta.get("toolUseId", a.agent_id):
+                    converted_agents.get(a.agent_id, a.jsonl_bytes)
                 for a in unpacked.agents
             },
         )

@@ -25,7 +25,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents._client import get_client, get_model
 from app.agents._usage import Outcome, record_run
 from app.agents.digest.distill import distill_with_uuids
-from app.codex_convert import codex_to_claude_jsonl, looks_like_codex
 from app.agents.digest.prompt import SYSTEM_PROMPT
 from app.agents.digest.schema import Digest, strip_em_dashes
 from app.storage.models import Trace
@@ -43,16 +42,6 @@ async def compute_digest(
     blob: bytes,
     subagent_blobs: dict[str, bytes],
 ) -> Digest | None:
-    # Codex rollouts (and their subagent threads) are stored in native
-    # format; convert to Claude-shaped records so the distiller works and
-    # the anchor uuids match the frontend's render-time conversion.
-    if looks_like_codex(blob):
-        blob = codex_to_claude_jsonl(blob)
-    subagent_blobs = {
-        k: codex_to_claude_jsonl(v) if looks_like_codex(v) else v
-        for k, v in subagent_blobs.items()
-    }
-
     distilled, uuids = distill_with_uuids(blob, subagent_blobs=subagent_blobs)
     input_hash = hashlib.sha256(distilled.encode("utf-8")).hexdigest()
     truncated = "[… elided" in distilled
