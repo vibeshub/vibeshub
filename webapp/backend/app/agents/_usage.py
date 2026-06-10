@@ -24,6 +24,7 @@ class Outcome(str, enum.Enum):
     OK = "ok"
     SKIP_UNCHANGED = "skip_unchanged"
     SKIP_NO_CONFIG = "skip_no_config"
+    SKIP_EMPTY = "skip_empty"
     FAIL_CALL = "fail_call"
     FAIL_SCHEMA = "fail_schema"
     FAIL_ANCHORS = "fail_anchors"

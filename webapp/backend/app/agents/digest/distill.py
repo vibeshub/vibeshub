@@ -20,7 +20,17 @@ _DROPPED_TYPES = {
 }
 
 # Tools whose presence we record but whose inputs are scratchpad noise.
-_SCRATCH_TOOLS = {"TodoWrite"}
+# update_plan is Codex's TodoWrite (emitted by codex_convert).
+_SCRATCH_TOOLS = {"TodoWrite", "update_plan"}
+
+# Shell-style tools: render as "<name>: <command>". Bash is Claude Code's;
+# shell is what codex_convert emits, with the same input keys.
+_SHELL_TOOLS = {"Bash", "shell"}
+
+# Subagent dispatch tools: Claude Code's Task, and the spawn_agent calls
+# that codex_convert emits with the same input keys (subagent_type,
+# description).
+_SUBAGENT_TOOLS = {"Task", "spawn_agent"}
 
 _TOOL_RESULT_PREFIX = 80
 _TOOL_RESULT_ERROR_PREFIX = 400
@@ -163,16 +173,16 @@ def _tool_use_to_line(
     inp = block.get("input") or {}
     if name in _SCRATCH_TOOLS:
         return None
-    if name == "Task":
+    if name in _SUBAGENT_TOOLS:
         agent_id = (inp.get("subagent_type") or "agent")
         desc = (inp.get("description") or "").strip()
         sub_summary = _summarize_subagent(block, subagent_blobs)
         return f"Subagent[{agent_id}]: {desc} → {sub_summary}".rstrip(" →")
-    if name == "Bash":
+    if name in _SHELL_TOOLS:
         cmd = (inp.get("command") or "").strip()
         if len(cmd) > _BASH_COMMAND_MAX:
             cmd = cmd[:_BASH_COMMAND_MAX] + "…"
-        return f"Bash: {cmd}"
+        return f"{name}: {cmd}"
     fp = inp.get("file_path")
     if isinstance(fp, str) and fp:
         return f"{name} {fp}"

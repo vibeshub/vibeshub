@@ -258,3 +258,102 @@ async def test_idempotency_skips_call_on_unchanged_input(
     assert [r.outcome for r in rows] == [
         Outcome.OK.value, Outcome.SKIP_UNCHANGED.value,
     ]
+
+
+@pytest.fixture
+def _codex_blob():
+    from pathlib import Path
+    return (
+        Path(__file__).parent.parent.parent / "fixtures" / "codex"
+        / "rollout.jsonl"
+    ).read_bytes()
+
+
+@pytest.mark.asyncio
+async def test_codex_rollout_is_converted_and_digested(
+    monkeypatch, db_session, _codex_blob, _seeded_trace,
+):
+    monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
+    monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
+    monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
+    payload = dict(VALID_PAYLOAD)
+    payload["chapters"] = [
+        {"anchor_uuid": "codex-rec-1", "title": "Frame the change",
+         "caption": "User asks for a greet helper."},
+    ]
+    mock_client = MagicMock()
+    mock_client.responses.parse.return_value = _ok_response(payload)
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock_client,
+    )
+
+    digest = await compute_digest(
+        db_session, _seeded_trace,
+        blob=_codex_blob, subagent_blobs={},
+    )
+
+    assert digest is not None
+    sent = mock_client.responses.parse.call_args.kwargs["input"]
+    # The rollout was converted before distillation: the genuine ask is a
+    # USER line and the anchor surface uses the synthetic codex-rec uuids
+    # the frontend converter will also assign at render time.
+    assert "USER: Add a greet function" in sent
+    assert "[codex-rec-1]" in sent
+    assert [c.anchor_uuid for c in digest.chapters] == ["codex-rec-1"]
+    assert _seeded_trace.digest_json is not None
+
+
+@pytest.mark.asyncio
+async def test_codex_subagent_blob_is_converted_for_summary(
+    monkeypatch, db_session, _codex_blob, _seeded_trace,
+):
+    from pathlib import Path
+    monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
+    monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
+    monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
+    mock_client = MagicMock()
+    mock_client.responses.parse.return_value = _ok_response(VALID_PAYLOAD)
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock_client,
+    )
+    child = (
+        Path(__file__).parent.parent.parent / "fixtures" / "codex"
+        / "rollout_subagent.jsonl"
+    ).read_bytes()
+
+    await compute_digest(
+        db_session, _seeded_trace,
+        blob=_codex_blob, subagent_blobs={"c_spawn": child},
+    )
+
+    sent = mock_client.responses.parse.call_args.kwargs["input"]
+    # The child rollout (also codex-shaped) was converted too, so the
+    # Tier-3 heuristic finds its final assistant text.
+    assert "Subagent[default]: Review src/util.ts" in sent
+    assert "The greet helper handles the common case" in sent
+
+
+@pytest.mark.asyncio
+async def test_empty_distillate_records_skip_empty(
+    monkeypatch, db_session, _seeded_trace,
+):
+    monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
+    monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
+    monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
+    mock_client = MagicMock()
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock_client,
+    )
+    # Tier-4-only content distills to nothing; the run must still be
+    # visible in agent_run rather than silently returning None.
+    blob = b'{"type":"ai-title","aiTitle":"x"}\n'
+
+    result = await compute_digest(
+        db_session, _seeded_trace, blob=blob, subagent_blobs={},
+    )
+
+    assert result is None
+    assert mock_client.responses.parse.call_count == 0
+    rows = (await db_session.execute(select(AgentRun))).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].outcome == Outcome.SKIP_EMPTY.value

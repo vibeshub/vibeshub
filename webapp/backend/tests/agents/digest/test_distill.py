@@ -191,3 +191,47 @@ def test_truncation_when_over_hardcap_keeps_head_and_tail():
     # First and last events still present
     assert "Find the auth handler" in out
     assert "Found it in oauth.py." in out
+
+
+def test_spawn_agent_dispatch_renders_like_task():
+    # Codex-converted traces dispatch subagents via spawn_agent tool_uses;
+    # the converter gives them the same input keys the Task branch reads
+    # (subagent_type, description), so the distiller must emit the same
+    # Subagent[...] one-liner instead of a bare tool name.
+    blob = (
+        b'{"type":"assistant","uuid":"a9","message":{"content":[{"type":'
+        b'"tool_use","id":"c_spawn","name":"spawn_agent","input":{'
+        b'"subagent_type":"default","model":"default",'
+        b'"prompt":"Review src/util.ts for edge cases and report back.",'
+        b'"description":"Review src/util.ts for edge cases and report back.'
+        b'"}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert (
+        "Subagent[default]: Review src/util.ts for edge cases and report"
+        in out
+    )
+    assert "spawn_agent" not in out
+
+
+def test_codex_shell_renders_command_like_bash():
+    # codex_convert emits shell tool_uses with the same input keys as Bash
+    # (command, description); the command must survive into the one-liner.
+    blob = (
+        b'{"type":"assistant","uuid":"a1","message":{"content":[{"type":'
+        b'"tool_use","id":"c1","name":"shell","input":{'
+        b'"command":"git diff main --stat","description":"/repo"}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert "shell: git diff main --stat" in out
+
+
+def test_codex_update_plan_is_dropped_as_scratchpad():
+    # update_plan is Codex's TodoWrite: plan churn, not work.
+    blob = (
+        b'{"type":"assistant","uuid":"a1","message":{"content":[{"type":'
+        b'"tool_use","id":"c1","name":"update_plan","input":{'
+        b'"plan":[{"step":"x","status":"in_progress"}],"explanation":""}}]}}\n'
+    )
+    out = distill(blob, subagent_blobs={})
+    assert "update_plan" not in out

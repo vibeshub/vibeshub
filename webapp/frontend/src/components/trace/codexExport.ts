@@ -2,6 +2,13 @@
 // Claude-shaped records `buildSession` consumes. Mirrors terminalExport.ts:
 // one content block per `assistant` record, a unique truthy top-level `uuid`
 // on every content record.
+//
+// Keep in sync with the backend mirror, webapp/backend/app/codex_convert.py.
+// Digest chapter anchor_uuids are generated against the backend conversion
+// and resolved against this render-time one, so both converters must assign
+// identical codex-rec-<n> uuids to identical records. The contract is pinned
+// by webapp/backend/tests/test_codex_convert.py against goldens captured from
+// this file; regenerate those goldens when changing record shapes here.
 
 type AnyRec = Record<string, unknown>;
 

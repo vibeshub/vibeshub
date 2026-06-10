@@ -9,21 +9,30 @@ PR comment body posted by the plugin.
 1. Backend calls `compute_digest(session, trace, blob, subagent_blobs)`
    from `app/api/trace_service.py::create_or_update_trace`, after the
    blob is written, before the transaction is committed.
-2. `distill_with_uuids` (in `distill.py`) walks the JSONL once and
+2. Codex rollouts (stored in native `session_meta`/`response_item`
+   format) are first converted to Claude-shaped records by
+   `app/codex_convert.py`, the backend mirror of the frontend's
+   `codexExport.ts`. Both converters must assign identical synthetic
+   `codex-rec-<n>` uuids, or chapter anchors break in the viewer; the
+   parity contract is pinned by `tests/test_codex_convert.py` against
+   goldens captured from the frontend converter. Codex-shaped subagent
+   blobs are converted the same way.
+3. `distill_with_uuids` (in `distill.py`) walks the JSONL once and
    classifies every event into a tier (see spec §5). Output is a single
    string with each retained event prefixed by `[uuid]`.
-3. `pipeline.compute_digest` computes `sha256(distilled)` and compares
+4. `pipeline.compute_digest` computes `sha256(distilled)` and compares
    to `trace.digest_input_hash`. Match → reuse persisted digest,
-   `outcome=skip_unchanged`, no LLM call.
-4. Otherwise: calls OpenAI `responses.parse` with `text_format=Digest`
+   `outcome=skip_unchanged`, no LLM call. An empty distillate records
+   `outcome=skip_empty` and returns without an LLM call.
+5. Otherwise: calls OpenAI `responses.parse` with `text_format=Digest`
    (Structured Outputs, so the schema is enforced server-side) and
    `reasoning.effort=low`.
-5. Reads the already-validated `Digest` from `response.output_parsed`
+6. Reads the already-validated `Digest` from `response.output_parsed`
    (None → `outcome=fail_schema`). Drops chapters whose `anchor_uuid`
    isn't in the distilled UUID surface. Strips em-dashes from every
    string field.
-6. Persists `digest_json` and `digest_input_hash` on the Trace row.
-7. Records the run in `agent_run` via `record_run`.
+7. Persists `digest_json` and `digest_input_hash` on the Trace row.
+8. Records the run in `agent_run` via `record_run`.
 
 ## Env vars
 

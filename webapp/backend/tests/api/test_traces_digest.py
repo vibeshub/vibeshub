@@ -66,6 +66,8 @@ def _digest_env(monkeypatch):
 
 @pytest.fixture
 def _patch_llm(monkeypatch):
+    from app.agents.digest.schema import Digest
+
     mock = MagicMock()
     payload = {
         "ask": "test ask", "decisions": "test decisions",
@@ -73,9 +75,12 @@ def _patch_llm(monkeypatch):
         "dead_ends": "test dead_ends", "chapters": [],
     }
     resp = MagicMock()
+    # The pipeline uses responses.parse (Structured Outputs), which
+    # returns an already-validated Digest on output_parsed.
+    resp.output_parsed = Digest.model_validate(payload)
     resp.output_text = json.dumps(payload)
     resp.usage = MagicMock(input_tokens=5, output_tokens=3)
-    mock.responses.create.return_value = resp
+    mock.responses.parse.return_value = resp
     monkeypatch.setattr(
         "app.agents.digest.pipeline.get_client", lambda: mock,
     )
@@ -105,7 +110,7 @@ async def test_upload_runs_digest_and_returns_it(
     assert summary.status_code == 200
     sbody = summary.json()
     assert sbody["ai_digest"]["ask"] == "test ask"
-    assert _patch_llm.responses.create.call_count == 1
+    assert _patch_llm.responses.parse.call_count == 1
 
 
 @pytest.mark.asyncio
