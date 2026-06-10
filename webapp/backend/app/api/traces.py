@@ -412,6 +412,8 @@ async def _claude_shaped(
             return await blob_store.get(converted_key)
         except FileNotFoundError:
             pass
+    # Legacy-only path: converts per request, deliberately un-cached and
+    # never backfilled to storage.
     raw = await blob_store.get(raw_key)
     return convert_imported(raw) or raw
 
@@ -470,6 +472,7 @@ async def get_trace_session(
         raise HTTPException(status_code=404, detail="not found")
     await _require_trace_access(trace, user, settings, access)
     if trace.blob_prefix is None:
+        # Should not happen post-migration. 500 so we notice.
         raise HTTPException(status_code=500, detail="trace not migrated to v2 layout")
     data = await _claude_shaped(
         blob_store,
