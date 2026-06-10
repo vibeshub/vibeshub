@@ -506,6 +506,27 @@ export function Landing() {
                 <div className={styles.prTitle}>
                   Claude Code session for this PR
                 </div>
+                {/* Mirrors the digest rows build_comment_body posts on real PRs. */}
+                <div className={styles.prDigest}>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Ask</span>
+                    <span className={styles.prDigestVal}>
+                      Add chapter navigation to the trace viewer
+                    </span>
+                  </div>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Key decisions</span>
+                    <span className={styles.prDigestVal}>
+                      Reuse digest anchors as the nav spine
+                    </span>
+                  </div>
+                  <div className={styles.prDigestRow}>
+                    <span className={styles.prDigestKey}>Dead ends</span>
+                    <span className={styles.prDigestVal}>
+                      IntersectionObserver thrashed, switched to scroll math
+                    </span>
+                  </div>
+                </div>
                 <div className={styles.prStats}>
                   <span>
                     <strong>257</strong> messages

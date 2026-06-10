@@ -1721,6 +1721,33 @@
   color: var(--text-strong);
   line-height: 1.35;
 }
+.prDigest {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.prDigestRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13px;
+}
+.prDigestKey {
+  flex: none;
+  width: 98px;
+  font: 500 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.prDigestVal {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .prStats {
   display: flex;
   align-items: center;

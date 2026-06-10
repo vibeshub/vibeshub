@@ -46,6 +46,16 @@ describe("Landing", () => {
     expect(screen.getByText(/Searchable team history/i)).toBeInTheDocument();
   });
 
+  it("shows the AI digest rows in the PR-comment mock", () => {
+    renderPage();
+    expect(screen.getByText("Ask")).toBeInTheDocument();
+    expect(screen.getByText("Key decisions")).toBeInTheDocument();
+    expect(screen.getByText("Dead ends")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Reuse digest anchors as the nav spine/i),
+    ).toBeInTheDocument();
+  });
+
   it("drops the solo brag-post framing from the front page", () => {
     renderPage();
     expect(screen.queryByText(/Brag posts/i)).not.toBeInTheDocument();
