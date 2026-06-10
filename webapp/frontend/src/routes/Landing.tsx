@@ -550,9 +550,10 @@ export function Landing() {
                     <IconCheck />
                   </span>
                   <span>
-                    <strong>Faster, deeper review.</strong> Reviewers open the
-                    actual run, the prompts, tool calls, and reasoning, before
-                    they read the diff. Less guessing, fewer round-trips.
+                    <strong>Review starts from intent.</strong> Every trace
+                    lands with an AI digest, the ask, key decisions, and dead
+                    ends, plus chapters that jump straight to the moment.
+                    Reviewers get the story before the diff.
                   </span>
                 </li>
                 <li>

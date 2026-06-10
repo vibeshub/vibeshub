@@ -42,7 +42,7 @@ describe("Landing", () => {
     expect(
       screen.getByText(/Your team.?s work, finally legible/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Faster, deeper review/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review starts from intent/i)).toBeInTheDocument();
     expect(screen.getByText(/Searchable team history/i)).toBeInTheDocument();
   });
 
