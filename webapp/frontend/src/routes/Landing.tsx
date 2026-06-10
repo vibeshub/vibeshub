@@ -265,7 +265,7 @@ export function Landing() {
               </div>
             </div>
 
-            {/* right: how it works - compact 3-step timeline */}
+            {/* right: how it works - compact 4-step timeline */}
             <div className={styles.heroVisual}>
               <div className={styles.eyebrow}>
                 <span className={styles.dot} /> How it works
@@ -302,9 +302,22 @@ export function Landing() {
                   <div>
                     <span className={styles.heroFlowNum}>03 · It posts itself</span>
                     <p className={styles.heroFlowText}>
-                      The trace uploads and the PR comment arrives with an AI
-                      digest and the link, automatically. Reviewers start from
-                      the story, not message one of 257.
+                      The trace uploads and the PR comment arrives with the
+                      link, automatically. No commands to remember, no links
+                      to paste.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconSparkle />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>04 · The AI digest kicks in</span>
+                    <p className={styles.heroFlowText}>
+                      vibeshub distills the whole session into five lines plus
+                      jump links to the key moments. Reviewers start from the
+                      story, not message one of 257.
                     </p>
                   </div>
                 </li>
@@ -1170,6 +1183,23 @@ function IconPrSvg() {
       <circle cx="6" cy="6" r="3" />
       <path d="M13 6h3a2 2 0 0 1 2 2v7" />
       <line x1="6" y1="9" x2="6" y2="21" />
+    </svg>
+  );
+}
+
+function IconSparkle() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      <path d="M20 3v4" />
+      <path d="M22 5h-4" />
     </svg>
   );
 }
