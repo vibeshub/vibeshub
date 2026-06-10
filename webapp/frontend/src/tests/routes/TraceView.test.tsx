@@ -63,7 +63,7 @@ function mockFetchSequence(traceSummary: object) {
         }),
       );
     }
-    if (url.endsWith(`/api/traces/${SHORT_ID}/raw`)) {
+    if (url.endsWith(`/api/traces/${SHORT_ID}/session`)) {
       return Promise.resolve(
         new Response(FIXTURE, {
           status: 200,
@@ -304,7 +304,7 @@ describe("TraceView", () => {
           }),
         );
       }
-      if (url.endsWith(`/api/traces/${SHORT_ID}/raw`)) {
+      if (url.endsWith(`/api/traces/${SHORT_ID}/session`)) {
         return Promise.resolve(
           new Response(JSON.stringify({ detail: "not_found" }), {
             status: 404,

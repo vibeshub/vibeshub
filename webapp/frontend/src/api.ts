@@ -48,8 +48,8 @@ export async function fetchTrace(shortId: string): Promise<TraceSummary> {
   return jsonOrThrow<TraceSummary>(r);
 }
 
-export async function fetchRawJsonl(shortId: string): Promise<string> {
-  const r = await fetch(`/api/traces/${shortId}/raw`, {
+export async function fetchSessionJsonl(shortId: string): Promise<string> {
+  const r = await fetch(`/api/traces/${shortId}/session`, {
     credentials: "same-origin",
   });
   if (!r.ok) {

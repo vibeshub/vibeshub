@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   fetchPrTraces,
   fetchTrace,
-  fetchRawJsonl,
+  fetchSessionJsonl,
   fetchAgentJsonl,
 } from "../api";
 
@@ -47,19 +47,22 @@ describe("api", () => {
     await expect(fetchTrace("zzz")).rejects.toThrow(/404/);
   });
 
-  it("fetchRawJsonl returns text", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
+  it("fetchSessionJsonl hits /api/traces/<sid>/session and returns text", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
       new Response('{"x":1}\n', { status: 200 }),
     );
-    const raw = await fetchRawJsonl("abc1234567");
+    const raw = await fetchSessionJsonl("abc1234567");
     expect(raw).toBe('{"x":1}\n');
+    expect(spy).toHaveBeenCalledWith("/api/traces/abc1234567/session", {
+      credentials: "same-origin",
+    });
   });
 
-  it("fetchRawJsonl on non-ok throws ApiError", async () => {
+  it("fetchSessionJsonl on non-ok throws ApiError", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response("not found", { status: 404 }),
     );
-    await expect(fetchRawJsonl("zzz")).rejects.toThrow(/404/);
+    await expect(fetchSessionJsonl("zzz")).rejects.toThrow(/404/);
   });
 
   it("fetchAgentJsonl hits /api/traces/<sid>/agents/<id> and returns body text", async () => {
