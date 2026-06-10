@@ -49,7 +49,7 @@ const LANDING_JSONLD = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS, Linux, Windows",
   description:
-    "Turn your Claude Code and Codex sessions, including every subagent they spawn, into shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
+    "Turn your Claude Code and Codex sessions, including every subagent they spawn, into shareable, replayable traces, each with an AI digest of the session. Public and private viewer with GitHub-mirrored access and automatic secret redaction.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
@@ -125,7 +125,7 @@ export function Landing() {
     <div className={`page-shell ${styles.shell}`}>
       <SeoHead
         title="vibeshub · share Claude Code & Codex sessions as replayable traces"
-        description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
+        description="Your Claude Code and Codex sessions, including every subagent they spawn, become shareable, replayable traces, each with an AI digest of the session. Public and private viewer with GitHub-mirrored access and automatic secret redaction."
         path="/"
         bareTitle
         jsonLd={LANDING_JSONLD}
