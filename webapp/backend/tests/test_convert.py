@@ -33,3 +33,13 @@ def test_claude_is_not_imported():
     assert convert_imported(raw) is None
     assert "claude" not in IMPORTED_FORMATS
     assert "terminal" not in IMPORTED_FORMATS
+
+
+def test_converted_output_is_not_reconvertible():
+    # Double-conversion guard: converted output starts with a *-meta
+    # record carrying a top-level "type", which both sniffers reject.
+    for sub in ("codex/rollout.jsonl", "cursor/transcript.jsonl"):
+        converted = convert_imported((FIXTURES / sub).read_bytes())
+        assert converted is not None
+        assert sniff_import_format(converted) is None
+        assert convert_imported(converted) is None
