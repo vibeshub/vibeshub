@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  buildChapterChanges,
   buildFileChanges,
   changeAnchorId,
+  changesChapterAnchorId,
   type SubagentEntry,
 } from "../../components/trace/changes";
 import type { StreamEvent, ToolResult } from "../../components/trace/types";
-import type { AgentSummary } from "../../types";
+import type { AgentSummary, DigestChapter } from "../../types";
 
 // Monotonic fixture clock: ISO timestamps compare lexicographically, which is
 // all buildFileChanges relies on for ordering.
@@ -333,5 +335,129 @@ describe("buildFileChanges ordering with missing timestamps", () => {
 describe("changeAnchorId", () => {
   it("sanitizes paths into stable DOM ids", () => {
     expect(changeAnchorId("/a/b c.ts")).toBe("change--a-b-c-ts");
+  });
+});
+
+function chapter(anchor: string, title: string, caption = ""): DigestChapter {
+  return { anchor_uuid: anchor, title, caption };
+}
+
+describe("buildChapterChanges", () => {
+  it("buckets edits into the chapter active at their stream position", () => {
+    const stream = [
+      prompt("p1", "start"),
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
+      prompt("p2", "next phase"),
+      tool("Edit", "t2", { file_path: "/r/a.ts", old_string: "q", new_string: "r" }),
+      tool("Edit", "t3", { file_path: "/r/b.ts", old_string: "m", new_string: "n" }),
+    ];
+    const chs = buildChapterChanges(stream, [], [
+      chapter("p1", "One"),
+      chapter("p2", "Two"),
+    ]);
+    expect(chs).toHaveLength(2);
+    expect(chs[0].ordinal).toBe(1);
+    expect(chs[0].title).toBe("One");
+    expect(chs[0].files.map((f) => f.path)).toEqual(["/r/a.ts"]);
+    expect(chs[1].files.map((f) => f.path)).toEqual(["/r/a.ts", "/r/b.ts"]);
+  });
+
+  it("assigns edits before the first anchor to the first chapter", () => {
+    const stream = [
+      tool("Write", "t0", { file_path: "/r/pre.ts", content: "x" }),
+      prompt("p1", "go"),
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
+    ];
+    const chs = buildChapterChanges(stream, [], [chapter("p1", "One")]);
+    expect(chs[0].files.map((f) => f.path)).toEqual(["/r/pre.ts", "/r/a.ts"]);
+  });
+
+  it("keeps empty and unresolved chapters with zero stats", () => {
+    const stream = [
+      prompt("p1", "go"),
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
+      prompt("p2", "chat only"),
+    ];
+    const chs = buildChapterChanges(stream, [], [
+      chapter("p1", "One"),
+      chapter("p2", "Quiet"),
+      chapter("ghost", "Ghost"),
+    ]);
+    expect(chs).toHaveLength(3);
+    expect(chs[1].files).toEqual([]);
+    expect(chs[1].adds).toBe(0);
+    expect(chs[2].files).toEqual([]);
+  });
+
+  it("keeps the supersede pass global across chapters", () => {
+    const stream = [
+      prompt("p1", "first try"),
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "base", new_string: "alpha" }),
+      prompt("p2", "rewrite"),
+      tool("Write", "t2", { file_path: "/r/a.ts", content: "fresh" }),
+    ];
+    const chs = buildChapterChanges(stream, [], [
+      chapter("p1", "One"),
+      chapter("p2", "Two"),
+    ]);
+    const early = chs[0].files[0];
+    expect(early.groups[0].hunks[0].supersededBy).toEqual({
+      turnLabel: "turn 2",
+    });
+    expect(chs[0].adds).toBe(0); // superseded hunks don't count
+    expect(chs[1].adds).toBe(1);
+  });
+
+  it("marks a file new only in the chapter of its first touch", () => {
+    const stream = [
+      prompt("p1", "create"),
+      tool("Write", "t1", { file_path: "/r/n.ts", content: "one" }),
+      prompt("p2", "extend"),
+      tool("Edit", "t2", { file_path: "/r/n.ts", old_string: "zzz", new_string: "three" }),
+    ];
+    const chs = buildChapterChanges(stream, [], [
+      chapter("p1", "One"),
+      chapter("p2", "Two"),
+    ]);
+    expect(chs[0].files[0].kind).toBe("new");
+    expect(chs[1].files[0].kind).toBe("mod");
+  });
+
+  it("attributes subagent edits to the chapter of the Task dispatch", () => {
+    const stream = [
+      prompt("p1", "phase one"),
+      tool("Task", "t-task", { subagent_type: "refactor", prompt: "go" }),
+      prompt("p2", "phase two"),
+      tool("Edit", "t9", { file_path: "/r/z.ts", old_string: "a", new_string: "b" }),
+    ];
+    const entries: SubagentEntry[] = [
+      {
+        agent: agent({ tool_use_id: "id-t-task", agent_type: "refactor" }),
+        stream: [
+          tool("Edit", "s1", { file_path: "/r/c.ts", old_string: "u", new_string: "v" }),
+        ],
+      },
+    ];
+    const chs = buildChapterChanges(stream, entries, [
+      chapter("p1", "One"),
+      chapter("p2", "Two"),
+    ]);
+    expect(chs[0].files.map((f) => f.path)).toEqual(["/r/c.ts"]);
+    expect(chs[0].files[0].groups[0].agentBadge).toBe("Task[refactor]");
+    expect(chs[1].files.map((f) => f.path)).toEqual(["/r/z.ts"]);
+  });
+
+  it("returns chapter rows even when there are no edits at all", () => {
+    const chs = buildChapterChanges([prompt("p1", "hi")], [], [
+      chapter("p1", "One"),
+    ]);
+    expect(chs).toHaveLength(1);
+    expect(chs[0].files).toEqual([]);
+  });
+});
+
+describe("changesChapterAnchorId", () => {
+  it("prefixes the anchor uuid", () => {
+    expect(changesChapterAnchorId("abc")).toBe("changes-chapter-abc");
   });
 });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CaptionGroup, ChangeHunk, FileChange } from "./changes";
-import { changeAnchorId } from "./changes";
+import type { DiffRow } from "./diff";
 import { DiffView } from "./tool/DiffView";
 import { langFromPath } from "./highlight";
 import { shortenPath } from "./format";
@@ -9,7 +9,14 @@ interface Props {
   change: FileChange;
   root: string | null;
   onJump: (jumpUuid: string | null, promptUuid: string | null) => void;
+  /** DOM id for index-strip jumps; omitted on repeat cards for one path. */
+  anchorId?: string;
 }
+
+// Hunks above the threshold (freshly written files, mostly) start folded so
+// one big green wall can't drown the rest of the view.
+const COLLAPSE_THRESHOLD = 34;
+const COLLAPSE_HEAD = 24;
 
 function hunkStats(h: ChangeHunk): string {
   let a = 0;
@@ -22,6 +29,39 @@ function hunkStats(h: ChangeHunk): string {
   if (a > 0) parts.push(`+${a}`);
   if (d > 0) parts.push(`−${d}`);
   return parts.join(" ");
+}
+
+function HunkBody({ rows, lang }: { rows: DiffRow[]; lang: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (rows.length <= COLLAPSE_THRESHOLD) {
+    return <DiffView rows={rows} lang={lang} />;
+  }
+  if (!expanded) {
+    return (
+      <>
+        <DiffView rows={rows.slice(0, COLLAPSE_HEAD)} lang={lang} />
+        <button
+          type="button"
+          className="diff-expand"
+          onClick={() => setExpanded(true)}
+        >
+          ▸ show {rows.length - COLLAPSE_HEAD} more lines
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      <DiffView rows={rows} lang={lang} />
+      <button
+        type="button"
+        className="diff-expand"
+        onClick={() => setExpanded(false)}
+      >
+        ▾ collapse
+      </button>
+    </>
+  );
 }
 
 function SupersededHunk({
@@ -88,10 +128,10 @@ function Caption({
   );
 }
 
-export function FileChangeCard({ change, root, onJump }: Props) {
+export function FileChangeCard({ change, root, onJump, anchorId }: Props) {
   const lang = langFromPath(change.path);
   return (
-    <section className="change-card" id={changeAnchorId(change.path)}>
+    <section className="change-card" id={anchorId}>
       <div className="file-card change-card-head">
         <span className="file-path">{shortenPath(change.path, root)}</span>
         {change.kind === "new" && (
@@ -122,7 +162,7 @@ export function FileChangeCard({ change, root, onJump }: Props) {
                 </div>
               );
             }
-            return <DiffView key={hi} rows={h.rows} lang={lang} />;
+            return <HunkBody key={hi} rows={h.rows} lang={lang} />;
           })}
         </div>
       ))}

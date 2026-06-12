@@ -10,7 +10,8 @@ import { Hero } from "./Hero";
 import { ThreadControls, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
 import { ChangesView } from "./ChangesView";
-import { buildFileChanges } from "./changes";
+import { FilesRail } from "./FilesRail";
+import { buildChapterChanges, buildFileChanges } from "./changes";
 import { useSubagentStreams } from "./useSubagentStreams";
 import { usePersistedBoolean } from "./persistedState";
 
@@ -51,6 +52,17 @@ export function TraceViewer({
   const changes = useMemo(
     () => buildFileChanges(session.stream, subagents),
     [session.stream, subagents],
+  );
+  const chapterChanges = useMemo(
+    () =>
+      trace.ai_digest?.chapters?.length
+        ? buildChapterChanges(
+            session.stream,
+            subagents,
+            trace.ai_digest.chapters,
+          )
+        : null,
+    [session.stream, subagents, trace.ai_digest],
   );
 
   // #changes in the URL deep-links into Changes mode; leaving the mode
@@ -97,6 +109,7 @@ export function TraceViewer({
   }, [mode]);
 
   const empty = session.stream.length === 0;
+  const inChanges = mode === "changes" && changes.length > 0;
 
   return (
     <div className="vibeshub-viewer">
@@ -126,7 +139,14 @@ export function TraceViewer({
       ) : (
         <div className="viewer-body">
           {trace.ai_digest?.chapters?.length ? (
-            <ChapterRail session={session} digest={trace.ai_digest} />
+            <ChapterRail
+              session={session}
+              digest={trace.ai_digest}
+              mode={inChanges ? "changes" : "conversation"}
+              chapterChanges={chapterChanges}
+            />
+          ) : inChanges ? (
+            <FilesRail changes={changes} root={session.meta.cwd} />
           ) : (
             <PromptRail session={session} />
           )}
@@ -140,10 +160,11 @@ export function TraceViewer({
               setMode={setMode}
               hasChanges={changes.length > 0}
             />
-            {mode === "changes" && changes.length > 0 ? (
+            {inChanges ? (
               <ChangesView
                 session={session}
                 changes={changes}
+                chapters={chapterChanges}
                 onJump={handleJump}
               />
             ) : (

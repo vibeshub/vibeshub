@@ -1,4 +1,4 @@
-import type { AgentSummary } from "../../types";
+import type { AgentSummary, DigestChapter } from "../../types";
 import type {
   StreamEvent,
   ToolUseEvent,
@@ -39,9 +39,27 @@ export interface FileChange {
   groups: CaptionGroup[];
 }
 
-// DOM id for a file card, used by the index strip's scroll links.
+// One digest chapter's slice of the session diff: the chapter reads like a
+// commit (title + caption as the message) over the files it touched.
+export interface ChapterChange {
+  anchorUuid: string;
+  title: string;
+  caption: string;
+  ordinal: number; // 1-based, matches the rail's numbering
+  adds: number; // surviving hunks in this chapter only
+  dels: number;
+  files: FileChange[];
+}
+
+// DOM id for a file card, used by the index list's scroll links.
 export function changeAnchorId(path: string): string {
   return "change-" + path.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+// DOM id for a chapter section in the Changes column. Distinct from the
+// conversation's `chapter-<uuid>` divider ids so the two modes never collide.
+export function changesChapterAnchorId(uuid: string): string {
+  return "changes-chapter-" + uuid;
 }
 
 // Tool names that modify a file (carry input.file_path). Shared with
@@ -89,6 +107,7 @@ interface EditOp {
   path: string;
   ts: string;
   seq: number; // stream walk order: tiebreaker, and fallback when ts is missing
+  streamPos: number; // main-stream index (Task event for subagent ops, -1 unknown)
   jumpUuid: string | null;
   prompt: PromptRef;
   agentBadge: string | null;
@@ -103,12 +122,13 @@ function opsFromTool(
   prompt: PromptRef,
   jumpUuid: string | null,
   agentBadge: string | null,
+  streamPos: number,
 ): EditOp[] {
   const path = typeof e.input.file_path === "string" ? e.input.file_path : null;
   if (!path) return [];
   const patch = extractPatch(e.result?.toolUseResult?.structuredPatch);
-  // seq is assigned post-hoc in buildFileChanges once all ops are collected.
-  const base = { path, ts: e.ts, seq: 0, jumpUuid, prompt, agentBadge };
+  // seq is assigned post-hoc in collectOps once all ops are collected.
+  const base = { path, ts: e.ts, seq: 0, streamPos, jumpUuid, prompt, agentBadge };
 
   if (e.name === "MultiEdit" && Array.isArray(e.input.edits) && !patch) {
     // No whole-call patch: one hunk per sub-edit (line numbers restart per
@@ -163,38 +183,38 @@ function opsFromTool(
   ];
 }
 
-export function buildFileChanges(
+// Pass over the main stream and subagent streams: prompt ordinals, the prompt
+// active at each tool call, Task dispatch lookups, and Read paths (new/mod).
+function collectOps(
   stream: StreamEvent[],
   subagents: SubagentEntry[],
-): FileChange[] {
-  // Pass over the main stream: prompt ordinals, the prompt active at each
-  // tool call, Task dispatch lookups, and Read paths (for new/mod).
+): { ops: EditOp[]; reads: Set<string> } {
   const reads = new Set<string>();
   const ops: EditOp[] = [];
   const taskByToolId = new Map<
     string,
-    { uuid: string | null; prompt: PromptRef }
+    { uuid: string | null; prompt: PromptRef; pos: number }
   >();
   let current = SESSION_START;
   let ordinal = 0;
 
-  for (const e of stream) {
+  stream.forEach((e, pos) => {
     if (e.kind === "user_prompt") {
       ordinal += 1;
       current = promptRef(e, ordinal);
-      continue;
+      return;
     }
-    if (e.kind !== "tool_use") continue;
+    if (e.kind !== "tool_use") return;
     if (e.name === "Read" && typeof e.input.file_path === "string") {
       reads.add(e.input.file_path);
     }
     if (e.name === "Task") {
-      taskByToolId.set(e.id, { uuid: e.uuid || null, prompt: current });
+      taskByToolId.set(e.id, { uuid: e.uuid || null, prompt: current, pos });
     }
     if (FILE_EDIT_TOOLS.has(e.name)) {
-      ops.push(...opsFromTool(e, current, e.uuid || null, null));
+      ops.push(...opsFromTool(e, current, e.uuid || null, null, pos));
     }
-  }
+  });
 
   // Subagent streams: edits attach to the spawning Task card and the prompt
   // that was active when it was dispatched.
@@ -204,6 +224,7 @@ export function buildFileChanges(
       : undefined;
     const prompt = dispatch?.prompt ?? SESSION_START;
     const jumpUuid = dispatch?.uuid ?? null;
+    const pos = dispatch?.pos ?? -1;
     const badge = `Task[${agent.agent_type || "agent"}]`;
     for (const e of sub) {
       if (e.kind !== "tool_use") continue;
@@ -211,7 +232,7 @@ export function buildFileChanges(
         reads.add(e.input.file_path);
       }
       if (FILE_EDIT_TOOLS.has(e.name)) {
-        ops.push(...opsFromTool(e, prompt, jumpUuid, badge));
+        ops.push(...opsFromTool(e, prompt, jumpUuid, badge, pos));
       }
     }
   }
@@ -221,85 +242,131 @@ export function buildFileChanges(
   ops.forEach((op, i) => {
     op.seq = i;
   });
+  return { ops, reads };
+}
 
+// ISO timestamps compare lexicographically, with seq as the tiebreaker.
+// When either ts is missing (e.g. cursor-imported traces emit ts: ""),
+// fall back to stream-collection order so empty ts can't reorder edits.
+function sortOps(list: EditOp[]): void {
+  list.sort(
+    (a, b) => (a.ts && b.ts ? a.ts.localeCompare(b.ts) : 0) || a.seq - b.seq,
+  );
+}
+
+interface MarkedOp {
+  op: EditOp;
+  supersededBy: { turnLabel: string } | null;
+}
+
+// Supersede pass over one file's sorted ops: a Write replaces everything
+// before it; an edit whose old_string textually contains ALL of an earlier
+// hunk's emitted content replaces that hunk. Exact substring only; empty
+// fragments never match (false negatives are fine, false positives are not).
+function markSuperseded(list: EditOp[]): MarkedOp[] {
+  const superseded = new Array<{ turnLabel: string } | null>(
+    list.length,
+  ).fill(null);
+  for (let j = 0; j < list.length; j++) {
+    const later = list[j];
+    for (let i = 0; i < j; i++) {
+      if (superseded[i]) continue;
+      if (later.isWrite) {
+        superseded[i] = { turnLabel: later.prompt.turnLabel };
+        continue;
+      }
+      const targets = list[i].newContents.filter((c) => c !== "");
+      if (targets.length === 0) continue;
+      const consumed = later.oldStrings.some(
+        (s) => s !== "" && targets.every((c) => s.includes(c)),
+      );
+      if (consumed) {
+        superseded[i] = { turnLabel: later.prompt.turnLabel };
+      }
+    }
+  }
+  return list.map((op, i) => ({ op, supersededBy: superseded[i] }));
+}
+
+// Group consecutive marked ops by (prompt, agent) into caption groups and
+// total the surviving rows.
+function buildGroups(marked: MarkedOp[]): {
+  groups: CaptionGroup[];
+  adds: number;
+  dels: number;
+} {
+  const groups: CaptionGroup[] = [];
+  let adds = 0;
+  let dels = 0;
+  for (const { op, supersededBy } of marked) {
+    const hunk: ChangeHunk = {
+      jumpUuid: op.jumpUuid,
+      ts: op.ts,
+      rows: op.rows,
+      supersededBy,
+    };
+    if (!hunk.supersededBy) {
+      for (const r of op.rows) {
+        if (r.kind === "add") adds += 1;
+        else if (r.kind === "del") dels += 1;
+      }
+    }
+    const last = groups[groups.length - 1];
+    if (
+      last &&
+      last.promptUuid === op.prompt.uuid &&
+      last.agentBadge === op.agentBadge
+    ) {
+      last.hunks.push(hunk);
+    } else {
+      groups.push({
+        promptUuid: op.prompt.uuid,
+        promptExcerpt: op.prompt.excerpt,
+        turnLabel: op.prompt.turnLabel,
+        agentBadge: op.agentBadge,
+        hunks: [hunk],
+      });
+    }
+  }
+  return { groups, adds, dels };
+}
+
+function groupByPath(ops: EditOp[]): Map<string, EditOp[]> {
   const byPath = new Map<string, EditOp[]>();
   for (const op of ops) {
     const list = byPath.get(op.path) ?? [];
     list.push(op);
     byPath.set(op.path, list);
   }
+  return byPath;
+}
+
+// Same comparator shape as sortOps: chronological with a seq tiebreak when
+// both first timestamps are present, stream order otherwise.
+function sortByFirstTouch(
+  files: Array<{ change: FileChange; firstTs: string; firstSeq: number }>,
+): FileChange[] {
+  files.sort(
+    (a, b) =>
+      (a.firstTs && b.firstTs ? a.firstTs.localeCompare(b.firstTs) : 0) ||
+      a.firstSeq - b.firstSeq,
+  );
+  return files.map((f) => f.change);
+}
+
+export function buildFileChanges(
+  stream: StreamEvent[],
+  subagents: SubagentEntry[],
+): FileChange[] {
+  const { ops, reads } = collectOps(stream, subagents);
+  const byPath = groupByPath(ops);
 
   const files: Array<{ change: FileChange; firstTs: string; firstSeq: number }> =
     [];
   for (const [path, list] of byPath) {
-    // ISO timestamps compare lexicographically, with seq as the tiebreaker.
-    // When either ts is missing (e.g. cursor-imported traces emit ts: ""),
-    // fall back to stream-collection order so empty ts can't reorder edits.
-    list.sort(
-      (a, b) =>
-        (a.ts && b.ts ? a.ts.localeCompare(b.ts) : 0) || a.seq - b.seq,
-    );
-
-    // Supersede pass: a Write replaces everything before it; an edit whose
-    // old_string textually contains ALL of an earlier hunk's emitted content
-    // replaces that hunk. Exact substring only; empty fragments never match
-    // (false negatives are fine, false positives are not).
-    const superseded = new Array<{ turnLabel: string } | null>(
-      list.length,
-    ).fill(null);
-    for (let j = 0; j < list.length; j++) {
-      const later = list[j];
-      for (let i = 0; i < j; i++) {
-        if (superseded[i]) continue;
-        if (later.isWrite) {
-          superseded[i] = { turnLabel: later.prompt.turnLabel };
-          continue;
-        }
-        const targets = list[i].newContents.filter((c) => c !== "");
-        if (targets.length === 0) continue;
-        const consumed = later.oldStrings.some(
-          (s) => s !== "" && targets.every((c) => s.includes(c)),
-        );
-        if (consumed) {
-          superseded[i] = { turnLabel: later.prompt.turnLabel };
-        }
-      }
-    }
-
-    const groups: CaptionGroup[] = [];
-    let adds = 0;
-    let dels = 0;
-    list.forEach((op, idx) => {
-      const hunk: ChangeHunk = {
-        jumpUuid: op.jumpUuid,
-        ts: op.ts,
-        rows: op.rows,
-        supersededBy: superseded[idx],
-      };
-      if (!hunk.supersededBy) {
-        for (const r of op.rows) {
-          if (r.kind === "add") adds += 1;
-          else if (r.kind === "del") dels += 1;
-        }
-      }
-      const last = groups[groups.length - 1];
-      if (
-        last &&
-        last.promptUuid === op.prompt.uuid &&
-        last.agentBadge === op.agentBadge
-      ) {
-        last.hunks.push(hunk);
-      } else {
-        groups.push({
-          promptUuid: op.prompt.uuid,
-          promptExcerpt: op.prompt.excerpt,
-          turnLabel: op.prompt.turnLabel,
-          agentBadge: op.agentBadge,
-          hunks: [hunk],
-        });
-      }
-    });
-
+    sortOps(list);
+    const marked = markSuperseded(list);
+    const { groups, adds, dels } = buildGroups(marked);
     const first = list[0];
     const kind: "new" | "mod" =
       first.isWrite && !reads.has(path) ? "new" : "mod";
@@ -309,13 +376,95 @@ export function buildFileChanges(
       firstSeq: first.seq,
     });
   }
+  return sortByFirstTouch(files);
+}
 
-  // Same comparator shape as the per-file sort: chronological with a seq
-  // tiebreak when both first timestamps are present, stream order otherwise.
-  files.sort(
-    (a, b) =>
-      (a.firstTs && b.firstTs ? a.firstTs.localeCompare(b.firstTs) : 0) ||
-      a.firstSeq - b.firstSeq,
-  );
-  return files.map((f) => f.change);
+// The session diff re-cut along digest chapters: every chapter appears (so
+// rail rows and ordinals stay aligned), with `files` empty for chapters that
+// changed nothing. The supersede pass stays global per file, so a hunk
+// rewritten in a later chapter shows as a stub inside the chapter that
+// produced it.
+export function buildChapterChanges(
+  stream: StreamEvent[],
+  subagents: SubagentEntry[],
+  chapters: DigestChapter[],
+): ChapterChange[] {
+  const out: ChapterChange[] = chapters.map((c, ci) => ({
+    anchorUuid: c.anchor_uuid,
+    title: c.title,
+    caption: c.caption,
+    ordinal: ci + 1,
+    adds: 0,
+    dels: 0,
+    files: [],
+  }));
+  if (chapters.length === 0) return out;
+
+  // Resolve chapter anchors to stream positions (mirrors chapterMetrics);
+  // unresolved chapters keep their row but can never receive ops.
+  const index = new Map<string, number>();
+  stream.forEach((e, i) => {
+    const uuid = (e as { uuid?: string }).uuid;
+    if (uuid && !index.has(uuid)) index.set(uuid, i);
+  });
+  const resolved = chapters
+    .map((c, ci) => ({ ci, pos: index.get(c.anchor_uuid) }))
+    .filter((r): r is { ci: number; pos: number } => r.pos !== undefined)
+    .sort((a, b) => a.pos - b.pos);
+  if (resolved.length === 0) return out;
+
+  // An op belongs to the last chapter anchored at or before it; everything
+  // earlier (including unattributable subagent ops at pos -1) joins the first.
+  const chapterOf = (pos: number): number => {
+    let ci = resolved[0].ci;
+    for (const r of resolved) {
+      if (r.pos <= pos) ci = r.ci;
+      else break;
+    }
+    return ci;
+  };
+
+  const { ops, reads } = collectOps(stream, subagents);
+  const byPath = groupByPath(ops);
+
+  // chapter -> path -> globally sorted+marked ops falling in that chapter.
+  const buckets = new Map<number, Map<string, MarkedOp[]>>();
+  const newInChapter = new Map<string, number>(); // path -> chapter of a globally-new first touch
+  for (const [path, list] of byPath) {
+    sortOps(list);
+    const marked = markSuperseded(list);
+    if (list[0].isWrite && !reads.has(path)) {
+      newInChapter.set(path, chapterOf(list[0].streamPos));
+    }
+    for (const m of marked) {
+      const ci = chapterOf(m.op.streamPos);
+      const paths = buckets.get(ci) ?? new Map<string, MarkedOp[]>();
+      const bucket = paths.get(path) ?? [];
+      bucket.push(m);
+      paths.set(path, bucket);
+      buckets.set(ci, paths);
+    }
+  }
+
+  for (const [ci, paths] of buckets) {
+    const files: Array<{
+      change: FileChange;
+      firstTs: string;
+      firstSeq: number;
+    }> = [];
+    for (const [path, marked] of paths) {
+      const { groups, adds, dels } = buildGroups(marked);
+      const kind: "new" | "mod" =
+        newInChapter.get(path) === ci ? "new" : "mod";
+      files.push({
+        change: { path, kind, adds, dels, groups },
+        firstTs: marked[0].op.ts,
+        firstSeq: marked[0].op.seq,
+      });
+      out[ci].adds += adds;
+      out[ci].dels += dels;
+    }
+    out[ci].files = sortByFirstTouch(files);
+  }
+  return out;
 }

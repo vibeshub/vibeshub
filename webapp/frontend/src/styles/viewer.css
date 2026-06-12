@@ -2389,3 +2389,147 @@
   font-size: 12px;
   color: var(--text-faint);
 }
+
+/* ----- Changes view: net summary header ----- */
+.vibeshub-viewer .changes-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vibeshub-viewer .changes-summary-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .changes-summary-count {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.vibeshub-viewer .changes-ratio {
+  flex: 0 1 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--diff-del-num) 30%, transparent);
+  overflow: hidden;
+  align-self: center;
+}
+.vibeshub-viewer .changes-ratio-add {
+  display: block;
+  height: 100%;
+  background: color-mix(in oklab, var(--diff-add-num) 60%, transparent);
+}
+.vibeshub-viewer .changes-summary-toggle {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+}
+.vibeshub-viewer .changes-summary-toggle:hover {
+  text-decoration: underline;
+}
+
+/* ----- Changes view: chapter sections ----- */
+.vibeshub-viewer .changes-chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-margin-top: 140px;
+}
+.vibeshub-viewer .changes-chapter + .changes-chapter {
+  margin-top: 18px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 22px;
+}
+.vibeshub-viewer .changes-chapter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.vibeshub-viewer .changes-chapter-n {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+.vibeshub-viewer .changes-chapter-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.vibeshub-viewer .changes-chapter-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .changes-chapter-jump {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+}
+.vibeshub-viewer .changes-chapter-jump:hover {
+  text-decoration: underline;
+}
+.vibeshub-viewer .changes-chapter-caption {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+
+/* ----- Changes view: large-hunk expander ----- */
+.vibeshub-viewer .diff-expand {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-inset);
+  color: var(--color-link);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.vibeshub-viewer .diff-expand:hover {
+  background: var(--bg-subtle);
+}
+
+/* ----- Rails in changes mode ----- */
+.vibeshub-viewer .chapterrail-item.empty {
+  cursor: default;
+  opacity: 0.45;
+}
+.vibeshub-viewer .chapterrail-item.empty:hover {
+  background: transparent;
+}
+.vibeshub-viewer .chapterrail-meta .diff-stat-add,
+.vibeshub-viewer .chapterrail-meta .diff-stat-del {
+  font-size: 10px;
+}
+.vibeshub-viewer .chapterrail-meta .diff-stat-del {
+  margin-left: 5px;
+}
+.vibeshub-viewer .filesrail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.vibeshub-viewer .filesrail-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
