@@ -1,0 +1,40 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two deploys at once; queue the newer push behind the active one.
+concurrency:
+  group: azure-deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC token for azure/login
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # deploy.sh reads deploy/azure/.env (gitignored); CI gets it from a secret.
+      - name: Materialize deploy .env
+        env:
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+        run: printf '%s\n' "$DEPLOY_ENV_FILE" > deploy/azure/.env
+
+      - name: Deploy
+        run: ./deploy/azure/deploy.sh
