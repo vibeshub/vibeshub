@@ -2221,6 +2221,10 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .vibeshub-viewer .changes-index-total {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* Provenance chip for traces reconstructed from a .txt terminal export. */
@@ -2307,7 +2311,9 @@
 }
 .vibeshub-viewer .change-card-head {
   margin: 0;
+  border: 0;
   border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
 }
 .vibeshub-viewer .change-new-badge {
   font-size: 10px;
@@ -2319,6 +2325,7 @@
 }
 .vibeshub-viewer .change-caption {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 10px;
   padding: 6px 12px;

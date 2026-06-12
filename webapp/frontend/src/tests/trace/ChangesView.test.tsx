@@ -185,5 +185,6 @@ describe("ChangesView", () => {
     );
     expect(screen.getByText("no patch data")).toBeTruthy();
     expect(screen.getAllByText("session start").length).toBeGreaterThan(0);
+    expect(screen.queryByText("jump ↗")).toBeNull();
   });
 });

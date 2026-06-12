@@ -16,7 +16,7 @@ export function ChangesView({ session, changes, onJump }: Props) {
   const totalDels = changes.reduce((n, c) => n + c.dels, 0);
   return (
     <div className="changes-view">
-      <div className="changes-index">
+      <nav className="changes-index" aria-label="Changed files">
         {changes.map((c) => (
           <button
             key={c.path}
@@ -40,7 +40,7 @@ export function ChangesView({ session, changes, onJump }: Props) {
           {changes.length} {changes.length === 1 ? "file" : "files"} · +
           {totalAdds} −{totalDels} net
         </span>
-      </div>
+      </nav>
       {changes.map((c) => (
         <FileChangeCard key={c.path} change={c} root={root} onJump={onJump} />
       ))}

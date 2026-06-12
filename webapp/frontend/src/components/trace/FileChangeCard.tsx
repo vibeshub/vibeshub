@@ -64,7 +64,7 @@ function Caption({
   const canJump = target !== null || group.promptUuid !== null;
   return (
     <div className="change-caption">
-      <span className="change-caption-text">
+      <span className="change-caption-text" title={group.promptExcerpt}>
         {group.promptUuid
           ? `↳ “${group.promptExcerpt}”`
           : group.promptExcerpt}
