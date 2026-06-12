@@ -88,16 +88,18 @@ function renderViewer(stream: StreamEvent[]) {
 describe("TraceViewer changes mode", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
-    // vitest's jsdom usually provides rAF; the jump effect needs it either way.
-    if (typeof window.requestAnimationFrame !== "function") {
-      window.requestAnimationFrame = (cb) => {
-        cb(0);
-        return 0;
-      };
-    }
+    // Deterministic rAF: run the jump effect's callback synchronously so the
+    // scroll assertion below doesn't race a real animation frame.
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    });
     window.history.replaceState(null, "", "/");
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("hides the pills when the session has no file edits", () => {
     renderViewer([EDIT_STREAM[0]]);
@@ -131,5 +133,8 @@ describe("TraceViewer changes mode", () => {
     fireEvent.click(screen.getByText("jump ↗"));
     expect(window.location.hash).toBe("");
     expect(screen.getByText("Show system events")).toBeTruthy();
+    // Collapsed tool groups render no [data-uuid] for tools, so the jump
+    // falls back to the prompt card and must still scroll.
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 });
