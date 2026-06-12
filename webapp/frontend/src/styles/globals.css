@@ -10,19 +10,25 @@ html {
   overflow-x: hidden;
 }
 
+/* In-page nav CTAs scroll smoothly to their sections. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
+  color: var(--txt);
+  font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv11", "ss03";
 }
 
 code,
@@ -30,17 +36,17 @@ pre,
 kbd,
 samp {
   font-family: var(--font-mono);
-  font-feature-settings: "zero", "ss01";
 }
 
 a {
-  color: var(--accent-strong);
+  color: var(--acc);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--accent);
+  color: var(--acc);
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 button {
@@ -52,25 +58,24 @@ button {
 code {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  background: var(--bg-subtle);
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-deep);
+  padding: 1px 5px;
+  border: 1px solid var(--line-soft);
 }
 
 .mono {
   font-family: var(--font-mono);
 }
 .muted {
-  color: var(--text-muted);
+  color: var(--dim);
 }
 .faint {
-  color: var(--text-faint);
+  color: var(--faint);
 }
 
 ::selection {
-  background: var(--accent-soft);
-  color: var(--text-strong);
+  background: color-mix(in oklab, var(--acc) 28%, transparent);
+  color: var(--strong);
 }
 
 /* Trim the "Sign in with GitHub" CTA to "Sign in" on small screens so the

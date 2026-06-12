@@ -6,14 +6,15 @@
 /* Promote the AuthWidget "Sign in" button into a real primary CTA in the topbar
    (matches Landing). */
 .vv-page .topbar-actions .iconbtn.primary {
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  border-color: var(--text-strong);
+  background: var(--acc);
+  color: var(--acc-ink);
+  border-color: var(--acc);
 }
 .vv-page .topbar-actions .iconbtn.primary:hover {
-  background: oklch(from var(--text-strong) calc(l + 0.07) c h);
-  border-color: oklch(from var(--text-strong) calc(l + 0.07) c h);
-  color: var(--bg-elevated);
+  filter: brightness(1.08);
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--acc-ink);
 }
 
 /* ============ layout ============ */
@@ -38,7 +39,7 @@
   z-index: 0;
   background-image: radial-gradient(
     circle at 1px 1px,
-    oklch(0.5 0.01 75 / 0.07) 1px,
+    oklch(0.6 0.02 160 / 0.07) 1px,
     transparent 0
   );
   background-size: 24px 24px;
@@ -65,7 +66,7 @@
   padding: 5px 13px 5px 11px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
-  border-radius: 999px;
+  border-radius: 0;
   font: 600 11px var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -80,19 +81,18 @@
 }
 
 .vv-page .vv-title {
-  font-size: clamp(38px, 5.6vw, 60px);
-  line-height: 1.04;
-  letter-spacing: -0.035em;
+  font-family: var(--font-mono);
+  font-size: clamp(32px, 4.6vw, 46px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
   font-weight: 600;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 22px 0 0;
-  max-width: 16ch;
+  max-width: 18ch;
   text-wrap: balance;
 }
 .vv-page .vv-title .hl {
-  color: var(--accent-strong);
-  font-style: italic;
-  font-weight: 500;
+  color: var(--acc);
 }
 .vv-page .vv-sub {
   font-size: clamp(16px, 1.7vw, 19px);
@@ -133,19 +133,16 @@
 }
 .vv-page .dropzone:hover {
   border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2), 0 16px 40px -20px oklch(0.55 0.14 45 / 0.4);
 }
 .vv-page .dropzone.dragover {
   border-color: var(--accent-strong);
   border-style: solid;
   background: color-mix(in oklab, var(--accent-soft) 70%, var(--bg-elevated));
-  transform: scale(1.01);
 }
 .vv-page .dz-icon {
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   color: var(--accent-strong);
@@ -154,7 +151,6 @@
   transition: transform 0.2s ease;
 }
 .vv-page .dropzone:hover .dz-icon {
-  transform: translateY(-2px);
 }
 .vv-page .dz-icon svg {
   width: 26px;
@@ -194,7 +190,7 @@
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
   padding: 4px 9px;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .vv-page .dz-chip svg {
   width: 11px;
@@ -246,7 +242,7 @@
 .vv-page .bridge-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 /* "See it in action" example link: a quiet helper under the dropzone that
@@ -282,7 +278,7 @@
 .vv-page .up-file .fic {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 0;
   flex: none;
   display: grid;
   place-items: center;
@@ -304,7 +300,7 @@
 }
 .vv-page .up-track {
   height: 8px;
-  border-radius: 999px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--bg-inset);
   border: 1px solid var(--border-subtle);
@@ -313,7 +309,7 @@
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, var(--accent), var(--accent-strong));
-  border-radius: 999px;
+  border-radius: 0;
   transition: width 0.25s linear;
 }
 .vv-page .up-status {
@@ -330,7 +326,6 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated);
-  box-shadow: var(--shadow-2), 0 24px 60px -30px oklch(0.4 0.04 60 / 0.35);
   overflow: hidden;
   text-align: left;
   animation: vvPop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -393,7 +388,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 3px 8px 3px 6px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid transparent;
 }
 .vv-page .pv-badge svg {
@@ -422,7 +417,7 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--bg-inset);
   cursor: pointer;
   transition:
@@ -463,7 +458,7 @@
   background: var(--bg-subtle);
   color: var(--text-strong);
   font: 600 13px var(--font-sans);
-  border-radius: 0 9px 9px 0;
+  border-radius: 0;
   transition:
     background 0.14s ease,
     color 0.14s ease;
@@ -491,7 +486,7 @@
   color: var(--bg-elevated);
   font: 600 11.5px var(--font-mono);
   padding: 6px 11px;
-  border-radius: 7px;
+  border-radius: 0;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -538,7 +533,7 @@
   gap: 8px;
   height: 40px;
   padding: 0 16px;
-  border-radius: 9px;
+  border-radius: 0;
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
@@ -552,13 +547,14 @@
   transform: translateY(1px);
 }
 .vv-page .btn.primary {
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  border-color: var(--text-strong);
+  background: var(--acc);
+  color: var(--acc-ink);
+  border-color: var(--acc);
 }
 .vv-page .btn.primary:hover {
-  background: oklch(from var(--text-strong) calc(l + 0.07) c h);
-  border-color: oklch(from var(--text-strong) calc(l + 0.07) c h);
+  filter: brightness(1.08);
+  background: var(--acc);
+  border-color: var(--acc);
 }
 .vv-page .btn.ghost {
   background: var(--bg-elevated);
@@ -593,7 +589,7 @@
   padding: 9px 15px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-subtle);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 13.5px;
   color: var(--text-muted);
   text-wrap: pretty;
@@ -715,7 +711,7 @@
 }
 .vv-page .how-card.featured {
   border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
-  box-shadow: var(--shadow-2), 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
 }
 /* brief accent pulse when the bridge jumps you to this card */
 .vv-page .how-card.flash {
@@ -763,7 +759,7 @@
 .vv-page .how-num {
   width: 26px;
   height: 26px;
-  border-radius: 8px;
+  border-radius: 0;
   flex: none;
   display: grid;
   place-items: center;
@@ -790,7 +786,7 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
   padding: 3px 7px;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .vv-page .how-tag.easy,
 .vv-page .how-tag.rich {
@@ -856,7 +852,7 @@
   align-items: center;
   gap: 5px;
   padding: 5px 9px;
-  border-radius: 7px;
+  border-radius: 0;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--text-muted);
@@ -898,7 +894,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
@@ -965,7 +961,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--accent-soft);
   color: var(--accent-strong);
 }

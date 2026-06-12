@@ -37,10 +37,11 @@
 }
 
 .title {
-  font-size: 36px;
-  line-height: 1.15;
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.25;
   letter-spacing: -0.02em;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 0 0 14px;
   text-wrap: balance;
 }
@@ -81,20 +82,18 @@
 /* ---------- accordion item ---------- */
 
 .item {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
   overflow: hidden;
   transition: border-color 140ms ease;
 }
 
 .item:hover {
-  border-color: var(--border-strong);
+  border-color: var(--faint);
 }
 
 .itemOpen {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-2);
+  border-color: var(--faint);
 }
 
 .q {
@@ -114,7 +113,7 @@
 }
 
 .q:hover {
-  background: var(--bg-subtle);
+  background: color-mix(in oklab, var(--acc) 4%, transparent);
 }
 
 .qText {
@@ -202,17 +201,16 @@
 .panelInner code {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  background: var(--bg-subtle);
+  background: var(--bg);
   padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-strong);
+  border: 1px solid var(--line-soft);
+  color: var(--txt);
 }
 
 .panelInner a {
-  color: var(--accent-strong);
+  color: var(--acc);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
 
 .panelInner a:hover {
@@ -223,10 +221,9 @@
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--text-strong);
-  background: var(--bg-inset);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  color: var(--txt);
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
   padding: 12px 14px;
   overflow-x: auto;
 }

@@ -28,10 +28,11 @@
 }
 
 .title {
-  font-size: 40px;
-  line-height: 1.1;
+  font-family: var(--font-mono);
+  font-size: 34px;
+  line-height: 1.22;
   letter-spacing: -0.02em;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 0 0 16px;
 }
 
@@ -48,20 +49,20 @@
   align-items: center;
   gap: 10px;
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--text-strong);
+  color: var(--acc);
   text-decoration: none;
   padding: 14px 20px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: var(--accent-soft, color-mix(in oklab, var(--accent) 8%, transparent));
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  border: 1px dashed color-mix(in oklab, var(--acc) 45%, transparent);
+  background: var(--bg-deep);
+  transition: background 0.15s ease;
 }
 
 .email:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--acc) 8%, transparent);
+  text-decoration: none;
+  color: var(--acc);
 }
 
 .emailArrow {

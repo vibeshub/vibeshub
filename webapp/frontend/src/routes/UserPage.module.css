@@ -175,11 +175,11 @@
 .cell {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 2.5px;
-  transition: transform 90ms ease;
+  border-radius: 0;
+  transition: opacity 90ms ease;
 }
 .cell:hover {
-  transform: scale(1.45);
+  opacity: 0.8;
 }
 .lvl[data-level="-1"] {
   background: transparent;
@@ -212,7 +212,7 @@
 .legend .sq {
   width: 11px;
   height: 11px;
-  border-radius: 2.5px;
+  border-radius: 0;
   flex: none;
 }
 
@@ -306,7 +306,7 @@
 .term {
   background: var(--bg-inset);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 10px 12px;
   font: 500 11.5px var(--font-mono);
   line-height: 1.7;
@@ -347,7 +347,7 @@
   width: 100%;
   justify-content: center;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--accent-strong);
   background: var(--accent-soft);
   color: var(--accent-strong);
@@ -372,7 +372,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated);
-  box-shadow: var(--shadow-2);
+  
   overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 1.15fr;
@@ -422,7 +422,7 @@
 .stepNum {
   width: 24px;
   height: 24px;
-  border-radius: 7px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   background: var(--accent-soft);
@@ -470,7 +470,7 @@
 .codeCopy {
   margin-left: auto;
   padding: 2px 8px;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--bg-elevated);
   color: var(--text-faint);
   border: 1px solid var(--border-subtle);

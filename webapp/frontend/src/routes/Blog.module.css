@@ -39,10 +39,11 @@
 }
 
 .indexTitle {
-  font-size: 36px;
-  line-height: 1.15;
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.25;
   letter-spacing: -0.02em;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 0 0 12px;
 }
 
@@ -78,7 +79,7 @@
 }
 
 .card:hover {
-  background: var(--bg-subtle);
+  background: color-mix(in oklab, var(--acc) 4%, transparent);
   text-decoration: none;
 }
 
@@ -87,9 +88,8 @@
   aspect-ratio: 16 / 10;
   object-fit: cover;
   object-position: top left;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
 }
 
 .cardMeta {
@@ -107,17 +107,18 @@
 }
 
 .cardTitle {
-  font-size: 21px;
+  font-family: var(--font-mono);
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 0 0 8px;
-  line-height: 1.25;
+  line-height: 1.35;
   text-wrap: pretty;
 }
 
 .card:hover .cardTitle {
-  color: var(--accent-strong);
+  color: var(--acc);
 }
 
 .cardExcerpt {
@@ -149,10 +150,11 @@
 }
 
 .postTitle {
-  font-size: 38px;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
-  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+  color: var(--strong);
   margin: 0 0 16px;
   text-wrap: balance;
 }
@@ -194,9 +196,10 @@
 
 .prose h2 {
   margin: 44px 0 14px;
-  font-size: 22px;
-  letter-spacing: -0.015em;
-  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--strong);
 }
 
 .prose p {
@@ -218,17 +221,17 @@
 
 .prose code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: 0.88em;
   padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--accent-soft, color-mix(in oklab, var(--accent) 12%, transparent));
-  color: var(--text-strong);
+  background: var(--bg-deep);
+  border: 1px solid var(--line-soft);
+  color: var(--txt);
 }
 
 .prose a {
-  color: var(--accent-strong, var(--accent));
+  color: var(--acc);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
 
 .prose a:hover {
@@ -245,10 +248,8 @@
   width: 100%;
   height: auto;
   display: block;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
-  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px oklch(0 0 0 / 0.06);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
 }
 
 .figure figcaption {
@@ -265,15 +266,15 @@
 .cta {
   margin-top: 16px;
   padding: 28px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
 }
 
 .ctaTitle {
-  font-size: 17px;
+  font-family: var(--font-mono);
+  font-size: 15px;
   font-weight: 600;
-  color: var(--text-strong);
+  color: var(--strong);
   margin: 0 0 6px;
 }
 

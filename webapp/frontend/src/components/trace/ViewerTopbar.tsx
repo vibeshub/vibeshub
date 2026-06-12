@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { Session } from "./types";
-import { IconLink, IconMoon, IconSun } from "./icons";
-import { useTheme } from "./theme";
+import { IconLink } from "./icons";
 
 interface Props {
   session: Session;
@@ -18,7 +17,6 @@ export function ViewerTopbar({
   repoName,
   ownerControls,
 }: Props) {
-  const { resolved, toggle } = useTheme();
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
 
@@ -71,17 +69,6 @@ export function ViewerTopbar({
           >
             <IconLink />
             <span className="share-label">Share</span>
-          </button>
-          <button
-            className="iconbtn"
-            onClick={toggle}
-            type="button"
-            aria-label={
-              resolved === "dark" ? "Switch to light theme" : "Switch to dark theme"
-            }
-            title={resolved === "dark" ? "Light" : "Dark"}
-          >
-            {resolved === "dark" ? <IconSun /> : <IconMoon />}
           </button>
         </div>
       </div>

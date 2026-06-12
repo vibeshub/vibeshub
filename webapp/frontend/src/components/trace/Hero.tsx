@@ -211,6 +211,9 @@ export function Hero({
   onTraceUpdated,
 }: Props) {
   const meta = session.meta;
+  // The ask quote repeats the opening prompt under the title; skip it when the
+  // title itself is already derived from that prompt.
+  const showAsk = !!meta.firstPrompt && !!(trace.title || meta.aiTitle);
   return (
     <section>
       <div className="hero">
@@ -222,6 +225,12 @@ export function Hero({
           canEdit={!!canEdit}
           onUpdated={onTraceUpdated ?? (() => {})}
         />
+        {showAsk && (
+          <div className="hero-ask">
+            <span className="who">user</span>
+            <span className="q">{meta.firstPrompt}</span>
+          </div>
+        )}
         <HeroBadges trace={trace} />
       </div>
       {trace.ai_digest && <DigestPanel digest={trace.ai_digest} />}

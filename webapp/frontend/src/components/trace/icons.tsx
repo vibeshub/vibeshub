@@ -89,34 +89,6 @@ export function IconSkill() {
   );
 }
 
-export function IconSun() {
-  return (
-    <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M8 1.5 V3 M8 13 V14.5 M1.5 8 H3 M13 8 H14.5 M3.5 3.5 L4.5 4.5 M11.5 11.5 L12.5 12.5 M3.5 12.5 L4.5 11.5 M11.5 4.5 L12.5 3.5"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-export function IconMoon() {
-  return (
-    <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M13.5 9.5 A5.5 5.5 0 1 1 6.5 2.5 a4.5 4.5 0 0 0 7 7 z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function TaskStatusIcon({
   status,
 }: {

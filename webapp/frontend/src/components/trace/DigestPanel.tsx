@@ -15,7 +15,10 @@ export function DigestPanel({ digest }: Props) {
   return (
     <div className={styles.wrap}>
       <section className={styles.panel}>
-        <div className={styles.eyebrow}>Digest</div>
+        <div className={styles.eyebrow}>
+          <span className={styles.badge}>ai digest</span>
+          <span className={styles.note}>generated on upload</span>
+        </div>
         <div className={styles.bullets}>
           {BULLETS.map(({ key, label }) => (
             <div className={styles.row} key={key}>

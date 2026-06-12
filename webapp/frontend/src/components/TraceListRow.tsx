@@ -2,25 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import type { MouseEvent } from "react";
 import type { TraceSummary } from "../types";
 
-function IconPr() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="4" cy="4" r="1.6" />
-      <circle cx="4" cy="12" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <path d="M4 5.6v4.8M12 5v5.4a3 3 0 0 1-3 3M9 3h3v3" />
-    </svg>
-  );
-}
-
 function IconArrow() {
   return (
     <svg
@@ -73,7 +54,7 @@ export function TraceListRow({ trace, showRepoChip, showUploader }: Props) {
   return (
     <Link className="trace-row" to={traceHref}>
       <div className="trace-icon">
-        <IconPr />
+        {trace.pr_number != null ? "⇅" : ">_"}
       </div>
       <div className="trace-body">
         <div className="trace-row-top">

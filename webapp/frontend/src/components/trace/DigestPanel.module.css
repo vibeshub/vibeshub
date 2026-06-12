@@ -1,52 +1,74 @@
-/* DigestPanel — the AI summary card under the hero. Aligns to the same
-   header-width gutters as the outcome card + metaline below it, and reuses the
-   site's card / eyebrow / chip language so it stays correct in dark mode. */
+/* DigestPanel — the AI summary panel under the hero, Terminal direction:
+   hairline panel with an outlined "ai digest" badge header and uppercase mono
+   keys in a fixed 120px column. */
 
 .wrap {
   max-width: var(--header-width);
   margin: 16px auto 0;
-  padding: 0 32px;
+  padding: 0 44px;
 }
 @media (max-width: 720px) {
   .wrap {
-    padding: 0 16px;
+    padding: 0 22px;
   }
 }
 
 .panel {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
 }
 
 .eyebrow {
-  font: 10.5px/1 var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-  margin-bottom: 12px;
+  color: var(--acc);
+}
+.badge {
+  color: var(--acc);
+  border: 1px solid color-mix(in oklab, var(--acc) 45%, transparent);
+  padding: 2px 8px;
+}
+.note {
+  color: var(--faint);
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
 .bullets {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 16px;
-  row-gap: 8px;
+  padding: 6px 16px 14px;
   font-size: 13.5px;
 }
 
 .row {
-  display: contents;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.row:last-child {
+  border-bottom: none;
 }
 
 .label {
-  color: var(--text-muted);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--faint);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 400;
+  padding-top: 2px;
 }
 
 .value {
-  color: var(--text);
+  color: var(--txt);
   line-height: 1.55;
   overflow-wrap: anywhere;
 }

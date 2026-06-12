@@ -1,60 +1,82 @@
-/* tokens.css — theme tokens + base type */
+/* tokens.css — Terminal theme tokens + base type.
+   Single dark theme: green-on-black, JetBrains Mono chrome, hairline grid. */
 
 :root {
-  /* Warm neutral light theme */
-  --bg: oklch(0.985 0.004 75);
-  --bg-elevated: oklch(1 0 0);
-  --bg-subtle: oklch(0.965 0.005 75);
-  --bg-inset: oklch(0.955 0.006 75);
-  --text: oklch(0.20 0.012 75);
-  --text-strong: oklch(0.12 0.012 75);
-  --text-muted: oklch(0.50 0.012 75);
-  --text-faint: oklch(0.62 0.010 75);
-  --border: oklch(0.91 0.006 75);
-  --border-subtle: oklch(0.94 0.005 75);
-  --border-strong: oklch(0.84 0.008 75);
-  --accent: oklch(0.66 0.13 50);
-  --accent-soft: oklch(0.95 0.04 65);
-  --accent-strong: oklch(0.56 0.14 45);
-  --accent-fg: oklch(0.20 0.04 50);
+  /* Terminal theme — single theme, always dark */
+  --bg:        oklch(0.15 0.008 170);   /* page background, green-black */
+  --bg-deep:   oklch(0.122 0.008 170);  /* panel/card background (darker) */
+  --line:      oklch(0.26 0.015 170);   /* primary hairline border */
+  --line-soft: oklch(0.215 0.012 170);  /* row separators inside panels */
+  --txt:       oklch(0.88 0.012 160);   /* body text */
+  --strong:    #fff;                    /* headings, emphasized text */
+  --dim:       oklch(0.68 0.015 160);   /* secondary text */
+  --faint:     oklch(0.56 0.02 160);    /* labels, metadata, timestamps */
+  --acc:       oklch(0.78 0.15 160);    /* the green. links, CTAs, status */
+  --acc-ink:   oklch(0.17 0.02 170);    /* text on top of --acc */
+  --err:       oklch(0.66 0.13 25);     /* errors, diff deletions */
 
-  /* Tool category dots — desaturated, theme-aware */
-  --tool-read: oklch(0.62 0.10 235);
-  --tool-write: oklch(0.68 0.13 75);
-  --tool-bash: oklch(0.60 0.10 150);
-  --tool-agent: oklch(0.58 0.13 290);
-  --tool-skill: oklch(0.62 0.13 340);
-  --tool-ask: oklch(0.60 0.10 200);
-  --tool-task: oklch(0.55 0.02 250);
-  --tool-other: oklch(0.55 0.01 75);
+  /* tool-category colors (trace viewer chips, size bars, dots) */
+  --t-read:  oklch(0.72 0.09 220);  /* Read */
+  --t-bash:  oklch(0.75 0.11 160);  /* Bash */
+  --t-write: oklch(0.78 0.10 85);   /* Write / Edit */
+  --t-agent: oklch(0.72 0.09 295);  /* Task / Subagent */
+  --t-skill: oklch(0.72 0.09 340);  /* Skill */
+  --t-other: oklch(0.60 0.015 170); /* everything else */
 
-  /* Diff + syntax highlighting (light) */
-  --diff-add-bg: oklch(0.94 0.05 150);
-  --diff-add-num: oklch(0.50 0.10 150);
-  --diff-del-bg: oklch(0.93 0.05 25);
-  --diff-del-num: oklch(0.52 0.13 25);
-  --diff-hunk-fg: oklch(0.55 0.05 250);
-  --syn-comment: oklch(0.58 0.02 75);
-  --syn-keyword: oklch(0.52 0.14 300);
-  --syn-string: oklch(0.48 0.11 150);
-  --syn-number: oklch(0.52 0.13 50);
-  --syn-function: oklch(0.50 0.13 250);
-  --syn-punct: oklch(0.50 0.012 75);
-
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
-  --shadow-1: 0 1px 0 0 oklch(0.91 0.006 75 / 0.6);
-  --shadow-2:
-    0 1px 2px oklch(0.5 0 0 / 0.04),
-    0 4px 12px oklch(0.5 0 0 / 0.05);
-
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Helvetica, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas,
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
     monospace;
+  --font-body: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui,
+    sans-serif;
 
-  --content-width: 760px;
+  /* ---- semantic aliases (pre-redesign names used across the app) ---- */
+  --bg-elevated: var(--bg-deep);
+  --bg-subtle: var(--bg-deep);
+  --bg-inset: var(--bg);
+  --text: var(--txt);
+  --text-strong: var(--strong);
+  --text-muted: var(--dim);
+  --text-faint: var(--faint);
+  --border: var(--line);
+  --border-subtle: var(--line-soft);
+  --border-strong: var(--faint);
+  --accent: var(--acc);
+  --accent-soft: color-mix(in oklab, var(--acc) 10%, transparent);
+  --accent-strong: var(--acc);
+  --accent-fg: var(--acc-ink);
+
+  --tool-read: var(--t-read);
+  --tool-write: var(--t-write);
+  --tool-bash: var(--t-bash);
+  --tool-agent: var(--t-agent);
+  --tool-skill: var(--t-skill);
+  --tool-ask: var(--t-read);
+  --tool-task: var(--t-other);
+  --tool-other: var(--t-other);
+
+  /* Diff + syntax highlighting */
+  --diff-add-bg: color-mix(in oklab, var(--acc) 9%, transparent);
+  --diff-add-num: color-mix(in oklab, var(--acc) 70%, var(--txt));
+  --diff-del-bg: color-mix(in oklab, var(--err) 10%, transparent);
+  --diff-del-num: color-mix(in oklab, var(--err) 60%, var(--txt));
+  --diff-hunk-fg: var(--t-read);
+  --syn-comment: var(--faint);
+  --syn-keyword: oklch(0.76 0.09 300);
+  --syn-string: oklch(0.78 0.09 160);
+  --syn-number: oklch(0.78 0.09 85);
+  --syn-function: oklch(0.74 0.09 220);
+  --syn-punct: var(--dim);
+
+  /* Square corners + flat panels everywhere — depth comes from --bg-deep
+     fills and 1px --line borders, never radius or shadow. */
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-lg: 0px;
+  --shadow-1: none;
+  --shadow-2: none;
+
+  --font-sans: var(--font-body);
+
+  --content-width: 860px;
   --header-width: 1200px;
 
   /* Legacy aliases used by pre-existing chrome (TraceHeader, ErrorState, …). */
@@ -62,9 +84,9 @@
   --color-fg: var(--text);
   --color-fg-muted: var(--text-muted);
   --color-border: var(--border);
-  --color-link: var(--accent-strong);
-  --color-link-hover: var(--accent);
-  --color-danger: oklch(0.62 0.18 25);
+  --color-link: var(--acc);
+  --color-link-hover: var(--acc);
+  --color-danger: var(--err);
   --radius-md: var(--radius);
   --space-1: 4px;
   --space-2: 8px;
@@ -73,53 +95,6 @@
   --space-6: 24px;
   --space-8: 32px;
   --shadow-sm: var(--shadow-1);
-
-  color-scheme: light;
-}
-
-[data-theme="dark"] {
-  --bg: oklch(0.155 0.005 70);
-  --bg-elevated: oklch(0.195 0.005 70);
-  --bg-subtle: oklch(0.180 0.005 70);
-  --bg-inset: oklch(0.130 0.005 70);
-  --text: oklch(0.94 0.006 75);
-  --text-strong: oklch(0.99 0.004 75);
-  --text-muted: oklch(0.68 0.010 75);
-  --text-faint: oklch(0.56 0.010 75);
-  --border: oklch(0.30 0.006 70);
-  --border-subtle: oklch(0.24 0.005 70);
-  --border-strong: oklch(0.40 0.008 70);
-  --accent: oklch(0.74 0.13 55);
-  --accent-soft: oklch(0.32 0.08 55);
-  --accent-strong: oklch(0.82 0.14 55);
-  --accent-fg: oklch(0.95 0.06 60);
-
-  --tool-read: oklch(0.72 0.11 235);
-  --tool-write: oklch(0.78 0.13 75);
-  --tool-bash: oklch(0.72 0.11 150);
-  --tool-agent: oklch(0.72 0.13 290);
-  --tool-skill: oklch(0.74 0.13 340);
-  --tool-ask: oklch(0.72 0.11 200);
-  --tool-task: oklch(0.72 0.02 250);
-  --tool-other: oklch(0.70 0.01 75);
-
-  /* Diff + syntax highlighting (dark) */
-  --diff-add-bg: oklch(0.30 0.06 150);
-  --diff-add-num: oklch(0.78 0.10 150);
-  --diff-del-bg: oklch(0.30 0.07 25);
-  --diff-del-num: oklch(0.78 0.12 25);
-  --diff-hunk-fg: oklch(0.70 0.05 250);
-  --syn-comment: oklch(0.60 0.02 75);
-  --syn-keyword: oklch(0.78 0.13 300);
-  --syn-string: oklch(0.78 0.12 150);
-  --syn-number: oklch(0.80 0.12 60);
-  --syn-function: oklch(0.78 0.12 250);
-  --syn-punct: oklch(0.70 0.012 75);
-
-  --shadow-1: 0 1px 0 0 oklch(0.30 0.006 70 / 0.6);
-  --shadow-2:
-    0 1px 2px oklch(0 0 0 / 0.5),
-    0 8px 24px oklch(0 0 0 / 0.4);
 
   color-scheme: dark;
 }
