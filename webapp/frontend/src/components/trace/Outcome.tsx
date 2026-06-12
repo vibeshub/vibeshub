@@ -7,6 +7,7 @@ import {
   shortenPath,
 } from "./format";
 import { buildSessionFromRaw } from "./sessionFromRaw";
+import { FILE_EDIT_TOOLS } from "./changes";
 import { fetchAgentJsonl } from "../../api";
 
 interface Props {
@@ -48,12 +49,7 @@ function deriveFiles(
           : null;
       if (!fp) continue;
       if (e.name === "Read") reads.add(fp);
-      if (
-        e.name === "Write" ||
-        e.name === "Edit" ||
-        e.name === "MultiEdit" ||
-        e.name === "apply_patch"
-      ) {
+      if (FILE_EDIT_TOOLS.has(e.name)) {
         writes.push({ path: fp, name: e.name, ts: e.ts });
       }
     }

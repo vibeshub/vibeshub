@@ -52,6 +52,24 @@ function tool(
   };
 }
 
+function toolAt(
+  name: string,
+  uuid: string,
+  tsValue: string,
+  input: Record<string, unknown>,
+): StreamEvent {
+  return {
+    kind: "tool_use",
+    name,
+    input,
+    id: `id-${uuid}`,
+    ts: tsValue,
+    msgId: "m1",
+    uuid,
+    result: null,
+  };
+}
+
 function agent(over: Partial<AgentSummary> = {}): AgentSummary {
   return {
     agent_id: "a1",
@@ -279,6 +297,36 @@ describe("buildFileChanges subagents", () => {
     expect(g.promptUuid).toBeNull();
     expect(g.agentBadge).toBe("Task[general]");
     expect(g.hunks[0].jumpUuid).toBeNull();
+  });
+});
+
+describe("buildFileChanges ordering with missing timestamps", () => {
+  it("keeps stream order when a later edit has no timestamp", () => {
+    const stream = [
+      prompt("p1", "first try"),
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "base", new_string: "alpha" }),
+      prompt("p2", "rewrite it"),
+      // ts "" must not sort this edit before t1.
+      toolAt("Edit", "t2", "", {
+        file_path: "/r/a.ts",
+        old_string: "alpha plus context",
+        new_string: "beta",
+      }),
+    ];
+    const f = buildFileChanges(stream, [])[0];
+    expect(f.groups.map((g) => g.turnLabel)).toEqual(["turn 1", "turn 2"]);
+    expect(f.groups[0].hunks[0].supersededBy).toEqual({ turnLabel: "turn 2" });
+  });
+
+  it("keeps stream order for files whose first edit has no timestamp", () => {
+    const stream = [
+      tool("Edit", "t1", { file_path: "/r/z.ts", old_string: "a", new_string: "b" }),
+      toolAt("Edit", "t2", "", { file_path: "/r/m.ts", old_string: "a", new_string: "b" }),
+    ];
+    expect(buildFileChanges(stream, []).map((f) => f.path)).toEqual([
+      "/r/z.ts",
+      "/r/m.ts",
+    ]);
   });
 });
 

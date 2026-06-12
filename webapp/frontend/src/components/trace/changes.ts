@@ -44,7 +44,14 @@ export function changeAnchorId(path: string): string {
   return "change-" + path.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "apply_patch"]);
+// Tool names that modify a file (carry input.file_path). Shared with
+// deriveFiles in Outcome.tsx so the two walks can't drift.
+export const FILE_EDIT_TOOLS = new Set([
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "apply_patch",
+]);
 
 interface PromptRef {
   uuid: string | null;
@@ -81,6 +88,7 @@ function promptRef(e: UserPromptEvent, ordinal: number): PromptRef {
 interface EditOp {
   path: string;
   ts: string;
+  seq: number; // stream walk order: tiebreaker, and fallback when ts is missing
   jumpUuid: string | null;
   prompt: PromptRef;
   agentBadge: string | null;
@@ -99,7 +107,8 @@ function opsFromTool(
   const path = typeof e.input.file_path === "string" ? e.input.file_path : null;
   if (!path) return [];
   const patch = extractPatch(e.result?.toolUseResult?.structuredPatch);
-  const base = { path, ts: e.ts, jumpUuid, prompt, agentBadge };
+  // seq is assigned post-hoc in buildFileChanges once all ops are collected.
+  const base = { path, ts: e.ts, seq: 0, jumpUuid, prompt, agentBadge };
 
   if (e.name === "MultiEdit" && Array.isArray(e.input.edits) && !patch) {
     // No whole-call patch: one hunk per sub-edit (line numbers restart per
@@ -182,7 +191,7 @@ export function buildFileChanges(
     if (e.name === "Task") {
       taskByToolId.set(e.id, { uuid: e.uuid || null, prompt: current });
     }
-    if (WRITE_TOOLS.has(e.name)) {
+    if (FILE_EDIT_TOOLS.has(e.name)) {
       ops.push(...opsFromTool(e, current, e.uuid || null, null));
     }
   }
@@ -195,17 +204,23 @@ export function buildFileChanges(
       : undefined;
     const prompt = dispatch?.prompt ?? SESSION_START;
     const jumpUuid = dispatch?.uuid ?? null;
-    const badge = `Task[${agent.agent_type}]`;
+    const badge = `Task[${agent.agent_type || "agent"}]`;
     for (const e of sub) {
       if (e.kind !== "tool_use") continue;
       if (e.name === "Read" && typeof e.input.file_path === "string") {
         reads.add(e.input.file_path);
       }
-      if (WRITE_TOOLS.has(e.name)) {
+      if (FILE_EDIT_TOOLS.has(e.name)) {
         ops.push(...opsFromTool(e, prompt, jumpUuid, badge));
       }
     }
   }
+
+  // Assign stream-collection order (main stream first, then subagent streams in
+  // push order) as the stable tiebreaker / fallback for timestamp-less ops.
+  ops.forEach((op, i) => {
+    op.seq = i;
+  });
 
   const byPath = new Map<string, EditOp[]>();
   for (const op of ops) {
@@ -214,11 +229,16 @@ export function buildFileChanges(
     byPath.set(op.path, list);
   }
 
-  const files: Array<{ change: FileChange; firstTs: string }> = [];
+  const files: Array<{ change: FileChange; firstTs: string; firstSeq: number }> =
+    [];
   for (const [path, list] of byPath) {
-    // ISO timestamps compare lexicographically; sort is stable so ts ties
-    // keep stream order.
-    list.sort((a, b) => a.ts.localeCompare(b.ts));
+    // ISO timestamps compare lexicographically, with seq as the tiebreaker.
+    // When either ts is missing (e.g. cursor-imported traces emit ts: ""),
+    // fall back to stream-collection order so empty ts can't reorder edits.
+    list.sort(
+      (a, b) =>
+        (a.ts && b.ts ? a.ts.localeCompare(b.ts) : 0) || a.seq - b.seq,
+    );
 
     // Supersede pass: a Write replaces everything before it; an edit whose
     // old_string textually contains ALL of an earlier hunk's emitted content
@@ -283,9 +303,19 @@ export function buildFileChanges(
     const first = list[0];
     const kind: "new" | "mod" =
       first.isWrite && !reads.has(path) ? "new" : "mod";
-    files.push({ change: { path, kind, adds, dels, groups }, firstTs: first.ts });
+    files.push({
+      change: { path, kind, adds, dels, groups },
+      firstTs: first.ts,
+      firstSeq: first.seq,
+    });
   }
 
-  files.sort((a, b) => a.firstTs.localeCompare(b.firstTs));
+  // Same comparator shape as the per-file sort: chronological with a seq
+  // tiebreak when both first timestamps are present, stream order otherwise.
+  files.sort(
+    (a, b) =>
+      (a.firstTs && b.firstTs ? a.firstTs.localeCompare(b.firstTs) : 0) ||
+      a.firstSeq - b.firstSeq,
+  );
   return files.map((f) => f.change);
 }
