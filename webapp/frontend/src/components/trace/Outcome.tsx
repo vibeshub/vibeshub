@@ -6,12 +6,13 @@ import {
   fmtDurationCompact,
   shortenPath,
 } from "./format";
-import { buildSessionFromRaw } from "./sessionFromRaw";
-import { fetchAgentJsonl } from "../../api";
+import { FILE_EDIT_TOOLS, type SubagentEntry } from "./changes";
 
 interface Props {
   session: Session;
   trace: TraceSummary;
+  subagents: SubagentEntry[];
+  subagentsLoading: boolean;
 }
 
 interface TouchedFile {
@@ -48,12 +49,7 @@ function deriveFiles(
           : null;
       if (!fp) continue;
       if (e.name === "Read") reads.add(fp);
-      if (
-        e.name === "Write" ||
-        e.name === "Edit" ||
-        e.name === "MultiEdit" ||
-        e.name === "apply_patch"
-      ) {
+      if (FILE_EDIT_TOOLS.has(e.name)) {
         writes.push({ path: fp, name: e.name, ts: e.ts });
       }
     }
@@ -71,49 +67,6 @@ function deriveFiles(
     out.push({ path: tightPath(path, root), kind });
   }
   return out;
-}
-
-// Fetch and parse every subagent's stream once per trace. Failures are
-// swallowed per-agent so one broken subagent doesn't blank the panel.
-function useSubagentStreams(trace: TraceSummary): {
-  streams: StreamEvent[][];
-  loading: boolean;
-} {
-  const [streams, setStreams] = useState<StreamEvent[][]>([]);
-  const [loading, setLoading] = useState<boolean>(
-    (trace.agents?.length ?? 0) > 0,
-  );
-
-  useEffect(() => {
-    // Skip guardian subagents: their review threads shouldn't add to
-    // files-touched or the subagent panel.
-    const agents = (trace.agents ?? []).filter(
-      (a) => a.agent_type !== "guardian",
-    );
-    if (agents.length === 0) {
-      setStreams([]);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    Promise.all(
-      agents.map((a) =>
-        fetchAgentJsonl(trace.short_id, a.agent_id)
-          .then((jsonl) => buildSessionFromRaw(jsonl).stream)
-          .catch(() => null),
-      ),
-    ).then((results) => {
-      if (cancelled) return;
-      setStreams(results.filter((s): s is StreamEvent[] => s !== null));
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [trace.short_id, trace.agents]);
-
-  return { streams, loading };
 }
 
 function lastAssistantText(stream: StreamEvent[]): string | null {
@@ -144,15 +97,23 @@ function StatCell({
 
 const FILES_COLLAPSED = 6;
 
-export function Outcome({ session, trace }: Props) {
+export function Outcome({
+  session,
+  trace,
+  subagents,
+  subagentsLoading,
+}: Props) {
   const { meta, stream } = session;
   const isTextImport = meta.sourceFormat === "terminal";
   const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
   const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
   const wall = Math.max(0, end - start);
   const distinctToolCount = Object.keys(meta.toolCounts).length;
-  const { streams: subStreams, loading: subLoading } =
-    useSubagentStreams(trace);
+  const subStreams = useMemo(
+    () => subagents.map((s) => s.stream),
+    [subagents],
+  );
+  const subLoading = subagentsLoading;
 
   const files = useMemo(
     () => deriveFiles([stream, ...subStreams], meta.cwd),

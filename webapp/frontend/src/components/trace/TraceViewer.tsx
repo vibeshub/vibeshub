@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
@@ -7,8 +7,11 @@ import { JumpStrip } from "./JumpStrip";
 import { PromptRail } from "./PromptRail";
 import { ChapterRail } from "./ChapterRail";
 import { Hero } from "./Hero";
-import { ThreadControls } from "./ThreadControls";
+import { ThreadControls, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
+import { ChangesView } from "./ChangesView";
+import { buildFileChanges } from "./changes";
+import { useSubagentStreams } from "./useSubagentStreams";
 import { usePersistedBoolean } from "./persistedState";
 
 interface Props {
@@ -43,6 +46,56 @@ export function TraceViewer({
     false,
   );
 
+  const { entries: subagents, loading: subagentsLoading } =
+    useSubagentStreams(trace);
+  const changes = useMemo(
+    () => buildFileChanges(session.stream, subagents),
+    [session.stream, subagents],
+  );
+
+  // #changes in the URL deep-links into Changes mode; leaving the mode
+  // (toggle or jump) clears it so shared links stay accurate.
+  const [mode, setModeState] = useState<ViewMode>(() =>
+    typeof window !== "undefined" && window.location.hash === "#changes"
+      ? "changes"
+      : "conversation",
+  );
+  const setMode = (m: ViewMode) => {
+    setModeState(m);
+    if (typeof window === "undefined") return;
+    const base = window.location.pathname + window.location.search;
+    window.history.replaceState(
+      null,
+      "",
+      m === "changes" ? `${base}#changes` : base,
+    );
+  };
+
+  const pendingJump = useRef<{
+    jumpUuid: string | null;
+    promptUuid: string | null;
+  } | null>(null);
+  const handleJump = (jumpUuid: string | null, promptUuid: string | null) => {
+    pendingJump.current = { jumpUuid, promptUuid };
+    setMode("conversation");
+  };
+  useEffect(() => {
+    if (mode !== "conversation" || !pendingJump.current) return;
+    const { jumpUuid, promptUuid } = pendingJump.current;
+    pendingJump.current = null;
+    // Wait one frame so the Thread is mounted before searching for anchors.
+    requestAnimationFrame(() => {
+      // Collapsed tool groups render no [data-uuid] for their tools; fall
+      // back to the prompt card that produced the edit.
+      const el =
+        (jumpUuid && document.querySelector(`[data-uuid="${jumpUuid}"]`)) ||
+        (promptUuid &&
+          document.querySelector(`[data-uuid="${promptUuid}"]`)) ||
+        null;
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [mode]);
+
   const empty = session.stream.length === 0;
 
   return (
@@ -60,6 +113,8 @@ export function TraceViewer({
         session={session}
         trace={trace}
         rawHref={rawHref}
+        subagents={subagents}
+        subagentsLoading={subagentsLoading}
         canEdit={canEditTitle}
         onTraceUpdated={onTraceUpdated}
       />
@@ -81,14 +136,25 @@ export function TraceViewer({
               setShowSystemEvents={setShowSystemEvents}
               expandToolCalls={expandToolCalls}
               setExpandToolCalls={setExpandToolCalls}
+              mode={mode}
+              setMode={setMode}
+              hasChanges={changes.length > 0}
             />
-            <Thread
-              session={session}
-              shortId={shortId}
-              showSystemEvents={showSystemEvents}
-              expandToolCalls={expandToolCalls}
-              digest={trace.ai_digest}
-            />
+            {mode === "changes" && changes.length > 0 ? (
+              <ChangesView
+                session={session}
+                changes={changes}
+                onJump={handleJump}
+              />
+            ) : (
+              <Thread
+                session={session}
+                shortId={shortId}
+                showSystemEvents={showSystemEvents}
+                expandToolCalls={expandToolCalls}
+                digest={trace.ai_digest}
+              />
+            )}
           </div>
         </div>
       )}

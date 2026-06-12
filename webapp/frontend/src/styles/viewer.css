@@ -2221,6 +2221,10 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .vibeshub-viewer .changes-index-total {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* Provenance chip for traces reconstructed from a .txt terminal export. */
@@ -2232,4 +2236,156 @@
   font-size: 11px;
   font-weight: 600;
   cursor: help;
+}
+
+/* ----- Changes view (trace-native net diff) ----- */
+.vibeshub-viewer .view-pills {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  margin-right: 12px;
+}
+.vibeshub-viewer .view-pill {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.vibeshub-viewer .view-pill.on {
+  background: var(--bg);
+  color: var(--text);
+}
+.vibeshub-viewer .changes-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.vibeshub-viewer .changes-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .changes-index-item {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.vibeshub-viewer .changes-index-item:hover .changes-index-path {
+  text-decoration: underline;
+}
+.vibeshub-viewer .changes-index-new {
+  color: var(--diff-add-num);
+  font-size: 10px;
+}
+.vibeshub-viewer .changes-index-total {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+.vibeshub-viewer .change-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+  scroll-margin-top: 140px;
+}
+.vibeshub-viewer .change-card-head {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+.vibeshub-viewer .change-new-badge {
+  font-size: 10px;
+  color: var(--diff-add-num);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0 7px;
+  margin-left: 8px;
+}
+.vibeshub-viewer .change-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--border-subtle);
+}
+.vibeshub-viewer .change-group:first-of-type .change-caption {
+  border-top: 0;
+}
+.vibeshub-viewer .change-caption-text {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vibeshub-viewer .change-caption-turn,
+.vibeshub-viewer .change-caption-agent {
+  flex: 0 0 auto;
+}
+.vibeshub-viewer .change-caption-agent {
+  color: var(--accent-strong);
+}
+.vibeshub-viewer .change-caption-jump {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+}
+.vibeshub-viewer .change-caption-jump:hover {
+  text-decoration: underline;
+}
+.vibeshub-viewer .change-card .diff-view {
+  border: 0;
+  border-radius: 0;
+}
+.vibeshub-viewer .superseded-stub {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: var(--bg-inset);
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.vibeshub-viewer .superseded-body .diff-view {
+  opacity: 0.55;
+}
+.vibeshub-viewer .change-nodata {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-faint);
 }

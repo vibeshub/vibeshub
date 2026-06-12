@@ -1,8 +1,13 @@
+export type ViewMode = "conversation" | "changes";
+
 interface Props {
   showSystemEvents: boolean;
   setShowSystemEvents: (v: boolean) => void;
   expandToolCalls: boolean;
   setExpandToolCalls: (v: boolean) => void;
+  mode: ViewMode;
+  setMode: (m: ViewMode) => void;
+  hasChanges: boolean;
 }
 
 function Toggle({
@@ -32,19 +37,48 @@ export function ThreadControls({
   setShowSystemEvents,
   expandToolCalls,
   setExpandToolCalls,
+  mode,
+  setMode,
+  hasChanges,
 }: Props) {
   return (
     <div className="thread-controls">
-      <Toggle
-        on={showSystemEvents}
-        onClick={() => setShowSystemEvents(!showSystemEvents)}
-        label="Show system events"
-      />
-      <Toggle
-        on={expandToolCalls}
-        onClick={() => setExpandToolCalls(!expandToolCalls)}
-        label="Expand tool calls"
-      />
+      {hasChanges && (
+        <div className="view-pills" role="tablist" aria-label="View mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "conversation"}
+            className={"view-pill" + (mode === "conversation" ? " on" : "")}
+            onClick={() => setMode("conversation")}
+          >
+            Conversation
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "changes"}
+            className={"view-pill" + (mode === "changes" ? " on" : "")}
+            onClick={() => setMode("changes")}
+          >
+            Changes
+          </button>
+        </div>
+      )}
+      {mode === "conversation" && (
+        <>
+          <Toggle
+            on={showSystemEvents}
+            onClick={() => setShowSystemEvents(!showSystemEvents)}
+            label="Show system events"
+          />
+          <Toggle
+            on={expandToolCalls}
+            onClick={() => setExpandToolCalls(!expandToolCalls)}
+            label="Expand tool calls"
+          />
+        </>
+      )}
     </div>
   );
 }

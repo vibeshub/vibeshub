@@ -58,7 +58,12 @@ function makeTrace(over: Partial<TraceSummary> = {}): TraceSummary {
 function renderOutcome(session: Session, trace: TraceSummary) {
   return render(
     <MemoryRouter>
-      <Outcome session={session} trace={trace} />
+      <Outcome
+        session={session}
+        trace={trace}
+        subagents={[]}
+        subagentsLoading={false}
+      />
     </MemoryRouter>,
   );
 }
