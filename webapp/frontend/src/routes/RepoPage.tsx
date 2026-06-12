@@ -95,7 +95,7 @@ export function RepoPage() {
           <div className="entity-body">
             <div className="entity-eyebrow">
               <span className="dot" />
-              <span>REPOSITORY</span>
+              <span>repository</span>
               <span style={{ opacity: 0.5 }}>·</span>
               <span>indexed {relativeFrom(data.stats.last_trace_at)}</span>
             </div>
@@ -106,76 +106,78 @@ export function RepoPage() {
               <span className="sep">/</span>
               <Link to={`/${owner}/${repo}`}>{repo}</Link>
             </h1>
+            {ghRepo?.description && (
+              <p className="entity-desc">{ghRepo.description}</p>
+            )}
             <div className="entity-meta">
+              {ghRepo?.default_branch && (
+                <span>
+                  <span className="kv-key">default</span>
+                  {ghRepo.default_branch}
+                </span>
+              )}
+              {ghRepo?.license_spdx && (
+                <span>
+                  <span className="kv-key">license</span>
+                  {ghRepo.license_spdx}
+                </span>
+              )}
+              {ghRepo?.primary_language && (
+                <span>
+                  <span className="kv-key">stack</span>
+                  {ghRepo.primary_language.toLowerCase()}
+                </span>
+              )}
+              {ghRepo && !ghError && (
+                <span>
+                  <span className="kv-key">stars</span>
+                  {compactCount(ghRepo.stargazers_count)}
+                </span>
+              )}
               <a href={githubUrl} target="_blank" rel="noreferrer">
                 github.com/{owner}/{repo} ↗
               </a>
             </div>
           </div>
-          <div className="entity-actions">
-            <a
-              href={githubUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="iconbtn primary"
-            >
-              View on GitHub ↗
-            </a>
-          </div>
         </section>
 
         <div className="stat-strip">
-          {ghError || !ghRepo ? (
-            <div className="stat-cell">
-              <div className="stat-label">GitHub</div>
-              <div className="stat-value">—</div>
-              <div className="stat-sub">
-                {ghError ? "Stats unavailable" : "Loading…"}
-              </div>
+          <div className="stat-cell">
+            <div className="stat-label">Traces</div>
+            <div className="stat-value">
+              {compactCount(data.stats.trace_count)}
             </div>
-          ) : (
-            <>
-              <div className="stat-cell">
-                <div className="stat-label">Stars</div>
-                <div className="stat-value">
-                  {compactCount(ghRepo.stargazers_count)}
-                </div>
-                <div className="stat-sub">
-                  {compactCount(ghRepo.watchers_count)} watching
-                </div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Forks</div>
-                <div className="stat-value">
-                  {compactCount(ghRepo.forks_count)}
-                </div>
-                <div className="stat-sub">
-                  {compactCount(ghRepo.open_issues_count)} open issues
-                </div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Language</div>
-                <div className="stat-value" style={{ fontSize: 16 }}>
-                  {ghRepo.primary_language ?? "—"}
-                </div>
-                <div className="stat-sub">
-                  {ghRepo.license_spdx ?? "no license"}
-                </div>
-              </div>
-              <div className="stat-cell">
-                <div className="stat-label">Updated</div>
-                <div className="stat-value" style={{ fontSize: 16 }}>
-                  {ghRepo.updated_at
-                    ? relativeFrom(ghRepo.updated_at)
-                    : "—"}
-                </div>
-                <div className="stat-sub">
-                  default branch{" "}
-                  {ghRepo.default_branch ?? "—"}
-                </div>
-              </div>
-            </>
-          )}
+            <div className="stat-sub">
+              latest {relativeFrom(data.stats.last_trace_at)}
+            </div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Messages</div>
+            <div className="stat-value">
+              {compactCount(data.stats.message_count)}
+            </div>
+            <div className="stat-sub">
+              {data.stats.trace_count > 0
+                ? `avg ${Math.round(
+                    data.stats.message_count / data.stats.trace_count,
+                  )} / trace`
+                : "no traces yet"}
+            </div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Pull requests</div>
+            <div className="stat-value">
+              {compactCount(data.stats.pr_count)}
+            </div>
+            <div className="stat-sub">with a trace attached</div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-label">Contributors</div>
+            <div className="stat-value">
+              {compactCount(data.stats.contributor_count)}
+            </div>
+            <div className="stat-sub">who shared a trace</div>
+          </div>
         </div>
 
         <div className="tabs">
@@ -255,16 +257,10 @@ export function RepoPage() {
                       className="contrib-row"
                       to={`/${c.login}`}
                     >
-                      <span
-                        className="contrib-avatar"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, oklch(0.68 0.13 50), oklch(0.55 0.10 290))",
-                        }}
-                      >
-                        {c.login.charAt(0).toUpperCase()}
+                      <span className="contrib-avatar">
+                        {c.login.charAt(0).toLowerCase()}
                       </span>
-                      <span className="contrib-name">{c.login}</span>
+                      <span className="contrib-name">@{c.login}</span>
                       <span className="contrib-count">{c.trace_count}</span>
                     </Link>
                   ))
@@ -276,19 +272,13 @@ export function RepoPage() {
               <div className="side-card-head">
                 <h4>About</h4>
               </div>
-              <div
-                style={{
-                  padding: "12px 14px 14px",
-                  fontSize: 13,
-                  color: "var(--text-muted)",
-                  lineHeight: 1.55,
-                }}
-              >
+              <div className="about">
                 <p style={{ margin: "0 0 10px" }}>
                   Trace visibility mirrors this repository on GitHub: traces
                   are viewable by anyone who can see the repo. Sensitive
                   content is automatically redacted before indexing.
                 </p>
+                <Link to="/privacy">how sharing works ↗</Link>
               </div>
             </div>
           </aside>
@@ -410,17 +400,7 @@ function ContributorList({
       <div className="trace-list">
         {contributors.map((c) => (
           <Link key={c.login} className="trace-row" to={`/${c.login}`}>
-            <div
-              className="trace-icon"
-              style={{
-                background:
-                  "linear-gradient(135deg, oklch(0.68 0.13 50), oklch(0.55 0.10 290))",
-                color: "white",
-                fontWeight: 600,
-              }}
-            >
-              {c.login.charAt(0).toUpperCase()}
-            </div>
+            <div className="trace-icon">{c.login.charAt(0).toLowerCase()}</div>
             <div className="trace-body">
               <div className="trace-row-top">
                 <span className="trace-title">@{c.login}</span>

@@ -55,7 +55,7 @@ describe("Landing", () => {
       screen.getByText(/Reuse digest anchors as the nav spine/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/start from the story, not message one/i),
+      screen.getByText(/IntersectionObserver thrashed, switched to scroll math/i),
     ).toBeInTheDocument();
   });
 

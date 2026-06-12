@@ -15,62 +15,65 @@
 
 /* ---------- top bar ---------- */
 .vibeshub-viewer .topbar {
-  background: color-mix(in oklab, var(--bg) 80%, transparent);
-  backdrop-filter: saturate(140%) blur(12px);
-  -webkit-backdrop-filter: saturate(140%) blur(12px);
-  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
 .vibeshub-viewer .topbar-inner {
   max-width: var(--header-width);
   margin: 0 auto;
-  padding: 14px 32px;
+  padding: 0 44px;
+  height: 58px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 .vibeshub-viewer .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-family: var(--font-mono);
   font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text-strong);
+  font-size: 15px;
+  color: var(--strong);
+  flex: none;
 }
 .vibeshub-viewer .brand-mark {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  background: var(--accent);
+  border: 1px solid var(--acc);
+  background: transparent;
   display: grid;
   place-items: center;
-  color: var(--accent-fg);
-  font-size: 12px;
-  font-weight: 700;
+  color: var(--acc);
+  font-size: 13px;
+  font-weight: 600;
   font-family: var(--font-mono);
+  flex: none;
 }
 .vibeshub-viewer .brand-sep {
-  color: var(--text-faint);
-  margin: 0 4px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 .vibeshub-viewer .brand-trace {
   font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 12.5px;
+  color: var(--strong);
+  font-weight: 600;
 }
 .vibeshub-viewer .topbar-link {
-  color: var(--text-muted);
+  color: var(--dim);
   text-decoration: none;
-  font-weight: 500;
-  border-radius: 4px;
-  padding: 1px 2px;
-  margin: -1px -2px;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+  transition: color 120ms ease;
 }
 .vibeshub-viewer .topbar-link:hover {
-  color: var(--accent-strong);
-  background: var(--accent-soft);
+  color: var(--strong);
+  text-decoration: none;
 }
 .vibeshub-viewer .topbar-spacer {
   flex: 1;
@@ -78,31 +81,38 @@
 .vibeshub-viewer .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 .vibeshub-viewer .iconbtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text);
-  font-size: 13px;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
   white-space: nowrap;
+  cursor: pointer;
   transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    transform 80ms ease;
+    color 120ms ease,
+    border-color 120ms ease;
 }
 .vibeshub-viewer .iconbtn:hover {
-  background: var(--bg-subtle);
-  border-color: var(--border-strong);
+  color: var(--strong);
+  border-color: var(--faint);
 }
-.vibeshub-viewer .iconbtn:active {
-  transform: translateY(1px);
+.vibeshub-viewer .iconbtn.primary {
+  background: var(--acc);
+  color: var(--acc-ink);
+  border-color: var(--acc);
+  font-weight: 600;
+}
+.vibeshub-viewer .iconbtn.primary:hover {
+  filter: brightness(1.08);
+  color: var(--acc-ink);
+  border-color: var(--acc);
 }
 .vibeshub-viewer .iconbtn-icon {
   width: 14px;
@@ -155,47 +165,44 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
+  padding: 0 11px;
+  border: 1px dashed var(--line);
+  background: none;
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--dim);
   cursor: pointer;
   max-width: 240px;
   white-space: nowrap;
   transition:
-    background 120ms ease,
     border-color 120ms ease,
     color 120ms ease;
 }
 .vibeshub-viewer .jumpchip .n {
-  font-weight: 600;
-  color: var(--text);
+  color: var(--acc);
   flex: none;
 }
 .vibeshub-viewer .jumpchip .pv {
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--dim);
 }
 .vibeshub-viewer .jumpchip:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-subtle);
+  color: var(--acc);
+  border-color: color-mix(in oklab, var(--acc) 45%, transparent);
 }
 .vibeshub-viewer .jumpchip.cur {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-strong);
+  color: var(--acc);
+  border-color: color-mix(in oklab, var(--acc) 45%, transparent);
+  background: color-mix(in oklab, var(--acc) 5%, transparent);
 }
 .vibeshub-viewer .jumpchip.cur .n {
-  color: var(--accent-strong);
+  color: var(--acc);
 }
 
 /* ---------- prompt rail (desktop sidebar nav) ---------- */
@@ -208,7 +215,7 @@
   gap: 32px;
   max-width: calc(var(--content-width) + 220px + 32px + 64px);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 44px;
   align-items: start;
 }
 .vibeshub-viewer .viewer-main {
@@ -280,7 +287,6 @@
   text-align: left;
   border: 1px solid transparent;
   background: transparent;
-  border-radius: 6px;
   padding: 8px 10px 10px;
   color: inherit;
   cursor: pointer;
@@ -386,7 +392,6 @@
   text-align: left;
   border: 1px solid transparent;
   background: transparent;
-  border-radius: 6px;
   padding: 8px 10px 10px;
   color: inherit;
   cursor: pointer;
@@ -432,14 +437,12 @@
 .vibeshub-viewer .chapterrail-bar {
   flex: 1;
   height: 4px;
-  border-radius: 2px;
   background: var(--bg-subtle);
   overflow: hidden;
 }
 .vibeshub-viewer .chapterrail-fill {
   display: block;
   height: 100%;
-  border-radius: 2px;
   background: var(--accent);
 }
 .vibeshub-viewer .chapterrail-meta {
@@ -480,36 +483,36 @@
 .vibeshub-viewer .hero {
   max-width: var(--header-width);
   margin: 0 auto;
-  padding: 40px 32px 24px;
+  padding: 38px 44px 24px;
 }
 .vibeshub-viewer .hero-eyebrow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--text-faint);
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 16px;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 .vibeshub-viewer .hero-eyebrow .dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--acc);
   flex: none;
 }
 .vibeshub-viewer .hero-eyebrow-repo {
-  color: var(--text-strong);
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 12px;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-decoration: none;
 }
 .vibeshub-viewer .hero-eyebrow-repo:hover {
-  color: var(--accent-strong);
+  color: var(--strong);
+  text-decoration: none;
 }
 .vibeshub-viewer .hero-eyebrow-spacer {
   flex: 1;
@@ -519,24 +522,56 @@
   display: inline-flex;
   gap: 14px;
   text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
 }
 .vibeshub-viewer .hero-eyebrow-actions a {
-  font-size: 12px;
-  color: var(--accent-strong);
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--acc);
   text-decoration: none;
 }
 .vibeshub-viewer .hero-eyebrow-actions a:hover {
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .vibeshub-viewer .hero-title {
-  font-size: 42px;
-  line-height: 1.08;
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.3;
   font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--text-strong);
+  letter-spacing: -0.02em;
+  color: var(--strong);
   margin: 0 0 18px;
   text-wrap: balance;
+}
+
+/* The ask quote — the user's opening prompt under the title. */
+.vibeshub-viewer .hero-ask {
+  margin: -4px 0 18px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--acc);
+  background: var(--bg-deep);
+  padding: 13px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.vibeshub-viewer .hero-ask .who {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.vibeshub-viewer .hero-ask .q {
+  font-size: 14px;
+  color: var(--txt);
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Inline owner title editor (HeroTitle). The pencil sits next to the heading
@@ -654,27 +689,27 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 12.5px;
-  color: var(--text);
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--dim);
   text-decoration: none !important;
   max-width: 460px;
 }
 .vibeshub-viewer .hero-pr:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-subtle);
+  border-color: var(--faint);
+  color: var(--strong);
 }
 .vibeshub-viewer .hero-pr-num {
-  font: 600 11.5px var(--font-mono);
-  color: var(--text-muted);
+  font: 600 11px var(--font-mono);
+  color: var(--acc);
   flex: none;
 }
 .vibeshub-viewer .hero-pr-title {
   min-width: 0;
-  color: var(--text);
+  color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -683,41 +718,42 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: var(--bg-subtle);
-  font: 11.5px/1 var(--font-mono);
-  color: var(--text-muted);
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  background: none;
+  font: 11px/1.2 var(--font-mono);
+  color: var(--dim);
 }
 .vibeshub-viewer .hero-tag--quiet {
   border-color: transparent;
   background: transparent;
-  color: var(--text-faint);
+  color: var(--faint);
   padding: 0 2px;
 }
 .vibeshub-viewer .hero-tag--quiet a {
-  color: var(--text-muted);
+  color: var(--dim);
   font-weight: 500;
   text-decoration: none;
 }
 .vibeshub-viewer .hero-tag--quiet a:hover {
-  color: var(--accent-strong);
-  text-decoration: underline;
+  color: var(--strong);
+  text-decoration: none;
 }
 .vibeshub-viewer .hero-tag--private {
-  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  border-color: color-mix(in oklab, var(--acc) 45%, transparent);
+  background: none;
+  color: var(--acc);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
 }
 
 /* ---------- outcome panel ---------- */
 .vibeshub-viewer .outcome-grid {
   max-width: var(--header-width);
   margin: 28px auto 0;
-  padding: 0 32px;
+  padding: 0 44px;
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 12px;
@@ -782,10 +818,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .vibeshub-viewer .outcome-status .dot {
   width: 7px;
@@ -793,19 +831,20 @@
   border-radius: 50%;
 }
 .vibeshub-viewer .outcome-status.ok {
-  background: color-mix(in oklab, var(--tool-bash) 14%, var(--bg-elevated));
-  color: var(--tool-bash);
+  background: color-mix(in oklab, var(--acc) 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--acc) 40%, transparent);
+  color: var(--acc);
 }
 .vibeshub-viewer .outcome-status.ok .dot {
-  background: var(--tool-bash);
+  background: var(--acc);
 }
 .vibeshub-viewer .outcome-status.neutral {
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-  border: 1px solid var(--border-subtle);
+  background: none;
+  color: var(--dim);
+  border: 1px solid var(--line);
 }
 .vibeshub-viewer .outcome-status.neutral .dot {
-  background: var(--text-faint);
+  background: var(--faint);
 }
 .vibeshub-viewer .outcome-summary {
   font-size: 13.5px;
@@ -852,7 +891,6 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg-subtle);
   font-size: 12px;
@@ -916,7 +954,6 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 3px 5px;
-  border-radius: 3px;
   background: var(--bg-inset);
   color: var(--text-muted);
   flex: none;
@@ -948,7 +985,6 @@
   align-items: center;
   margin-left: 8px;
   padding: 2px 8px;
-  border-radius: 999px;
   border: 1px dashed var(--border);
   background: var(--bg-subtle);
   font: 10.5px var(--font-mono);
@@ -957,44 +993,47 @@
 }
 
 .vibeshub-viewer .meta-cell {
-  background: var(--bg-elevated);
-  padding: 14px 18px;
+  background: var(--bg);
+  padding: 16px 20px 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .vibeshub-viewer .meta-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-family: var(--font-mono);
-  color: var(--text-faint);
+  color: var(--faint);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
 }
 .vibeshub-viewer .meta-value {
-  font-size: 22px;
+  font-family: var(--font-mono);
+  font-size: 24px;
   font-weight: 600;
   font-feature-settings: "tnum";
-  letter-spacing: -0.015em;
-  color: var(--text-strong);
+  letter-spacing: -0.02em;
+  color: var(--strong);
 }
 .vibeshub-viewer .meta-sub {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--faint);
 }
 
 .vibeshub-viewer .meta-wrap {
   max-width: var(--header-width);
   margin: 28px auto 0;
-  padding: 0 32px;
+  padding: 0 44px;
 }
 
 .vibeshub-viewer .metaline {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--dim);
+  margin-top: 14px;
 }
 .vibeshub-viewer .metaline-item {
   display: inline-flex;
@@ -1003,15 +1042,15 @@
   white-space: nowrap;
 }
 .vibeshub-viewer .metaline-item .kv-key {
-  color: var(--text-faint);
+  color: var(--faint);
 }
 .vibeshub-viewer .metaline-item .kv-val {
-  color: var(--text);
+  color: var(--dim);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 .vibeshub-viewer .metaline-sep {
-  color: var(--text-faint);
+  color: var(--faint);
   opacity: 0.6;
 }
 
@@ -1019,43 +1058,43 @@
 .vibeshub-viewer .tools-chips {
   max-width: var(--header-width);
   margin: 24px auto 0;
-  padding: 0 32px;
+  padding: 0 44px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
 .vibeshub-viewer .tools-chips-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  color: var(--faint);
   margin-right: 4px;
 }
 .vibeshub-viewer .tool-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px 0 8px;
-  border-radius: 999px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  font-size: 12.5px;
-  color: var(--text);
+  gap: 7px;
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
   white-space: nowrap;
 }
 .vibeshub-viewer .tool-chip .dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--dot, var(--tool-other));
+  background: var(--dot, var(--t-other));
 }
 .vibeshub-viewer .tool-chip .count {
   font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--txt);
+  font-weight: 500;
   font-feature-settings: "tnum";
 }
 
@@ -1063,7 +1102,7 @@
 .vibeshub-viewer .timeline-wrap {
   max-width: var(--header-width);
   margin: 28px auto 0;
-  padding: 0 32px;
+  padding: 0 44px;
 }
 .vibeshub-viewer .timeline-card {
   border: 1px solid var(--border-subtle);
@@ -1109,13 +1148,11 @@
   pointer-events: none;
   background: var(--bg);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
   padding: 6px 9px;
   font-size: 11.5px;
   font-family: var(--font-mono);
   line-height: 1.4;
   color: var(--text);
-  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.18);
   max-width: 320px;
 }
 .vibeshub-viewer .timeline-tooltip[data-anchor="start"] {
@@ -1166,7 +1203,6 @@
 .vibeshub-viewer .timeline-legend-swatch {
   width: 9px;
   height: 9px;
-  border-radius: 2px;
   display: inline-block;
 }
 
@@ -1190,12 +1226,7 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    var(--border-subtle),
-    transparent
-  );
+  background: var(--line-soft);
 }
 
 .vibeshub-viewer .user-prompt {
@@ -1203,42 +1234,36 @@
   gap: 14px;
   align-items: flex-start;
   margin: 0 0 8px;
-  padding: 18px 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-1);
+  padding: 14px 18px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--acc);
 }
+/* The Terminal thread marks the speaker with a mono "user" label, not an
+   avatar bubble. */
 .vibeshub-viewer .user-prompt-avatar {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--text-strong);
-  color: var(--bg-elevated);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--font-mono);
+  display: none;
 }
 .vibeshub-viewer .user-prompt-body {
   flex: 1;
   min-width: 0;
 }
 .vibeshub-viewer .user-prompt-meta {
-  font-size: 11.5px;
-  color: var(--text-faint);
-  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 7px;
   display: flex;
   gap: 10px;
   align-items: center;
   white-space: nowrap;
 }
 .vibeshub-viewer .user-prompt-text {
-  color: var(--text-strong);
-  font-size: 15.5px;
-  line-height: 1.55;
+  color: var(--strong);
+  font-size: 14.5px;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
@@ -1298,36 +1323,17 @@
   margin: 8px 0;
   padding: 0 0 0 4px;
 }
+/* Assistant prose reads as plain body text in the Terminal thread — the
+   typography (IBM Plex vs mono chrome) is the speaker cue, not an avatar. */
 .vibeshub-viewer .assistant-avatar {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-fg);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  margin-top: 2px;
-}
-.vibeshub-viewer .assistant-avatar[data-agent="codex"] {
-  font-size: 0.62em;
-  letter-spacing: 0;
-  background: var(--tool-agent);
-}
-.vibeshub-viewer .assistant-avatar[data-agent="cursor"] {
-  font-size: 0.62em;
-  letter-spacing: 0;
-  background: var(--tool-agent);
+  display: none;
 }
 .vibeshub-viewer .assistant-text-body {
   flex: 1;
   min-width: 0;
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.7;
+  color: var(--txt);
+  font-size: 14.5px;
+  line-height: 1.75;
 }
 .vibeshub-viewer .assistant-text-body p {
   margin: 0 0 12px;
@@ -1342,14 +1348,12 @@
 .vibeshub-viewer .assistant-text-body code {
   background: var(--bg-subtle);
   padding: 2px 5px;
-  border-radius: 4px;
   font-size: 0.9em;
   border: 1px solid var(--border-subtle);
 }
 .vibeshub-viewer .assistant-text-body pre.code-block {
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
   padding: 10px 12px;
   margin: 0 0 12px;
   overflow-x: auto;
@@ -1393,55 +1397,49 @@
 }
 
 .vibeshub-viewer .thinking-block {
-  margin: 4px 0 8px 36px;
+  margin: 4px 0 8px;
   font-size: 13.5px;
-  color: var(--text-muted);
+  color: var(--dim);
   font-style: italic;
-  border-left: 2px solid var(--border);
+  border-left: 2px solid var(--line);
   padding: 2px 0 2px 12px;
   white-space: pre-wrap;
 }
 .vibeshub-viewer .thinking-empty {
-  margin: 4px 0 8px 36px;
+  margin: 4px 0 8px;
   font-size: 11.5px;
-  color: var(--text-faint);
+  color: var(--faint);
   font-family: var(--font-mono);
 }
 
 /* ---------- tool card ---------- */
 .vibeshub-viewer .tool-card {
-  margin: 6px 0;
-  padding-left: 36px;
+  margin: 8px 0;
+  padding-left: 0;
   position: relative;
 }
 .vibeshub-viewer .tool-card-inner {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-deep);
   overflow: hidden;
-  transition: border-color 120ms ease;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 .vibeshub-viewer .tool-card-inner:hover {
-  border-color: var(--border-strong);
-}
-.vibeshub-viewer .tool-card.is-open .tool-card-inner {
-  box-shadow: var(--shadow-2);
+  border-color: var(--line);
+  background: color-mix(in oklab, var(--acc) 3%, var(--bg-deep));
 }
 
 .vibeshub-viewer .tool-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 9px 14px;
   cursor: pointer;
   user-select: none;
   background: transparent;
   border: none;
   width: 100%;
   text-align: left;
-}
-.vibeshub-viewer .tool-head:hover {
-  background: var(--bg-subtle);
 }
 .vibeshub-viewer .tool-head .chev {
   width: 14px;
@@ -1455,43 +1453,46 @@
 }
 
 .vibeshub-viewer .tool-name {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  color: var(--txt);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: none;
+  width: 96px;
   white-space: nowrap;
+  overflow: hidden;
 }
 .vibeshub-viewer .tool-name .dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--dot, var(--tool-other));
+  background: var(--dot, var(--t-other));
+  flex: none;
 }
 .vibeshub-viewer .tool-summary {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
-  color: var(--text);
+  font-size: 12px;
+  color: var(--dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--font-mono);
 }
 .vibeshub-viewer .tool-summary .arg-key {
-  color: var(--text-faint);
+  color: var(--faint);
 }
 .vibeshub-viewer .tool-summary .arg-val {
-  color: var(--text-strong);
+  color: var(--dim);
 }
 .vibeshub-viewer .tool-meta-r {
   flex: none;
-  font-size: 11.5px;
-  color: var(--text-faint);
+  font-size: 11px;
+  color: var(--faint);
   font-family: var(--font-mono);
   font-feature-settings: "tnum";
   white-space: nowrap;
@@ -1539,9 +1540,9 @@
   color: var(--text-faint);
 }
 .vibeshub-viewer .tool-body {
-  border-top: 1px solid var(--border-subtle);
-  padding: 14px 16px 16px;
-  background: var(--bg-subtle);
+  border-top: 1px solid var(--line-soft);
+  padding: 12px 16px 14px;
+  background: var(--bg);
 }
 .vibeshub-viewer .tool-body h4 {
   font-size: 10.5px;
@@ -1807,7 +1808,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 0 4px 36px;
+  padding: 4px 0;
   font-size: 11.5px;
   color: var(--text-faint);
   font-family: var(--font-mono);
@@ -1841,7 +1842,6 @@
 .vibeshub-viewer .pr-card-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
   background: color-mix(in oklab, var(--tool-bash) 14%, var(--bg-elevated));
   color: var(--tool-bash);
   display: grid;
@@ -1906,29 +1906,28 @@
 .vibeshub-viewer .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   height: 28px;
   padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  font-size: 12.5px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
   white-space: nowrap;
   transition: all 120ms ease;
 }
 .vibeshub-viewer .toggle.on {
-  background: var(--bg-subtle);
-  color: var(--text-strong);
-  border-color: var(--border-strong);
+  color: var(--strong);
+  border-color: var(--faint);
 }
 .vibeshub-viewer .toggle:hover {
-  border-color: var(--border-strong);
+  border-color: var(--faint);
+  color: var(--strong);
 }
 .vibeshub-viewer .toggle .check {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
   border: 1.5px solid var(--text-faint);
   display: inline-grid;
   place-items: center;
@@ -2096,26 +2095,26 @@
 /* A run of consecutive tool calls collapsed into one summary line.
    Visually matches the collapsed tool-card head. */
 .vibeshub-viewer .tool-group {
-  margin: 6px 0;
-  padding-left: 36px;
+  margin: 8px 0;
+  padding-left: 0;
   position: relative;
 }
 .vibeshub-viewer .tool-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 9px 14px;
   cursor: pointer;
   user-select: none;
   width: 100%;
   text-align: left;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color 120ms ease;
+  background: var(--bg-deep);
+  border: 1px solid var(--line-soft);
+  transition: border-color 120ms ease, background 120ms ease;
 }
 .vibeshub-viewer .tool-group-head:hover {
-  border-color: var(--border-strong);
+  border-color: var(--line);
+  background: color-mix(in oklab, var(--acc) 3%, var(--bg-deep));
 }
 .vibeshub-viewer .tool-group.is-open .tool-group-head {
   border-bottom-left-radius: 0;
@@ -2132,19 +2131,19 @@
   transform: rotate(90deg);
 }
 .vibeshub-viewer .tool-group-count {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  color: var(--txt);
   flex: none;
   white-space: nowrap;
 }
 .vibeshub-viewer .tool-group-breakdown {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
-  color: var(--text-faint);
+  font-size: 12px;
+  color: var(--faint);
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
@@ -2153,14 +2152,9 @@
 /* Nested cards sit indented under the group head rather than at the
    thread's left gutter. */
 .vibeshub-viewer .tool-group-body {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line-soft);
   border-top: none;
-  border-bottom-left-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
-  padding: 2px 0 4px;
-}
-.vibeshub-viewer .tool-group-body .tool-card {
-  padding-left: 14px;
+  padding: 4px 12px 8px;
 }
 
 /* ---------- mobile ---------- */
@@ -2168,7 +2162,7 @@
   /* Topbar: trim padding, drop the redundant owner crumb, truncate the trace
      id, and collapse the Share button to its icon so the row fits. */
   .vibeshub-viewer .topbar-inner {
-    padding: 12px 16px;
+    padding: 0 22px;
     gap: 10px;
   }
   .vibeshub-viewer .viewer-crumb-owner {
@@ -2230,7 +2224,6 @@
 /* Provenance chip for traces reconstructed from a .txt terminal export. */
 .vibeshub-viewer .meta-import-chip {
   padding: 2px 8px;
-  border-radius: 999px;
   background: var(--accent-soft);
   color: var(--text-strong);
   font-size: 11px;
@@ -2245,22 +2238,21 @@
   padding: 2px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: 999px;
   margin-right: 12px;
 }
 .vibeshub-viewer .view-pill {
   border: 0;
   background: transparent;
-  color: var(--text-faint);
+  color: var(--faint);
   font: inherit;
+  font-family: var(--font-mono);
   font-size: 12px;
   padding: 3px 12px;
-  border-radius: 999px;
   cursor: pointer;
 }
 .vibeshub-viewer .view-pill.on {
   background: var(--bg);
-  color: var(--text);
+  color: var(--strong);
 }
 .vibeshub-viewer .changes-view {
   display: flex;
@@ -2319,7 +2311,6 @@
   font-size: 10px;
   color: var(--diff-add-num);
   border: 1px solid currentColor;
-  border-radius: 999px;
   padding: 0 7px;
   margin-left: 8px;
 }
@@ -2410,7 +2401,6 @@
 .vibeshub-viewer .changes-ratio {
   flex: 0 1 120px;
   height: 4px;
-  border-radius: 2px;
   background: color-mix(in oklab, var(--diff-del-num) 30%, transparent);
   overflow: hidden;
   align-self: center;

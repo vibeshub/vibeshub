@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { AuthWidget } from "./AuthWidget";
-import { IconMoon, IconSun } from "./trace/icons";
-import { useTheme } from "./trace/theme";
 
 export interface Crumb {
   label: string;
@@ -15,7 +13,6 @@ interface Props {
 }
 
 export function PageTopbar({ crumbs }: Props) {
-  const { resolved, toggle } = useTheme();
   const { user } = useAuth();
 
   return (
@@ -49,19 +46,6 @@ export function PageTopbar({ crumbs }: Props) {
             </Link>
           )}
           <AuthWidget />
-          <button
-            className="iconbtn"
-            onClick={toggle}
-            type="button"
-            aria-label={
-              resolved === "dark"
-                ? "Switch to light theme"
-                : "Switch to dark theme"
-            }
-            title={resolved === "dark" ? "Light" : "Dark"}
-          >
-            {resolved === "dark" ? <IconSun /> : <IconMoon />}
-          </button>
         </div>
       </div>
     </header>
