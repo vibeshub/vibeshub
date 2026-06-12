@@ -10,6 +10,7 @@ import { Hero } from "./Hero";
 import { ThreadControls } from "./ThreadControls";
 import { Thread } from "./Thread";
 import { usePersistedBoolean } from "./persistedState";
+import { useSubagentStreams } from "./useSubagentStreams";
 
 interface Props {
   trace: TraceSummary;
@@ -43,6 +44,9 @@ export function TraceViewer({
     false,
   );
 
+  const { entries: subagents, loading: subagentsLoading } =
+    useSubagentStreams(trace);
+
   const empty = session.stream.length === 0;
 
   return (
@@ -60,6 +64,8 @@ export function TraceViewer({
         session={session}
         trace={trace}
         rawHref={rawHref}
+        subagents={subagents}
+        subagentsLoading={subagentsLoading}
         canEdit={canEditTitle}
         onTraceUpdated={onTraceUpdated}
       />

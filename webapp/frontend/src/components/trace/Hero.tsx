@@ -8,16 +8,23 @@ import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
 import { HeroTitle } from "./HeroTitle";
 import { DigestPanel } from "./DigestPanel";
+import type { SubagentEntry } from "./changes";
 
 interface Props {
   session: Session;
   trace: TraceSummary;
   rawHref: string;
+  subagents: SubagentEntry[];
+  subagentsLoading: boolean;
   canEdit?: boolean;
   onTraceUpdated?: (trace: TraceSummary) => void;
 }
 
-function HeroEyebrow({ session, trace, rawHref }: Props) {
+function HeroEyebrow({
+  session,
+  trace,
+  rawHref,
+}: Pick<Props, "session" | "trace" | "rawHref">) {
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
   const date = meta.startedAt
@@ -198,6 +205,8 @@ export function Hero({
   session,
   trace,
   rawHref,
+  subagents,
+  subagentsLoading,
   canEdit,
   onTraceUpdated,
 }: Props) {
@@ -216,7 +225,12 @@ export function Hero({
         <HeroBadges trace={trace} />
       </div>
       {trace.ai_digest && <DigestPanel digest={trace.ai_digest} />}
-      <Outcome session={session} trace={trace} />
+      <Outcome
+        session={session}
+        trace={trace}
+        subagents={subagents}
+        subagentsLoading={subagentsLoading}
+      />
       <MetaLine session={session} />
       <ToolsChips session={session} />
       <Timeline session={session} />
