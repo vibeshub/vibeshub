@@ -138,10 +138,13 @@ describe("TraceViewer changes mode", () => {
 
   it("jump returns to conversation mode and scrolls to the edit", () => {
     renderViewer(EDIT_STREAM);
-    // The hunk header's ↗ jumps to the tool card in the conversation.
-    fireEvent.click(
-      screen.getByTitle("View this edit in the conversation"),
-    );
+    // The per-hunk ↗ header was removed when files merged into one block.
+    // Select a blame row to open its provenance panel, then use the panel's
+    // "open this edit in the conversation" button (same jump handler).
+    const row = document.querySelector('.prov-ln[role="button"]');
+    expect(row).not.toBeNull();
+    fireEvent.click(row as Element);
+    fireEvent.click(screen.getByText(/open this edit in the conversation/));
     expect(window.location.hash).toBe("#chat");
     expect(screen.getByText("Show system events")).toBeTruthy();
     // Collapsed tool groups render no [data-uuid] for tools, so the jump
