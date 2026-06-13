@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents._client import get_client, get_model
 from app.agents._usage import Outcome, record_run
-from app.agents.digest.distill import distill_with_uuids
+from app.agents.digest.distill import distill_with_uuids, edited_paths
 from app.agents.digest.prompt import SYSTEM_PROMPT
 from app.agents.digest.schema import Digest, strip_em_dashes
 from app.storage.models import Trace
@@ -131,6 +131,13 @@ async def compute_digest(
         c.caption = strip_em_dashes(c.caption)
     chapters_kept = len(candidate.chapters)
 
+    paths = edited_paths(blob, subagent_blobs=subagent_blobs)
+    file_notes_total = len(candidate.file_notes)
+    candidate.file_notes = [n for n in candidate.file_notes if n.path in paths]
+    for n in candidate.file_notes:
+        n.caption = strip_em_dashes(n.caption)
+    file_notes_kept = len(candidate.file_notes)
+
     trace.digest_json = candidate.model_dump()
     trace.digest_input_hash = input_hash
 
@@ -142,6 +149,8 @@ async def compute_digest(
             "chapters_kept": chapters_kept,
             "chapters_total": chapters_total,
             "distill_truncated": truncated,
+            "file_notes_kept": file_notes_kept,
+            "file_notes_total": file_notes_total,
         },
     )
     return candidate

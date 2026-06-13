@@ -5,10 +5,12 @@ import type {
   BlameHunk,
   ProvenanceModel,
 } from "./provenance";
+import { orderRegions } from "./provenance";
 import type { DiffRow } from "./diff";
 import { changeAnchorId } from "./changes";
 import { fmtTimeOfDay, shortenPath } from "./format";
 import { highlightLine, langFromPath } from "./highlight";
+import type { TraceDigest } from "../../types";
 
 // ProvenanceView — the "Provenance Blame" diff: the session's net changes
 // annotated with where every line came from. Gutters carry prompt №, author
@@ -25,13 +27,14 @@ interface Props {
   model: ProvenanceModel;
   session: Session;
   subagentsLoading: boolean;
+  digest?: TraceDigest | null;
   onJump: (jumpUuid: string | null, promptUuid: string | null) => void;
 }
 
 const PROMPT_CLIP = 400;
 const TINY_PROMPT = 24;
-const COLLAPSE_THRESHOLD = 34;
-const COLLAPSE_HEAD = 24;
+const FILE_FOLD_THRESHOLD = 80;
+const FILE_FOLD_HEAD = 48;
 
 function clip(s: string, n: number): string {
   const t = s.trim().replace(/\s+/g, " ");
@@ -240,201 +243,166 @@ const SIGN: Record<DiffRow["kind"], string> = {
   hunk: "",
 };
 
-function BlameRows({
-  hunk,
+interface FlatRow {
+  row: DiffRow;
+  region: BlameHunk;
+  localIdx: number;
+}
+
+function FlatRowView({
+  entry,
   file,
   lang,
   sel,
   onSelect,
 }: {
-  hunk: BlameHunk;
+  entry: FlatRow;
   file: BlameFile;
   lang: string | null;
   sel: Sel | null;
   onSelect: (s: Sel) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const folded =
-    hunk.rows.length > COLLAPSE_THRESHOLD && !expanded
-      ? hunk.rows.slice(0, COLLAPSE_HEAD)
-      : hunk.rows;
-  const hidden = hunk.rows.length - folded.length;
-  const author = hunk.agentType ? "agent" : "ai";
+  const { row, region, localIdx } = entry;
+  if (row.kind === "hunk") {
+    return (
+      <div className="prov-ln hunkline">
+        <span className="prov-pidx" />
+        <span className="prov-band" />
+        <span className="prov-heat" />
+        <span className="prov-sign" />
+        <span className="prov-src">{row.text}</span>
+      </div>
+    );
+  }
+  const changed = row.kind !== "ctx";
+  const isSel =
+    sel !== null && sel.hunk.id === region.id && sel.rowIdx === localIdx;
+  const author = region.agentType ? "agent" : "ai";
+  const select = () => onSelect({ file, hunk: region, rowIdx: localIdx });
   return (
-    <div className="prov-code">
-      {folded.map((r, i) => {
-        if (r.kind === "hunk") {
-          return (
-            <div key={i} className="prov-ln hunkline">
-              <span className="prov-pidx" />
-              <span className="prov-band" />
-              <span className="prov-heat" />
-              <span className="prov-sign" />
-              <span className="prov-src">{r.text}</span>
-            </div>
-          );
+    <div
+      className={
+        `prov-ln ${row.kind}` +
+        (isSel ? " sel" : "") +
+        (region.retried ? " retried" : "")
+      }
+      role="button"
+      tabIndex={0}
+      title={region.retried ? "This edit was retried" : undefined}
+      onClick={select}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          select();
         }
-        const isSel =
-          sel !== null && sel.hunk.id === hunk.id && sel.rowIdx === i;
-        const changed = r.kind !== "ctx";
-        return (
-          <div
-            key={i}
-            className={`prov-ln ${r.kind}${isSel ? " sel" : ""}`}
-            onClick={() => onSelect({ file, hunk, rowIdx: i })}
-          >
-            <span className="prov-pidx">
-              {changed && hunk.promptIdx > 0 ? hunk.promptIdx : ""}
-            </span>
-            <span
-              className="prov-band"
-              style={
-                changed ? { background: authorVar(author) } : undefined
-              }
-            />
-            <span className="prov-heat" aria-hidden="true">
-              {[0, 1, 2].map((n) => (
-                <i
-                  key={n}
-                  className={changed && hunk.heat[i] > n + 1 ? "on" : ""}
-                />
-              ))}
-            </span>
-            <span className="prov-sign">{SIGN[r.kind]}</span>
-            {r.kind === "add" ? (
-              // Only additions get syntax color: context and deletions stay
-              // quiet so the new code carries the eye.
-              <span
-                className="prov-src diff-code"
-                dangerouslySetInnerHTML={{
-                  __html: highlightLine(r.text || " ", lang),
-                }}
-              />
-            ) : (
-              <span className="prov-src">{r.text || " "}</span>
-            )}
-          </div>
-        );
-      })}
-      {hidden > 0 && (
-        <button
-          type="button"
-          className="diff-expand"
-          onClick={() => setExpanded(true)}
-        >
-          ▸ show {hidden} more lines
-        </button>
-      )}
-      {expanded && hunk.rows.length > COLLAPSE_THRESHOLD && (
-        <button
-          type="button"
-          className="diff-expand"
-          onClick={() => setExpanded(false)}
-        >
-          ▾ collapse
-        </button>
+      }}
+    >
+      <span className="prov-pidx">
+        {changed && region.promptIdx > 0 ? region.promptIdx : ""}
+      </span>
+      <span
+        className="prov-band"
+        style={changed ? { background: authorVar(author) } : undefined}
+      />
+      <span className="prov-heat" aria-hidden="true">
+        {[0, 1, 2].map((n) => (
+          <i key={n} className={changed && region.heat[localIdx] > n + 1 ? "on" : ""} />
+        ))}
+      </span>
+      <span className="prov-sign">{SIGN[row.kind]}</span>
+      {row.kind === "add" ? (
+        <span
+          className="prov-src diff-code"
+          dangerouslySetInnerHTML={{ __html: highlightLine(row.text || " ", lang) }}
+        />
+      ) : (
+        <span className="prov-src">{row.text || " "}</span>
       )}
     </div>
   );
 }
 
-function Hunk({
-  hunk,
+function FileBlock({
   file,
-  lang,
+  root,
+  caption,
   sel,
   onSelect,
-  onJump,
 }: {
-  hunk: BlameHunk;
   file: BlameFile;
-  lang: string | null;
+  root: string | null;
+  caption: string | undefined;
   sel: Sel | null;
   onSelect: (s: Sel) => void;
-  onJump: Props["onJump"];
 }) {
-  const [stubOpen, setStubOpen] = useState(false);
-  const isSel = sel !== null && sel.hunk.id === hunk.id;
-  const timeLabel =
-    hunk.attemptCount > 1
-      ? `${fmtTimeOfDay(hunk.startTs)} → ${fmtTimeOfDay(hunk.ts)}`
-      : fmtTimeOfDay(hunk.ts);
-  const toolLabel =
-    hunk.attemptCount > 1 ? `${hunk.tool} ×${hunk.attemptCount}` : hunk.tool;
-
-  if (hunk.superseded) {
-    return (
-      <div className={"prov-hunk superseded" + (isSel ? " sel-hunk" : "")}>
-        <button
-          type="button"
-          className="prov-stub"
-          onClick={() => setStubOpen((v) => !v)}
-          aria-expanded={stubOpen}
-        >
-          <span className="prov-stub-arrow">{stubOpen ? "▾" : "▸"}</span>
-          {hunk.title}
-          <span className="prov-stub-note">
-            superseded by {hunk.superseded.turnLabel}
-          </span>
-        </button>
-        {stubOpen && (
-          <div className="prov-stub-body">
-            <BlameRows
-              hunk={hunk}
+  const [expanded, setExpanded] = useState(false);
+  const lang = langFromPath(file.path);
+  const regions = orderRegions(file.hunks.filter((h) => !h.superseded));
+  const flat: FlatRow[] = [];
+  for (const region of regions) {
+    region.rows.forEach((row, localIdx) => flat.push({ row, region, localIdx }));
+  }
+  const retriedCount = regions.filter((r) => r.retried).length;
+  const folded =
+    flat.length > FILE_FOLD_THRESHOLD && !expanded
+      ? flat.slice(0, FILE_FOLD_HEAD)
+      : flat;
+  const hidden = flat.length - folded.length;
+  return (
+    <section
+      id={changeAnchorId(file.path)}
+      className={"prov-file" + (file.status === "ephemeral" ? " ephemeral" : "")}
+    >
+      <div className="prov-fhead">
+        <span className="prov-fpath" title={file.path}>
+          {shortenPath(file.path, root)}
+        </span>
+        <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
+        <span className="prov-fstats">
+          {file.adds > 0 && <span className="diff-stat-add">+{file.adds}</span>}
+          {file.dels > 0 && <span className="diff-stat-del">−{file.dels}</span>}
+        </span>
+        <span className="prov-fsummary">
+          · {regions.length} {regions.length === 1 ? "edit" : "edits"}
+          {retriedCount > 0 ? `, ${retriedCount} retried` : ""}
+        </span>
+      </div>
+      {caption && <p className="prov-fcaption">{caption}</p>}
+      {flat.length === 0 ? (
+        <div className="prov-nodata">no patch data</div>
+      ) : (
+        <div className="prov-code">
+          {folded.map((entry, i) => (
+            <FlatRowView
+              key={i}
+              entry={entry}
               file={file}
               lang={lang}
               sel={sel}
               onSelect={onSelect}
             />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className={"prov-hunk" + (isSel ? " sel-hunk" : "")}>
-      <div className="prov-hhead">
-        <button
-          type="button"
-          className="prov-htitle"
-          title="Show this hunk's provenance"
-          onClick={() => onSelect({ file, hunk, rowIdx: null })}
-        >
-          {hunk.title}
-        </button>
-        {hunk.attempts.length > 0 && (
-          <span className="prov-badge">retried</span>
-        )}
-        {hunk.agentType && (
-          <span className="prov-badge agent">via {hunk.agentType}</span>
-        )}
-        <span className="prov-hmeta">
-          {toolLabel} · {timeLabel}
-          {hunk.jumpUuid && (
+          ))}
+          {hidden > 0 && (
             <button
               type="button"
-              className="prov-jump"
-              title="View this edit in the conversation"
-              onClick={() => onJump(hunk.jumpUuid, hunk.promptUuid)}
+              className="diff-expand"
+              onClick={() => setExpanded(true)}
             >
-              ↗
+              ▸ show {hidden} more lines
             </button>
           )}
-        </span>
-      </div>
-      {hunk.rows.length === 0 ? (
-        <div className="prov-nodata">no patch data</div>
-      ) : (
-        <BlameRows
-          hunk={hunk}
-          file={file}
-          lang={lang}
-          sel={sel}
-          onSelect={onSelect}
-        />
+          {expanded && flat.length > FILE_FOLD_THRESHOLD && (
+            <button
+              type="button"
+              className="diff-expand"
+              onClick={() => setExpanded(false)}
+            >
+              ▾ collapse
+            </button>
+          )}
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -602,11 +570,15 @@ export function ProvenanceView({
   model,
   session,
   subagentsLoading,
+  digest,
   onJump,
 }: Props) {
   const root = effectiveRoot(
     model.files.map((f) => f.path),
     session.meta.cwd,
+  );
+  const captions = new Map(
+    (digest?.file_notes ?? []).map((n) => [n.path, n.caption] as const),
   );
   const [sel, setSel] = useState<Sel | null>(null);
 
@@ -619,39 +591,14 @@ export function ProvenanceView({
           <Attribution model={model} loading={subagentsLoading} />
           <FilesIndex files={model.files} root={root} />
           {model.files.map((file) => (
-            <section
+            <FileBlock
               key={file.path}
-              id={changeAnchorId(file.path)}
-              className={"prov-file" + (file.status === "ephemeral" ? " ephemeral" : "")}
-            >
-              <div className="prov-fhead">
-                <span className="prov-fpath" title={file.path}>
-                  {shortenPath(file.path, root)}
-                </span>
-                <span className={"prov-fstatus " + file.status}>
-                  {statusLabel(file)}
-                </span>
-                <span className="prov-fstats">
-                  {file.adds > 0 && (
-                    <span className="diff-stat-add">+{file.adds}</span>
-                  )}
-                  {file.dels > 0 && (
-                    <span className="diff-stat-del">−{file.dels}</span>
-                  )}
-                </span>
-              </div>
-              {file.hunks.map((h) => (
-                <Hunk
-                  key={h.id}
-                  hunk={h}
-                  file={file}
-                  lang={langFromPath(file.path)}
-                  sel={sel}
-                  onSelect={setSel}
-                  onJump={onJump}
-                />
-              ))}
-            </section>
+              file={file}
+              root={root}
+              caption={captions.get(file.path)}
+              sel={sel}
+              onSelect={setSel}
+            />
           ))}
           <OutcomeRows model={model} />
         </div>

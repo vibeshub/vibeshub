@@ -2558,68 +2558,6 @@
   text-decoration: line-through;
   text-decoration-color: color-mix(in oklab, var(--t-write) 50%, transparent);
 }
-.vibeshub-viewer .prov-file.ephemeral .prov-hunk {
-  border-style: dashed;
-  opacity: 0.85;
-}
-
-/* hunks */
-.vibeshub-viewer .prov-hunk {
-  border: 1px solid var(--line-soft);
-  background: var(--bg-deep);
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.vibeshub-viewer .prov-hunk.sel-hunk {
-  border-color: var(--faint);
-}
-.vibeshub-viewer .prov-hhead {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 12px;
-  flex-wrap: wrap;
-}
-.vibeshub-viewer .prov-htitle {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--txt);
-  text-align: left;
-  cursor: pointer;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.vibeshub-viewer .prov-htitle:hover {
-  color: var(--strong);
-  text-decoration: underline;
-}
-.vibeshub-viewer .prov-badge {
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--t-write);
-  border: 1px solid color-mix(in oklab, var(--t-write) 40%, transparent);
-  padding: 1px 8px;
-  white-space: nowrap;
-}
-.vibeshub-viewer .prov-badge.agent {
-  color: var(--t-agent);
-  border-color: color-mix(in oklab, var(--t-agent) 40%, transparent);
-}
-.vibeshub-viewer .prov-hmeta {
-  display: inline-flex;
-  gap: 8px;
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--faint);
-  white-space: nowrap;
-}
 .vibeshub-viewer .prov-nodata {
   padding: 6px 12px;
   font-size: 12px;
@@ -2640,6 +2578,7 @@
   border-left: 2px solid transparent;
   cursor: pointer;
   white-space: pre;
+  position: relative;
 }
 .vibeshub-viewer .prov-ln:hover {
   background: color-mix(in oklab, var(--acc) 4%, transparent);
@@ -2708,28 +2647,33 @@
   font-size: 11px;
 }
 
-/* superseded stubs */
-.vibeshub-viewer .prov-stub {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: var(--bg-inset);
-  color: var(--faint);
-  font: inherit;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 12px;
-  cursor: pointer;
+/* merged file block: caption + summary + retry marker */
+.vibeshub-viewer .prov-fcaption {
+  margin: 2px 0 8px;
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.5;
 }
-.vibeshub-viewer .prov-stub-note {
-  margin-left: auto;
+.vibeshub-viewer .prov-fsummary {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--faint);
   white-space: nowrap;
 }
-.vibeshub-viewer .prov-stub-body .prov-code {
-  opacity: 0.55;
+.vibeshub-viewer .prov-ln.retried::before {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 50%;
+  background: var(--t-write);
+}
+.vibeshub-viewer .prov-ln[role="button"]:focus-visible {
+  outline: 1px solid var(--strong);
+  outline-offset: -1px;
 }
 
 /* outcome */

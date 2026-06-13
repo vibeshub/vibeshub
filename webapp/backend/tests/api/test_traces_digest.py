@@ -255,3 +255,48 @@ async def test_cursor_digest_anchors_resolve_against_session(
     sent = mock.responses.parse.call_args.kwargs["input"]
     assert "USER: Review the frontend for likely bugs." in sent
     assert "Subagent[explore]:" in sent
+
+
+@pytest.mark.asyncio
+async def test_file_notes_survive_api_serialization(
+    client, respx_mock, _digest_env, monkeypatch,
+):
+    """Per-file captions (file_notes) must survive API serialization and
+    reach the client. Guards the schemas.py TraceDigest seam."""
+    from app.agents.digest.schema import Digest
+
+    _mock_alice_pr(respx_mock, "alice", "repo", 32)
+    payload = {
+        "ask": "a", "decisions": "b", "files": "c", "tests": "d",
+        "dead_ends": "e", "chapters": [],
+        "file_notes": [{"path": "src/x.ts", "caption": "Tighten the x path"}],
+    }
+    mock = MagicMock()
+    resp = MagicMock()
+    resp.output_parsed = Digest.model_validate(payload)
+    resp.output_text = json.dumps(payload)
+    resp.usage = MagicMock(input_tokens=5, output_tokens=3)
+    mock.responses.parse.return_value = resp
+    monkeypatch.setattr("app.agents.digest.pipeline.get_client", lambda: mock)
+
+    edit_jsonl = (
+        b'{"type":"user","uuid":"u1","message":{"content":"edit x"}}\n'
+        b'{"type":"assistant","uuid":"a1","message":{"content":[{"type":"tool_use",'
+        b'"name":"Edit","id":"tu1","input":{"file_path":"src/x.ts",'
+        b'"old_string":"a","new_string":"b"}}]}}\n'
+    )
+    r = client.post(
+        "/api/ingest",
+        content=_make_bundle({"main.jsonl": edit_jsonl}),
+        headers=_ingest_headers("https://github.com/alice/repo/pull/32"),
+    )
+    assert r.status_code == 201, r.text
+    sid = r.json()["short_id"]
+
+    assert r.json()["ai_digest"]["file_notes"] == [
+        {"path": "src/x.ts", "caption": "Tighten the x path"}
+    ]
+    summary = client.get(f"/api/traces/{sid}").json()
+    assert summary["ai_digest"]["file_notes"] == [
+        {"path": "src/x.ts", "caption": "Tighten the x path"}
+    ]

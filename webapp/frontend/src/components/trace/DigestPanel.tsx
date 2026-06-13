@@ -5,7 +5,7 @@ interface Props {
   digest: TraceDigest;
 }
 
-const BULLETS: Array<{ key: keyof Omit<TraceDigest, "chapters">; label: string }> = [
+const BULLETS: Array<{ key: keyof Omit<TraceDigest, "chapters" | "file_notes">; label: string }> = [
   { key: "ask", label: "Ask" },
   { key: "decisions", label: "Key decisions" },
   { key: "dead_ends", label: "Dead ends" },

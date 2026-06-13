@@ -21,6 +21,11 @@ class DigestChapter(BaseModel):
     caption: str
 
 
+class FileNote(BaseModel):
+    path: str
+    caption: str
+
+
 class TraceDigest(BaseModel):
     ask: str
     decisions: str
@@ -28,6 +33,7 @@ class TraceDigest(BaseModel):
     tests: str
     dead_ends: str
     chapters: list[DigestChapter] = Field(default_factory=list)
+    file_notes: list[FileNote] = Field(default_factory=list)
 
 
 class TraceSummary(BaseModel):

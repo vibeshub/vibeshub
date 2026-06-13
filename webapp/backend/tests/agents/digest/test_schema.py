@@ -66,3 +66,22 @@ def test_strip_em_dashes_handles_sentence_breaks():
 def test_strip_em_dashes_strips_unicode_em_dash_only():
     # ASCII hyphens are left alone
     assert strip_em_dashes("file-name foo-bar") == "file-name foo-bar"
+
+
+def test_digest_defaults_file_notes_to_empty():
+    from app.agents.digest.schema import Digest
+    d = Digest.model_validate({
+        "ask": "a", "decisions": "b", "files": "c",
+        "tests": "d", "dead_ends": "e",
+    })
+    assert d.file_notes == []
+
+
+def test_file_note_round_trips():
+    from app.agents.digest.schema import Digest, FileNote
+    d = Digest.model_validate({
+        "ask": "a", "decisions": "b", "files": "c",
+        "tests": "d", "dead_ends": "e",
+        "file_notes": [{"path": "src/x.ts", "caption": "Tighten the loop"}],
+    })
+    assert d.file_notes == [FileNote(path="src/x.ts", caption="Tighten the loop")]

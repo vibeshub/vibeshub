@@ -28,6 +28,14 @@ source event's UUID in square brackets, e.g. [a1f8…] ASSISTANT: text.
     },
     ...
   ]
+  ,
+  "file_notes": [
+    {
+      "path": "<a file path that appears in the input>",
+      "caption": "<1 sentence: what changed in this file and why>"
+    },
+    ...
+  ]
 }
 
 ## Rules
@@ -39,6 +47,11 @@ source event's UUID in square brackets, e.g. [a1f8…] ASSISTANT: text.
   prompt as a chapter; aim coarser than that.
 - anchor_uuid MUST be one of the UUIDs in square brackets in the input. \
   If unsure, drop the chapter rather than guess.
+- file_notes: one caption per significant changed file, PR-review voice \
+  ("what changed here and why"). caption is at most 140 chars. Up to 20 \
+  files; skip trivial/unchanged ones.
+- file_notes[].path MUST be a file path that appears in the input (the \
+  "Edit <path>" / "Write <path>" lines). If unsure, drop it rather than guess.
 - Never use em-dashes ("—"). Use commas, periods, or parentheses instead.
 - No URLs, no markdown formatting, no emoji.
 """
