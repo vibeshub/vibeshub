@@ -1,4 +1,4 @@
-import type { AgentSummary, DigestChapter } from "../../types";
+import type { AgentSummary } from "../../types";
 import type {
   StreamEvent,
   ToolUseEvent,
@@ -14,52 +14,9 @@ export interface SubagentEntry {
   stream: StreamEvent[];
 }
 
-export interface ChangeHunk {
-  // data-uuid scroll target: the tool card for main-stream edits, the
-  // spawning Task card for subagent edits, null when unattributable.
-  jumpUuid: string | null;
-  ts: string;
-  rows: DiffRow[];
-  supersededBy: { turnLabel: string } | null;
-}
-
-export interface CaptionGroup {
-  promptUuid: string | null;
-  promptExcerpt: string;
-  turnLabel: string;
-  agentBadge: string | null;
-  hunks: ChangeHunk[];
-}
-
-export interface FileChange {
-  path: string;
-  kind: "new" | "mod";
-  adds: number; // surviving hunks only
-  dels: number;
-  groups: CaptionGroup[];
-}
-
-// One digest chapter's slice of the session diff: the chapter reads like a
-// commit (title + caption as the message) over the files it touched.
-export interface ChapterChange {
-  anchorUuid: string;
-  title: string;
-  caption: string;
-  ordinal: number; // 1-based, matches the rail's numbering
-  adds: number; // surviving hunks in this chapter only
-  dels: number;
-  files: FileChange[];
-}
-
 // DOM id for a file card, used by the index list's scroll links.
 export function changeAnchorId(path: string): string {
   return "change-" + path.replace(/[^a-zA-Z0-9_-]/g, "-");
-}
-
-// DOM id for a chapter section in the Changes column. Distinct from the
-// conversation's `chapter-<uuid>` divider ids so the two modes never collide.
-export function changesChapterAnchorId(uuid: string): string {
-  return "changes-chapter-" + uuid;
 }
 
 // Tool names that modify a file (carry input.file_path). Shared with
@@ -71,14 +28,16 @@ export const FILE_EDIT_TOOLS = new Set([
   "apply_patch",
 ]);
 
-interface PromptRef {
+export interface PromptRef {
   uuid: string | null;
+  ordinal: number; // 1-based; 0 for edits before the first prompt
   excerpt: string;
   turnLabel: string;
 }
 
 const SESSION_START: PromptRef = {
   uuid: null,
+  ordinal: 0,
   excerpt: "session start",
   turnLabel: "session start",
 };
@@ -88,23 +47,51 @@ function clipExcerpt(text: string): string {
   return t.length <= 90 ? t : t.slice(0, 90) + "…";
 }
 
-function promptRef(e: UserPromptEvent, ordinal: number): PromptRef {
-  const raw = e.command
+// The raw prompt text: slash commands format as "name args", free text as is.
+export function promptText(e: UserPromptEvent): string {
+  return e.command
     ? e.command.args
       ? `${e.command.name} ${e.command.args}`
       : e.command.name
     : e.text;
+}
+
+function promptRef(e: UserPromptEvent, ordinal: number): PromptRef {
   return {
     uuid: e.uuid || null,
-    excerpt: clipExcerpt(raw),
+    ordinal,
+    excerpt: clipExcerpt(promptText(e)),
     turnLabel: `turn ${ordinal}`,
   };
 }
 
+// Failed tool calls report their reason as plain text in result.content
+// (string, or a list of text blocks), sometimes wrapped in <tool_use_error>.
+function cleanError(t: string): string | null {
+  const s = t.replace(/<\/?tool_use_error>/g, "").trim();
+  return s || null;
+}
+
+function resultErrorText(e: ToolUseEvent): string | null {
+  if (!e.result?.isError) return null;
+  const c = e.result.content;
+  if (typeof c === "string") return cleanError(c);
+  if (Array.isArray(c)) {
+    for (const part of c as Array<Record<string, unknown>>) {
+      if (part && part.type === "text" && typeof part.text === "string") {
+        const t = cleanError(part.text);
+        if (t) return t;
+      }
+    }
+  }
+  return null;
+}
+
 // One file-edit operation flattened to what grouping and the supersede pass
 // need. MultiEdit without a structuredPatch yields one op per sub-edit.
-interface EditOp {
+export interface EditOp {
   path: string;
+  tool: string; // tool name as recorded: Write / Edit / MultiEdit / apply_patch
   ts: string;
   seq: number; // stream walk order: tiebreaker, and fallback when ts is missing
   streamPos: number; // main-stream index (Task event for subagent ops, -1 unknown)
@@ -112,6 +99,8 @@ interface EditOp {
   prompt: PromptRef;
   agentBadge: string | null;
   isWrite: boolean;
+  failed: boolean; // the tool call errored; the file was not actually changed
+  errorText: string | null;
   rows: DiffRow[];
   newContents: string[]; // emitted content, supersede targets
   oldStrings: string[]; // supersede sources
@@ -128,7 +117,18 @@ function opsFromTool(
   if (!path) return [];
   const patch = extractPatch(e.result?.toolUseResult?.structuredPatch);
   // seq is assigned post-hoc in collectOps once all ops are collected.
-  const base = { path, ts: e.ts, seq: 0, streamPos, jumpUuid, prompt, agentBadge };
+  const base = {
+    path,
+    tool: e.name,
+    ts: e.ts,
+    seq: 0,
+    streamPos,
+    jumpUuid,
+    prompt,
+    agentBadge,
+    failed: !!e.result?.isError,
+    errorText: resultErrorText(e),
+  };
 
   if (e.name === "MultiEdit" && Array.isArray(e.input.edits) && !patch) {
     // No whole-call patch: one hunk per sub-edit (line numbers restart per
@@ -185,7 +185,7 @@ function opsFromTool(
 
 // Pass over the main stream and subagent streams: prompt ordinals, the prompt
 // active at each tool call, Task dispatch lookups, and Read paths (new/mod).
-function collectOps(
+export function collectOps(
   stream: StreamEvent[],
   subagents: SubagentEntry[],
 ): { ops: EditOp[]; reads: Set<string> } {
@@ -248,13 +248,13 @@ function collectOps(
 // ISO timestamps compare lexicographically, with seq as the tiebreaker.
 // When either ts is missing (e.g. cursor-imported traces emit ts: ""),
 // fall back to stream-collection order so empty ts can't reorder edits.
-function sortOps(list: EditOp[]): void {
+export function sortOps(list: EditOp[]): void {
   list.sort(
     (a, b) => (a.ts && b.ts ? a.ts.localeCompare(b.ts) : 0) || a.seq - b.seq,
   );
 }
 
-interface MarkedOp {
+export interface MarkedOp {
   op: EditOp;
   supersededBy: { turnLabel: string } | null;
 }
@@ -263,7 +263,7 @@ interface MarkedOp {
 // before it; an edit whose old_string textually contains ALL of an earlier
 // hunk's emitted content replaces that hunk. Exact substring only; empty
 // fragments never match (false negatives are fine, false positives are not).
-function markSuperseded(list: EditOp[]): MarkedOp[] {
+export function markSuperseded(list: EditOp[]): MarkedOp[] {
   const superseded = new Array<{ turnLabel: string } | null>(
     list.length,
   ).fill(null);
@@ -288,50 +288,7 @@ function markSuperseded(list: EditOp[]): MarkedOp[] {
   return list.map((op, i) => ({ op, supersededBy: superseded[i] }));
 }
 
-// Group consecutive marked ops by (prompt, agent) into caption groups and
-// total the surviving rows.
-function buildGroups(marked: MarkedOp[]): {
-  groups: CaptionGroup[];
-  adds: number;
-  dels: number;
-} {
-  const groups: CaptionGroup[] = [];
-  let adds = 0;
-  let dels = 0;
-  for (const { op, supersededBy } of marked) {
-    const hunk: ChangeHunk = {
-      jumpUuid: op.jumpUuid,
-      ts: op.ts,
-      rows: op.rows,
-      supersededBy,
-    };
-    if (!hunk.supersededBy) {
-      for (const r of op.rows) {
-        if (r.kind === "add") adds += 1;
-        else if (r.kind === "del") dels += 1;
-      }
-    }
-    const last = groups[groups.length - 1];
-    if (
-      last &&
-      last.promptUuid === op.prompt.uuid &&
-      last.agentBadge === op.agentBadge
-    ) {
-      last.hunks.push(hunk);
-    } else {
-      groups.push({
-        promptUuid: op.prompt.uuid,
-        promptExcerpt: op.prompt.excerpt,
-        turnLabel: op.prompt.turnLabel,
-        agentBadge: op.agentBadge,
-        hunks: [hunk],
-      });
-    }
-  }
-  return { groups, adds, dels };
-}
-
-function groupByPath(ops: EditOp[]): Map<string, EditOp[]> {
+export function groupByPath(ops: EditOp[]): Map<string, EditOp[]> {
   const byPath = new Map<string, EditOp[]>();
   for (const op of ops) {
     const list = byPath.get(op.path) ?? [];
@@ -339,132 +296,4 @@ function groupByPath(ops: EditOp[]): Map<string, EditOp[]> {
     byPath.set(op.path, list);
   }
   return byPath;
-}
-
-// Same comparator shape as sortOps: chronological with a seq tiebreak when
-// both first timestamps are present, stream order otherwise.
-function sortByFirstTouch(
-  files: Array<{ change: FileChange; firstTs: string; firstSeq: number }>,
-): FileChange[] {
-  files.sort(
-    (a, b) =>
-      (a.firstTs && b.firstTs ? a.firstTs.localeCompare(b.firstTs) : 0) ||
-      a.firstSeq - b.firstSeq,
-  );
-  return files.map((f) => f.change);
-}
-
-export function buildFileChanges(
-  stream: StreamEvent[],
-  subagents: SubagentEntry[],
-): FileChange[] {
-  const { ops, reads } = collectOps(stream, subagents);
-  const byPath = groupByPath(ops);
-
-  const files: Array<{ change: FileChange; firstTs: string; firstSeq: number }> =
-    [];
-  for (const [path, list] of byPath) {
-    sortOps(list);
-    const marked = markSuperseded(list);
-    const { groups, adds, dels } = buildGroups(marked);
-    const first = list[0];
-    const kind: "new" | "mod" =
-      first.isWrite && !reads.has(path) ? "new" : "mod";
-    files.push({
-      change: { path, kind, adds, dels, groups },
-      firstTs: first.ts,
-      firstSeq: first.seq,
-    });
-  }
-  return sortByFirstTouch(files);
-}
-
-// The session diff re-cut along digest chapters: every chapter appears (so
-// rail rows and ordinals stay aligned), with `files` empty for chapters that
-// changed nothing. The supersede pass stays global per file, so a hunk
-// rewritten in a later chapter shows as a stub inside the chapter that
-// produced it.
-export function buildChapterChanges(
-  stream: StreamEvent[],
-  subagents: SubagentEntry[],
-  chapters: DigestChapter[],
-): ChapterChange[] {
-  const out: ChapterChange[] = chapters.map((c, ci) => ({
-    anchorUuid: c.anchor_uuid,
-    title: c.title,
-    caption: c.caption,
-    ordinal: ci + 1,
-    adds: 0,
-    dels: 0,
-    files: [],
-  }));
-  if (chapters.length === 0) return out;
-
-  // Resolve chapter anchors to stream positions (mirrors chapterMetrics);
-  // unresolved chapters keep their row but can never receive ops.
-  const index = new Map<string, number>();
-  stream.forEach((e, i) => {
-    const uuid = (e as { uuid?: string }).uuid;
-    if (uuid && !index.has(uuid)) index.set(uuid, i);
-  });
-  const resolved = chapters
-    .map((c, ci) => ({ ci, pos: index.get(c.anchor_uuid) }))
-    .filter((r): r is { ci: number; pos: number } => r.pos !== undefined)
-    .sort((a, b) => a.pos - b.pos);
-  if (resolved.length === 0) return out;
-
-  // An op belongs to the last chapter anchored at or before it; everything
-  // earlier (including unattributable subagent ops at pos -1) joins the first.
-  const chapterOf = (pos: number): number => {
-    let ci = resolved[0].ci;
-    for (const r of resolved) {
-      if (r.pos <= pos) ci = r.ci;
-      else break;
-    }
-    return ci;
-  };
-
-  const { ops, reads } = collectOps(stream, subagents);
-  const byPath = groupByPath(ops);
-
-  // chapter -> path -> globally sorted+marked ops falling in that chapter.
-  const buckets = new Map<number, Map<string, MarkedOp[]>>();
-  const newInChapter = new Map<string, number>(); // path -> chapter of a globally-new first touch
-  for (const [path, list] of byPath) {
-    sortOps(list);
-    const marked = markSuperseded(list);
-    if (list[0].isWrite && !reads.has(path)) {
-      newInChapter.set(path, chapterOf(list[0].streamPos));
-    }
-    for (const m of marked) {
-      const ci = chapterOf(m.op.streamPos);
-      const paths = buckets.get(ci) ?? new Map<string, MarkedOp[]>();
-      const bucket = paths.get(path) ?? [];
-      bucket.push(m);
-      paths.set(path, bucket);
-      buckets.set(ci, paths);
-    }
-  }
-
-  for (const [ci, paths] of buckets) {
-    const files: Array<{
-      change: FileChange;
-      firstTs: string;
-      firstSeq: number;
-    }> = [];
-    for (const [path, marked] of paths) {
-      const { groups, adds, dels } = buildGroups(marked);
-      const kind: "new" | "mod" =
-        newInChapter.get(path) === ci ? "new" : "mod";
-      files.push({
-        change: { path, kind, adds, dels, groups },
-        firstTs: marked[0].op.ts,
-        firstSeq: marked[0].op.seq,
-      });
-      out[ci].adds += adds;
-      out[ci].dels += dels;
-    }
-    out[ci].files = sortByFirstTouch(files);
-  }
-  return out;
 }

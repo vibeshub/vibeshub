@@ -1,0 +1,696 @@
+import type { Session, StreamEvent, ToolUseEvent } from "./types";
+import type { EditOp, SubagentEntry } from "./changes";
+import {
+  collectOps,
+  groupByPath,
+  markSuperseded,
+  promptText,
+  sortOps,
+} from "./changes";
+import type { DiffRow } from "./diff";
+
+// provenance.ts — derives the Provenance Blame model from a parsed session:
+// per-prompt attribution, per-op rewrite heat, failed attempts, verification
+// runs, ephemeral files, and the session outcome. Everything here is computed
+// from the transcript; nothing is invented.
+
+export interface PromptInfo {
+  idx: number; // 1-based ordinal, matches the gutter column
+  uuid: string | null;
+  ts: string;
+  text: string;
+  /** Derived activity note: "3 edit ops · +120 lines" or "wrote no code". */
+  note: string;
+}
+
+export interface AttemptInfo {
+  ok: boolean;
+  ts: string;
+  label: string;
+}
+
+export interface VerificationInfo {
+  status: "pass" | "fail" | "none";
+  ts: string;
+  label: string;
+}
+
+export interface ResearchInfo {
+  agentType: string;
+  description: string;
+  reads: number;
+  editOps: number;
+}
+
+export interface BlameHunk {
+  id: string;
+  jumpUuid: string | null;
+  promptIdx: number; // 0 = before the first prompt
+  promptUuid: string | null;
+  /** First failed attempt's ts when retried, else the op ts. */
+  startTs: string;
+  ts: string;
+  tool: string;
+  /** Failed tries + the landing call; 1 for a clean op. */
+  attemptCount: number;
+  /** Subagent type when a subagent wrote this hunk, null for the main agent. */
+  agentType: string | null;
+  title: string;
+  rows: DiffRow[];
+  /** Parallel to rows: how many ops on this file emitted that exact line. */
+  heat: number[];
+  adds: number;
+  dels: number;
+  superseded: { turnLabel: string } | null;
+  attempts: AttemptInfo[];
+  verifications: VerificationInfo[];
+  /** Nearest assistant text or thinking before the op, same turn. */
+  reasoning: { ts: string; text: string } | null;
+  /** A read-only subagent dispatched earlier under the same prompt. */
+  research: ResearchInfo | null;
+}
+
+export type BlameFileStatus = "new" | "mod" | "ephemeral";
+
+export interface BlameFile {
+  path: string;
+  status: BlameFileStatus;
+  adds: number; // surviving hunks only
+  dels: number;
+  hunks: BlameHunk[];
+}
+
+export interface AuthorSlice {
+  key: "ai" | "agent" | "human";
+  label: string;
+  lines: number;
+  pct: number; // 0-100, of surviving added lines
+}
+
+export interface OutcomeEvent {
+  ts: string;
+  label: string;
+  detail: string;
+}
+
+export interface ProvenanceStats {
+  prompts: number;
+  editOps: number;
+  files: number;
+  reads: number;
+  bash: number;
+  thinking: number;
+  subagents: number;
+  /** Summary of the last test run, e.g. "298 passed", or null when none. */
+  tests: string | null;
+}
+
+export interface ProvenanceModel {
+  stats: ProvenanceStats;
+  prompts: PromptInfo[];
+  attribution: { slices: AuthorSlice[]; notes: string[] };
+  files: BlameFile[];
+  outcome: OutcomeEvent[];
+}
+
+// ---------------------------------------------------------------------------
+// Shell-command classification
+
+// The trailing (?![\w./-]) keeps tool names from matching inside larger words
+// or paths: "playwright-report", "vitest.config.ts", "jest/".
+const TEST_CMD =
+  /\b(vitest|jest|pytest|playwright|rspec|phpunit|tox|ctest|busted|(?:go|cargo|bun|deno) test|(?:npm|pnpm|yarn) (?:run )?test\w*|make (?:test|check))(?![\w./-])/;
+const BUILD_CMD =
+  /\b((?:npm|pnpm|yarn) (?:run )?build|tsc|vite build|next build|cargo build|go build|make build|webpack|esbuild)(?![\w./-])/;
+const LINT_CMD =
+  /\b(eslint|ruff|flake8|pylint|mypy|clippy|golangci-lint|prettier --check|black --check)(?![\w./-])/;
+
+interface VerifyRun {
+  pos: number;
+  ts: string;
+  kind: "test" | "build" | "lint";
+  ok: boolean;
+  label: string;
+  /** Pass count when the output reported one, e.g. "298". */
+  passCount: string | null;
+}
+
+function resultText(e: ToolUseEvent): string {
+  const r = e.result;
+  if (!r) return "";
+  const parts: string[] = [];
+  const tu = r.toolUseResult;
+  if (tu?.stdout) parts.push(tu.stdout);
+  if (tu?.stderr) parts.push(tu.stderr);
+  if (typeof r.content === "string") parts.push(r.content);
+  else if (Array.isArray(r.content)) {
+    for (const p of r.content as Array<Record<string, unknown>>) {
+      if (p && p.type === "text" && typeof p.text === "string") {
+        parts.push(p.text);
+      }
+    }
+  }
+  return parts.join("\n");
+}
+
+function commandOf(e: ToolUseEvent): string | null {
+  const c = e.input.command;
+  return typeof c === "string" ? c : null;
+}
+
+// Classification must look at the command itself, not its string payloads: a
+// `gh pr create --body "$(cat <<EOF …npm test…)"` is not a test run. Cut at
+// the first heredoc and blank out quoted segments.
+function sanitizeCmd(cmd: string): string {
+  const cut = cmd.indexOf("<<");
+  const head = cut >= 0 ? cmd.slice(0, cut) : cmd;
+  return head.replace(/"[^"]*"|'[^']*'/g, '""');
+}
+
+// "vitest run src/tests" -> the matched binary plus a pass/fail summary
+// extracted from the output: "vitest · 26 passed".
+function classifyRun(e: ToolUseEvent, pos: number): VerifyRun | null {
+  const raw = commandOf(e);
+  if (!raw) return null;
+  const cmd = sanitizeCmd(raw);
+  const m = TEST_CMD.exec(cmd) ?? BUILD_CMD.exec(cmd) ?? LINT_CMD.exec(cmd);
+  if (!m) return null;
+  const kind: VerifyRun["kind"] = TEST_CMD.test(cmd)
+    ? "test"
+    : BUILD_CMD.test(cmd)
+      ? "build"
+      : "lint";
+  const ok = !e.result?.isError;
+  const out = resultText(e);
+  const passed = /(\d+)\s+pass(?:ed|ing)?\b/.exec(out);
+  const failed = /(\d+)\s+fail(?:ed|ing)?\b/.exec(out);
+  let summary: string;
+  if (!ok) summary = failed ? `${failed[1]} failed` : "failed";
+  else if (failed && failed[1] !== "0") summary = `${failed[1]} failed`;
+  else if (passed) summary = `${passed[1]} passed`;
+  else summary = "ok";
+  const okFinal = ok && !(failed && failed[1] !== "0");
+  return {
+    pos,
+    ts: e.ts,
+    kind,
+    ok: okFinal,
+    label: `${m[1]} · ${summary}`,
+    passCount: okFinal && passed ? passed[1] : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Per-hunk derivation helpers
+
+const DECL_EXPORT =
+  /^(export\s+(default\s+)?)(async\s+)?(function|class|const|interface|type|enum)\b/;
+const DECL_ANY =
+  /^(public|private|protected|static|async|function|class|interface|type|enum|def|fn|impl|struct|trait|module|namespace)\b/;
+
+function clipTitle(s: string): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  return t.length <= 88 ? t : t.slice(0, 88) + "…";
+}
+
+// A blame hunk's one-line handle: the most declaration-looking added line,
+// else the first changed line, else the @@ range. Prose files skip the code
+// heuristics (their fenced code blocks would win otherwise).
+export function hunkTitle(rows: DiffRow[], path?: string): string {
+  const adds = rows.filter((r) => r.kind === "add" && r.text.trim() !== "");
+  const prose = path !== undefined && /\.(md|mdx|txt|rst)$/.test(path);
+  if (!prose) {
+    const exported = adds.find((r) => DECL_EXPORT.test(r.text.trim()));
+    if (exported) return clipTitle(exported.text);
+    const decl = adds.find((r) => DECL_ANY.test(r.text.trim()));
+    if (decl) return clipTitle(decl.text);
+  }
+  if (adds.length > 0) return clipTitle(adds[0].text);
+  const del = rows.find((r) => r.kind === "del" && r.text.trim() !== "");
+  if (del) return clipTitle(del.text);
+  const hunk = rows.find((r) => r.kind === "hunk");
+  if (hunk) return hunk.text;
+  return "no patch data";
+}
+
+// Lines this short are structural noise ("}", "});") whose recurrence across
+// ops says nothing about rewrites.
+const HEAT_MIN_LINE = 6;
+const HEAT_CAP = 4;
+
+function buildHeatIndex(ops: EditOp[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const op of ops) {
+    // Count each distinct line once per op: a line repeated inside one Write
+    // is not a rewrite.
+    const seen = new Set<string>();
+    for (const r of op.rows) {
+      if (r.kind !== "add") continue;
+      const key = r.text.trim();
+      if (key.length < HEAT_MIN_LINE || seen.has(key)) continue;
+      seen.add(key);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function heatOf(rows: DiffRow[], index: Map<string, number>): number[] {
+  return rows.map((r) => {
+    if (r.kind !== "add") return 1;
+    const key = r.text.trim();
+    if (key.length < HEAT_MIN_LINE) return 1;
+    return Math.min(HEAT_CAP, index.get(key) ?? 1);
+  });
+}
+
+function clipText(s: string, n: number): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  return t.length <= n ? t : t.slice(0, n) + "…";
+}
+
+function agentTypeOf(badge: string | null): string | null {
+  if (!badge) return null;
+  const m = /^Task\[(.+)\]$/.exec(badge);
+  return m ? m[1] : badge;
+}
+
+// Nearest assistant text (preferred) or thinking block before `pos`, without
+// crossing back over a user prompt: what the model said right before editing.
+function reasoningBefore(
+  stream: StreamEvent[],
+  pos: number,
+): { ts: string; text: string } | null {
+  let thinking: { ts: string; text: string } | null = null;
+  for (let i = pos - 1; i >= 0; i--) {
+    const e = stream[i];
+    if (e.kind === "user_prompt") break;
+    if (e.kind === "assistant_text" && e.text.trim()) {
+      return { ts: e.ts, text: clipText(e.text, 280) };
+    }
+    if (!thinking && e.kind === "thinking" && e.text.trim()) {
+      thinking = { ts: e.ts, text: clipText(e.text, 280) };
+    }
+  }
+  return thinking;
+}
+
+// ---------------------------------------------------------------------------
+
+interface AgentFacts {
+  pos: number; // Task dispatch position in the main stream
+  promptOrdinal: number;
+  agentType: string;
+  description: string;
+  reads: number;
+  editOps: number;
+}
+
+function collectAgentFacts(
+  stream: StreamEvent[],
+  subagents: SubagentEntry[],
+): AgentFacts[] {
+  const taskPos = new Map<string, { pos: number; ordinal: number }>();
+  let ordinal = 0;
+  stream.forEach((e, pos) => {
+    if (e.kind === "user_prompt") ordinal += 1;
+    else if (e.kind === "tool_use" && e.name === "Task") {
+      taskPos.set(e.id, { pos, ordinal });
+    }
+  });
+  const out: AgentFacts[] = [];
+  for (const { agent, stream: sub } of subagents) {
+    const at = agent.tool_use_id ? taskPos.get(agent.tool_use_id) : undefined;
+    let reads = 0;
+    let editOps = 0;
+    for (const e of sub) {
+      if (e.kind !== "tool_use") continue;
+      if (e.name === "Read") reads += 1;
+      if (e.name === "Write" || e.name === "Edit" || e.name === "MultiEdit") {
+        editOps += 1;
+      }
+    }
+    out.push({
+      pos: at?.pos ?? -1,
+      promptOrdinal: at?.ordinal ?? 0,
+      agentType: agent.agent_type || "agent",
+      description: agent.description,
+      reads,
+      editOps,
+    });
+  }
+  return out;
+}
+
+// Did any later shell command remove this path? Shell commands usually name
+// the file relative to wherever they ran (which the trace doesn't pin down),
+// so match on the path's basename inside an `rm …` command.
+function deletedAfter(
+  runs: Array<{ pos: number; cmd: string }>,
+  path: string,
+  afterPos: number,
+): boolean {
+  const base = path.split("/").pop() ?? path;
+  for (const { pos, cmd } of runs) {
+    if (pos <= afterPos) continue;
+    const head = sanitizeCmd(cmd);
+    if (!/\brm\b/.test(head)) continue;
+    if (head.includes(base)) return true;
+  }
+  return false;
+}
+
+function countEvents(
+  streams: StreamEvent[][],
+  pred: (e: StreamEvent) => boolean,
+): number {
+  let n = 0;
+  for (const s of streams) for (const e of s) if (pred(e)) n += 1;
+  return n;
+}
+
+const AI_LABELS: Record<string, string> = {
+  "claude-code": "Claude",
+  codex: "Codex",
+  cursor: "Cursor",
+};
+
+export function buildProvenance(
+  session: Session,
+  subagents: SubagentEntry[],
+  platform?: string,
+): ProvenanceModel {
+  const { stream, meta } = session;
+  const subStreams = subagents.map((s) => s.stream);
+  const allStreams = [stream, ...subStreams];
+
+  // -- prompts ---------------------------------------------------------------
+  const prompts: PromptInfo[] = [];
+  stream.forEach((e) => {
+    if (e.kind !== "user_prompt") return;
+    prompts.push({
+      idx: prompts.length + 1,
+      uuid: e.uuid || null,
+      ts: e.ts,
+      text: promptText(e),
+      note: "", // filled in below once ops are known
+    });
+  });
+
+  // -- edit ops --------------------------------------------------------------
+  const { ops, reads } = collectOps(stream, subagents);
+  const byPath = groupByPath(ops);
+  const agentFacts = collectAgentFacts(stream, subagents);
+
+  // -- shell runs (verification + rm detection + outcome) --------------------
+  const verifyRuns: VerifyRun[] = [];
+  const shellCmds: Array<{ pos: number; ts: string; cmd: string }> = [];
+  stream.forEach((e, pos) => {
+    if (e.kind !== "tool_use" || (e.name !== "Bash" && e.name !== "shell")) {
+      return;
+    }
+    const cmd = commandOf(e);
+    if (cmd) shellCmds.push({ pos, ts: e.ts, cmd });
+    const run = classifyRun(e, pos);
+    if (run) verifyRuns.push(run);
+  });
+
+  const verificationsAfter = (pos: number): VerificationInfo[] => {
+    // pos -1 = an unattributable subagent op; "after" is meaningless there.
+    const next =
+      pos < 0 ? [] : verifyRuns.filter((r) => r.pos > pos).slice(0, 2);
+    if (next.length === 0) {
+      return [
+        {
+          status: "none",
+          ts: "",
+          label: "no test or build run after this change",
+        },
+      ];
+    }
+    return next.map((r) => ({
+      status: r.ok ? "pass" : "fail",
+      ts: r.ts,
+      label: r.label,
+    }));
+  };
+
+  // -- files + hunks ---------------------------------------------------------
+  const files: Array<{ file: BlameFile; firstTs: string; firstSeq: number }> =
+    [];
+  for (const [path, list] of byPath) {
+    sortOps(list);
+    const okOps = list.filter((o) => !o.failed);
+    if (okOps.length === 0) continue; // only failed attempts: nothing landed
+    const heatIndex = buildHeatIndex(list);
+    const marked = markSuperseded(okOps);
+
+    const hunks: BlameHunk[] = [];
+    let fileAdds = 0;
+    let fileDels = 0;
+    // Walk failed ops once, attaching each to the next ok op in the file's
+    // sorted order (NOT seq: seq is collection order, which subagent ops break).
+    const orderOf = new Map(list.map((o, i) => [o, i]));
+    let cursor = 0;
+    const failedOps = list.filter((o) => o.failed);
+    for (const { op, supersededBy } of marked) {
+      const attempts: AttemptInfo[] = [];
+      while (
+        cursor < failedOps.length &&
+        orderOf.get(failedOps[cursor])! < orderOf.get(op)!
+      ) {
+        const f = failedOps[cursor];
+        attempts.push({
+          ok: false,
+          ts: f.ts,
+          label: `${f.tool} failed: ${clipText(f.errorText ?? "tool error", 120)}`,
+        });
+        cursor += 1;
+      }
+      if (attempts.length > 0) {
+        attempts.push({ ok: true, ts: op.ts, label: `${op.tool} succeeded` });
+      }
+
+      let adds = 0;
+      let dels = 0;
+      for (const r of op.rows) {
+        if (r.kind === "add") adds += 1;
+        else if (r.kind === "del") dels += 1;
+      }
+      if (!supersededBy) {
+        fileAdds += adds;
+        fileDels += dels;
+      }
+
+      const research =
+        agentFacts.find(
+          (a) =>
+            a.editOps === 0 &&
+            a.pos >= 0 &&
+            a.pos < op.streamPos &&
+            a.promptOrdinal === op.prompt.ordinal,
+        ) ?? null;
+
+      hunks.push({
+        id: `${path}#${op.seq}`,
+        jumpUuid: op.jumpUuid,
+        promptIdx: op.prompt.ordinal,
+        promptUuid: op.prompt.uuid,
+        startTs: attempts.length > 0 ? attempts[0].ts : op.ts,
+        ts: op.ts,
+        tool: op.tool,
+        attemptCount: attempts.length > 0 ? attempts.length : 1,
+        agentType: agentTypeOf(op.agentBadge),
+        title: hunkTitle(op.rows, path),
+        rows: op.rows,
+        heat: heatOf(op.rows, heatIndex),
+        adds,
+        dels,
+        superseded: supersededBy,
+        attempts,
+        verifications: verificationsAfter(op.streamPos),
+        reasoning:
+          op.streamPos >= 0 ? reasoningBefore(stream, op.streamPos) : null,
+        research: research
+          ? {
+              agentType: research.agentType,
+              description: research.description,
+              reads: research.reads,
+              editOps: research.editOps,
+            }
+          : null,
+      });
+    }
+
+    const first = okOps[0];
+    const lastPos = Math.max(...list.map((o) => o.streamPos));
+    const status: BlameFileStatus = deletedAfter(shellCmds, path, lastPos)
+      ? "ephemeral"
+      : first.isWrite && !reads.has(path)
+        ? "new"
+        : "mod";
+
+    files.push({
+      file: { path, status, adds: fileAdds, dels: fileDels, hunks },
+      firstTs: first.ts,
+      firstSeq: first.seq,
+    });
+  }
+  files.sort(
+    (a, b) =>
+      (a.firstTs && b.firstTs ? a.firstTs.localeCompare(b.firstTs) : 0) ||
+      a.firstSeq - b.firstSeq,
+  );
+  const blameFiles = files.map((f) => f.file);
+
+  // -- prompt notes ----------------------------------------------------------
+  const opsByOrdinal = new Map<number, { ops: number; adds: number }>();
+  for (const op of ops) {
+    if (op.failed) continue;
+    const slot = opsByOrdinal.get(op.prompt.ordinal) ?? { ops: 0, adds: 0 };
+    slot.ops += 1;
+    slot.adds += op.rows.filter((r) => r.kind === "add").length;
+    opsByOrdinal.set(op.prompt.ordinal, slot);
+  }
+  for (const p of prompts) {
+    const slot = opsByOrdinal.get(p.idx);
+    p.note = slot
+      ? `${slot.ops} edit ${slot.ops === 1 ? "op" : "ops"} · +${slot.adds} lines`
+      : "wrote no code";
+  }
+
+  // -- attribution -----------------------------------------------------------
+  const aiLabel = AI_LABELS[platform ?? ""] ?? "AI";
+  const survivingAdds = new Map<string | null, number>(); // agentBadge -> lines
+  for (const [, list] of byPath) {
+    // recompute marks per path on ok ops only (cheap; lists are small)
+    const okOps = list.filter((o) => !o.failed);
+    for (const { op, supersededBy } of markSuperseded(okOps)) {
+      if (supersededBy) continue;
+      const n = op.rows.filter((r) => r.kind === "add").length;
+      survivingAdds.set(
+        op.agentBadge,
+        (survivingAdds.get(op.agentBadge) ?? 0) + n,
+      );
+    }
+  }
+  const totalAdds = [...survivingAdds.values()].reduce((a, b) => a + b, 0);
+  const pct = (n: number): number =>
+    totalAdds === 0 ? 0 : Math.round((n / totalAdds) * 100);
+  const slices: AuthorSlice[] = [
+    {
+      key: "ai",
+      label: aiLabel,
+      lines: survivingAdds.get(null) ?? 0,
+      pct: pct(survivingAdds.get(null) ?? 0),
+    },
+  ];
+  for (const [badge, lines] of survivingAdds) {
+    if (badge === null) continue;
+    const type = agentTypeOf(badge) ?? "agent";
+    slices.push({ key: "agent", label: `${type} subagent`, lines, pct: pct(lines) });
+  }
+  // Read-only subagents still earn a legend entry: research is part of the story.
+  for (const a of agentFacts) {
+    if (a.editOps > 0) continue;
+    if (slices.some((s) => s.label === `${a.agentType} subagent`)) continue;
+    slices.push({ key: "agent", label: `${a.agentType} subagent`, lines: 0, pct: 0 });
+  }
+  slices.push({ key: "human", label: "human", lines: 0, pct: 0 });
+
+  const notes: string[] = [];
+  for (const a of agentFacts) {
+    if (a.editOps === 0 && a.reads > 0) {
+      notes.push(
+        `The ${a.agentType} subagent made ${a.reads} reads but wrote 0 lines.`,
+      );
+    }
+  }
+  if (prompts.length > 0) {
+    notes.push(
+      `The human wrote 0 lines and ${prompts.length} ${
+        prompts.length === 1 ? "prompt" : "prompts"
+      }.`,
+    );
+  }
+
+  // -- outcome ---------------------------------------------------------------
+  const outcome: OutcomeEvent[] = [];
+  const lastTest = [...verifyRuns].reverse().find((r) => r.kind === "test");
+  if (lastTest) {
+    outcome.push({
+      ts: lastTest.ts,
+      label: lastTest.ok ? "Final test run" : "Last test run failed",
+      detail: lastTest.label,
+    });
+  }
+  const lastBuild = [...verifyRuns].reverse().find((r) => r.kind === "build");
+  if (lastBuild) {
+    outcome.push({
+      ts: lastBuild.ts,
+      label: lastBuild.ok ? "Build passed" : "Build failed",
+      detail: lastBuild.label,
+    });
+  }
+  const commit = [...shellCmds]
+    .reverse()
+    .find((c) => /\bgit commit\b/.test(sanitizeCmd(c.cmd)));
+  if (commit) {
+    // Heredoc-style messages (-m "$(cat <<EOF …)") aren't worth quoting.
+    const m = /-m\s+["']([^"'\n]+)/.exec(commit.cmd);
+    const msg = m && !m[1].startsWith("$(") ? m[1] : null;
+    outcome.push({
+      ts: commit.ts,
+      label: "Commit",
+      detail:
+        (msg ? `"${clipText(msg, 60)}"` : "") +
+        (meta.gitBranch ? `${msg ? " on " : "on "}${meta.gitBranch}` : ""),
+    });
+  }
+  if (meta.prLink) {
+    outcome.push({
+      ts: meta.prLink.at,
+      label: `PR #${meta.prLink.number} opened`,
+      detail: meta.prLink.repo,
+    });
+  }
+  const merge = [...shellCmds]
+    .reverse()
+    .find((c) => /\bgh pr merge\b|\bgit merge\b/.test(sanitizeCmd(c.cmd)));
+  if (merge) {
+    outcome.push({ ts: merge.ts, label: "Merged", detail: "" });
+  }
+  outcome.sort((a, b) => a.ts.localeCompare(b.ts));
+
+  // -- stats -----------------------------------------------------------------
+  const stats: ProvenanceStats = {
+    prompts: prompts.length,
+    editOps: ops.length,
+    files: blameFiles.length,
+    reads: countEvents(
+      allStreams,
+      (e) => e.kind === "tool_use" && e.name === "Read",
+    ),
+    bash: countEvents(
+      allStreams,
+      (e) => e.kind === "tool_use" && (e.name === "Bash" || e.name === "shell"),
+    ),
+    thinking: countEvents(allStreams, (e) => e.kind === "thinking"),
+    subagents: subagents.length,
+    tests: lastTest
+      ? lastTest.passCount
+        ? `${lastTest.passCount} ✓`
+        : lastTest.ok
+          ? "✓"
+          : "✗"
+      : null,
+  };
+
+  return {
+    stats,
+    prompts,
+    attribution: { slices, notes },
+    files: blameFiles,
+    outcome,
+  };
+}

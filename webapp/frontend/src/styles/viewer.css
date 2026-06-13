@@ -2215,10 +2215,6 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .vibeshub-viewer .changes-index-total {
-    margin-left: 0;
-    width: 100%;
-  }
 }
 
 /* Provenance chip for traces reconstructed from a .txt terminal export. */
@@ -2254,230 +2250,6 @@
   background: var(--bg);
   color: var(--strong);
 }
-.vibeshub-viewer .changes-view {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.vibeshub-viewer .changes-index {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  align-items: baseline;
-  padding: 8px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--bg-inset);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.vibeshub-viewer .changes-index-item {
-  display: inline-flex;
-  gap: 6px;
-  align-items: baseline;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  padding: 0;
-}
-.vibeshub-viewer .changes-index-item:hover .changes-index-path {
-  text-decoration: underline;
-}
-.vibeshub-viewer .changes-index-new {
-  color: var(--diff-add-num);
-  font-size: 10px;
-}
-.vibeshub-viewer .changes-index-total {
-  margin-left: auto;
-  color: var(--text-faint);
-  font-size: 11px;
-}
-.vibeshub-viewer .change-card {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--bg);
-  scroll-margin-top: 140px;
-}
-.vibeshub-viewer .change-card-head {
-  margin: 0;
-  border: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  border-radius: 0;
-}
-.vibeshub-viewer .change-new-badge {
-  font-size: 10px;
-  color: var(--diff-add-num);
-  border: 1px solid currentColor;
-  padding: 0 7px;
-  margin-left: 8px;
-}
-.vibeshub-viewer .change-caption {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text-faint);
-  background: var(--bg-subtle);
-  border-top: 1px solid var(--border-subtle);
-}
-.vibeshub-viewer .change-group:first-of-type .change-caption {
-  border-top: 0;
-}
-.vibeshub-viewer .change-caption-text {
-  color: var(--text);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.vibeshub-viewer .change-caption-turn,
-.vibeshub-viewer .change-caption-agent {
-  flex: 0 0 auto;
-}
-.vibeshub-viewer .change-caption-agent {
-  color: var(--accent-strong);
-}
-.vibeshub-viewer .change-caption-jump {
-  flex: 0 0 auto;
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: var(--color-link);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  padding: 0;
-}
-.vibeshub-viewer .change-caption-jump:hover {
-  text-decoration: underline;
-}
-.vibeshub-viewer .change-card .diff-view {
-  border: 0;
-  border-radius: 0;
-}
-.vibeshub-viewer .superseded-stub {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: var(--bg-inset);
-  color: var(--text-faint);
-  font: inherit;
-  font-size: 12px;
-  padding: 5px 12px;
-  cursor: pointer;
-}
-.vibeshub-viewer .superseded-body .diff-view {
-  opacity: 0.55;
-}
-.vibeshub-viewer .change-nodata {
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-
-/* ----- Changes view: net summary header ----- */
-.vibeshub-viewer .changes-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.vibeshub-viewer .changes-summary-line {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.vibeshub-viewer .changes-summary-count {
-  color: var(--text-strong);
-  font-weight: 600;
-}
-.vibeshub-viewer .changes-ratio {
-  flex: 0 1 120px;
-  height: 4px;
-  background: color-mix(in oklab, var(--diff-del-num) 30%, transparent);
-  overflow: hidden;
-  align-self: center;
-}
-.vibeshub-viewer .changes-ratio-add {
-  display: block;
-  height: 100%;
-  background: color-mix(in oklab, var(--diff-add-num) 60%, transparent);
-}
-.vibeshub-viewer .changes-summary-toggle {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: var(--color-link);
-  font: inherit;
-  font-size: 12px;
-  padding: 0;
-  cursor: pointer;
-}
-.vibeshub-viewer .changes-summary-toggle:hover {
-  text-decoration: underline;
-}
-
-/* ----- Changes view: chapter sections ----- */
-.vibeshub-viewer .changes-chapter {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  scroll-margin-top: 140px;
-}
-.vibeshub-viewer .changes-chapter + .changes-chapter {
-  margin-top: 18px;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 22px;
-}
-.vibeshub-viewer .changes-chapter-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.vibeshub-viewer .changes-chapter-n {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-faint);
-}
-.vibeshub-viewer .changes-chapter-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-strong);
-}
-.vibeshub-viewer .changes-chapter-stats {
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.vibeshub-viewer .changes-chapter-jump {
-  flex: 0 0 auto;
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: var(--color-link);
-  font: inherit;
-  font-size: 12px;
-  padding: 0;
-  cursor: pointer;
-}
-.vibeshub-viewer .changes-chapter-jump:hover {
-  text-decoration: underline;
-}
-.vibeshub-viewer .changes-chapter-caption {
-  margin: -4px 0 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-muted);
-  max-width: 60ch;
-}
-
 /* ----- Changes view: large-hunk expander ----- */
 .vibeshub-viewer .diff-expand {
   display: block;
@@ -2496,30 +2268,704 @@
   background: var(--bg-subtle);
 }
 
-/* ----- Rails in changes mode ----- */
-.vibeshub-viewer .chapterrail-item.empty {
-  cursor: default;
-  opacity: 0.45;
+/* ----- Provenance blame (the Changes mode) -----
+   Two-column grid: the blame column and a sticky provenance panel. Gutters
+   per line: prompt № · author band · rewrite heat. All colors come from the
+   terminal theme tokens. */
+.vibeshub-viewer .viewer-body--prov {
+  display: block;
+  max-width: 1560px;
 }
-.vibeshub-viewer .chapterrail-item.empty:hover {
-  background: transparent;
+@media (min-width: 1080px) {
+  .vibeshub-viewer .viewer-body--prov .thread-controls {
+    max-width: none;
+  }
 }
-.vibeshub-viewer .chapterrail-meta .diff-stat-add,
-.vibeshub-viewer .chapterrail-meta .diff-stat-del {
-  font-size: 10px;
+.vibeshub-viewer .prov-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 36px;
+  align-items: start;
 }
-.vibeshub-viewer .chapterrail-meta .diff-stat-del {
-  margin-left: 5px;
-}
-.vibeshub-viewer .filesrail-item {
+.vibeshub-viewer .prov-main {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 22px;
+  padding-bottom: 60px;
 }
-.vibeshub-viewer .filesrail-path {
+
+/* stat row */
+.vibeshub-viewer .prov-statrow {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+}
+.vibeshub-viewer .prov-stat {
+  flex: 1;
+  min-width: 92px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--line-soft);
+}
+.vibeshub-viewer .prov-stat:last-child {
+  border-right: none;
+}
+.vibeshub-viewer .prov-stat b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vibeshub-viewer .prov-stat span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* prompt cards */
+.vibeshub-viewer .prov-prompts {
+  display: grid;
+  gap: 8px;
+}
+.vibeshub-viewer .prov-prompt {
+  display: grid;
+  grid-template-columns: 46px 34px 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  border: 1px solid var(--line-soft);
+  padding: 10px 14px;
+  background: var(--bg-deep);
+}
+.vibeshub-viewer .prov-prompt .t {
   font-family: var(--font-mono);
   font-size: 11px;
-  line-height: 1.4;
-  color: var(--text);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.vibeshub-viewer .prov-prompt .n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--t-write);
+}
+.vibeshub-viewer .prov-prompt .q {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--txt);
+  margin: 0;
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+.vibeshub-viewer .prov-prompt .q.tiny {
+  font-size: 17px;
+  color: var(--strong);
+}
+.vibeshub-viewer .prov-prompt .note {
+  display: block;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 5px;
+}
+.vibeshub-viewer .prov-jump {
+  border: 0;
+  background: transparent;
+  color: var(--acc);
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 0;
+}
+.vibeshub-viewer .prov-jump:hover {
+  color: var(--strong);
+}
+
+/* attribution bar + legend */
+.vibeshub-viewer .prov-attrib {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vibeshub-viewer .prov-bar {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  background: var(--bg-deep);
+  border: 1px solid var(--line-soft);
+}
+.vibeshub-viewer .prov-bar i {
+  display: block;
+  height: 100%;
+}
+.vibeshub-viewer .prov-legend {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.6;
+  max-width: 760px;
+}
+.vibeshub-viewer .prov-legend .k {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 16px;
+}
+.vibeshub-viewer .prov-legend .k i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+.vibeshub-viewer .prov-legend .k b {
+  color: var(--txt);
+  font-weight: 500;
+}
+.vibeshub-viewer .prov-legend p {
+  margin: 6px 0 0;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+/* net summary + folded file index */
+.vibeshub-viewer .prov-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vibeshub-viewer .prov-summary-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .prov-summary-count {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.vibeshub-viewer .prov-ratio {
+  flex: 0 1 120px;
+  height: 4px;
+  background: color-mix(in oklab, var(--diff-del-num) 30%, transparent);
+  overflow: hidden;
+  align-self: center;
+}
+.vibeshub-viewer .prov-ratio-add {
+  display: block;
+  height: 100%;
+  background: color-mix(in oklab, var(--diff-add-num) 60%, transparent);
+}
+.vibeshub-viewer .prov-summary-toggle {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+}
+.vibeshub-viewer .prov-summary-toggle:hover {
+  text-decoration: underline;
+}
+.vibeshub-viewer .prov-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-inset);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .prov-index-item {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.vibeshub-viewer .prov-index-item:hover .prov-index-path {
+  text-decoration: underline;
+}
+.vibeshub-viewer .prov-index-status {
+  font-size: 10px;
+}
+.vibeshub-viewer .prov-index-status.new {
+  color: var(--diff-add-num);
+}
+.vibeshub-viewer .prov-index-status.ephemeral {
+  color: var(--t-write);
+}
+
+/* file sections */
+.vibeshub-viewer .prov-file {
+  scroll-margin-top: 140px;
+}
+.vibeshub-viewer .prov-fhead {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--txt);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.vibeshub-viewer .prov-fpath {
+  overflow-wrap: anywhere;
+}
+.vibeshub-viewer .prov-fstatus {
+  font-size: 9.5px;
+  color: var(--faint);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.vibeshub-viewer .prov-fstatus.new {
+  color: var(--diff-add-num);
+  border-color: color-mix(in oklab, var(--acc) 35%, transparent);
+}
+.vibeshub-viewer .prov-fstatus.ephemeral {
+  color: var(--t-write);
+  border-color: color-mix(in oklab, var(--t-write) 40%, transparent);
+  border-style: dashed;
+}
+.vibeshub-viewer .prov-fstats {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vibeshub-viewer .prov-file.ephemeral .prov-fpath {
+  color: var(--dim);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--t-write) 50%, transparent);
+}
+.vibeshub-viewer .prov-file.ephemeral .prov-hunk {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+/* hunks */
+.vibeshub-viewer .prov-hunk {
+  border: 1px solid var(--line-soft);
+  background: var(--bg-deep);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.vibeshub-viewer .prov-hunk.sel-hunk {
+  border-color: var(--faint);
+}
+.vibeshub-viewer .prov-hhead {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.vibeshub-viewer .prov-htitle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--txt);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.vibeshub-viewer .prov-htitle:hover {
+  color: var(--strong);
+  text-decoration: underline;
+}
+.vibeshub-viewer .prov-badge {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-write);
+  border: 1px solid color-mix(in oklab, var(--t-write) 40%, transparent);
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.vibeshub-viewer .prov-badge.agent {
+  color: var(--t-agent);
+  border-color: color-mix(in oklab, var(--t-agent) 40%, transparent);
+}
+.vibeshub-viewer .prov-hmeta {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.vibeshub-viewer .prov-nodata {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* blame rows */
+.vibeshub-viewer .prov-code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 4px 0;
+  overflow-x: auto;
+}
+.vibeshub-viewer .prov-ln {
+  display: grid;
+  grid-template-columns: 34px 4px 26px 22px 1fr;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  white-space: pre;
+}
+.vibeshub-viewer .prov-ln:hover {
+  background: color-mix(in oklab, var(--acc) 4%, transparent);
+}
+.vibeshub-viewer .prov-ln.sel {
+  border-left-color: var(--strong);
+  background: color-mix(in oklab, var(--acc) 8%, transparent);
+}
+.vibeshub-viewer .prov-pidx {
+  text-align: center;
+  font-size: 10px;
+  color: var(--t-write);
+  align-self: center;
+  user-select: none;
+}
+.vibeshub-viewer .prov-band {
+  margin: 1px 0;
+}
+.vibeshub-viewer .prov-heat {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding-left: 6px;
+}
+.vibeshub-viewer .prov-heat i {
+  width: 4px;
+  height: 9px;
+  background: var(--line-soft);
+}
+.vibeshub-viewer .prov-heat i.on {
+  background: var(--t-write);
+}
+.vibeshub-viewer .prov-sign {
+  text-align: center;
+  color: var(--faint);
+  user-select: none;
+  align-self: center;
+}
+.vibeshub-viewer .prov-src {
+  padding-right: 12px;
+}
+.vibeshub-viewer .prov-ln.add {
+  background: var(--diff-add-bg);
+}
+.vibeshub-viewer .prov-ln.add .prov-sign {
+  color: var(--diff-add-num);
+}
+.vibeshub-viewer .prov-ln.del {
+  background: var(--diff-del-bg);
+}
+.vibeshub-viewer .prov-ln.del .prov-sign {
+  color: var(--diff-del-num);
+}
+.vibeshub-viewer .prov-ln.del .prov-src {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--err) 45%, transparent);
+}
+.vibeshub-viewer .prov-ln.ctx .prov-src {
+  color: var(--dim);
+}
+.vibeshub-viewer .prov-ln.hunkline {
+  cursor: default;
+}
+.vibeshub-viewer .prov-ln.hunkline .prov-src {
+  color: var(--diff-hunk-fg);
+  font-size: 11px;
+}
+
+/* superseded stubs */
+.vibeshub-viewer .prov-stub {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: var(--bg-inset);
+  color: var(--faint);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.vibeshub-viewer .prov-stub-note {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.vibeshub-viewer .prov-stub-body .prov-code {
+  opacity: 0.55;
+}
+
+/* outcome */
+.vibeshub-viewer .prov-outcome {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 7px;
+}
+.vibeshub-viewer .prov-outcome h2 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 4px;
+  font-weight: 500;
+}
+.vibeshub-viewer .prov-orow {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.vibeshub-viewer .prov-orow .t {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.vibeshub-viewer .prov-orow b {
+  color: var(--txt);
+  font-weight: 500;
+}
+
+/* provenance panel */
+.vibeshub-viewer .prov-panel {
+  position: sticky;
+  top: 120px;
+  align-self: start;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  border-left: 1px solid var(--line);
+  padding: 4px 0 40px 28px;
+}
+.vibeshub-viewer .prov-panel h2 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 16px;
+  font-weight: 500;
+}
+.vibeshub-viewer .prov-panel-close {
+  display: none;
+}
+.vibeshub-viewer .prov-empty {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.65;
+  border: 1px dashed var(--line);
+  padding: 18px;
+}
+.vibeshub-viewer .prov-empty b {
+  color: var(--txt);
+  font-weight: 500;
+}
+.vibeshub-viewer .prov-chain {
+  position: relative;
+  padding-left: 20px;
+}
+.vibeshub-viewer .prov-chain::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--line);
+}
+.vibeshub-viewer .prov-step {
+  position: relative;
+  margin-bottom: 20px;
+}
+.vibeshub-viewer .prov-step::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--bg);
+  border: 2px solid var(--faint);
+}
+.vibeshub-viewer .prov-step.prompt::before {
+  border-color: var(--t-write);
+}
+.vibeshub-viewer .prov-step.research::before {
+  border-color: var(--t-agent);
+}
+.vibeshub-viewer .prov-step.verify::before {
+  border-color: var(--acc);
+}
+.vibeshub-viewer .prov-step h3 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  color: var(--dim);
+  font-weight: 500;
+}
+.vibeshub-viewer .prov-step p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--txt);
+  overflow-wrap: anywhere;
+}
+.vibeshub-viewer .prov-step p.q {
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--strong);
+}
+.vibeshub-viewer .prov-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.vibeshub-viewer .prov-attempt {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+.vibeshub-viewer .prov-attempt.dead {
+  opacity: 0.65;
+}
+.vibeshub-viewer .prov-attempt .ok {
+  color: var(--diff-add-num);
+}
+.vibeshub-viewer .prov-attempt .no {
+  color: var(--err);
+}
+.vibeshub-viewer .prov-vrow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.vibeshub-viewer .prov-vchip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+}
+.vibeshub-viewer .prov-vchip.pass {
+  color: var(--diff-add-num);
+  border-color: color-mix(in oklab, var(--acc) 35%, transparent);
+}
+.vibeshub-viewer .prov-vchip.fail {
+  color: var(--err);
+  border-color: color-mix(in oklab, var(--err) 40%, transparent);
+}
+.vibeshub-viewer .prov-vchip.none {
+  border-style: dashed;
+  color: var(--t-write);
+  border-color: color-mix(in oklab, var(--t-write) 40%, transparent);
+}
+.vibeshub-viewer .prov-thisline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.vibeshub-viewer .prov-open-chat {
+  border: 0;
+  background: transparent;
+  color: var(--acc);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+}
+.vibeshub-viewer .prov-open-chat:hover {
+  text-decoration: underline;
+}
+
+/* narrow: single column, panel becomes a bottom sheet on selection */
+@media (max-width: 1180px) {
+  .vibeshub-viewer .prov-grid {
+    grid-template-columns: 1fr;
+  }
+  .vibeshub-viewer .prov-panel {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    max-height: 55vh;
+    background: var(--bg);
+    border: 0;
+    border-top: 1px solid var(--line);
+    padding: 16px 20px 24px;
+    z-index: 60;
+  }
+  .vibeshub-viewer .prov-panel.has-sel {
+    display: block;
+  }
+  .vibeshub-viewer .prov-panel-close {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    border: 0;
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 14px;
+  }
+}
+@media (max-width: 640px) {
+  .vibeshub-viewer .viewer-body--prov .prov-main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

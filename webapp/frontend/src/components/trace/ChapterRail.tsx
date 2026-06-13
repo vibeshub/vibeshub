@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "./types";
 import type { TraceDigest } from "../../types";
-import type { ChapterChange } from "./changes";
-import { changesChapterAnchorId } from "./changes";
 import { chapterMetrics } from "./chapterMetrics";
 
 interface Props {
   session: Session;
   digest: TraceDigest;
-  /** Which column the rail is indexing; anchors and meta follow suit. */
-  mode?: "conversation" | "changes";
-  /** Per-chapter diffstats, required for meaningful rows in changes mode. */
-  chapterChanges?: ChapterChange[] | null;
 }
 
 function fmtDur(ms: number): string {
@@ -22,18 +16,9 @@ function fmtDur(ms: number): string {
   return rem ? `${m}m${String(rem).padStart(2, "0")}s` : `${m}m`;
 }
 
-export function ChapterRail({
-  session,
-  digest,
-  mode = "conversation",
-  chapterChanges = null,
-}: Props) {
+export function ChapterRail({ session, digest }: Props) {
   const chapters = digest.chapters;
-  const inChanges = mode === "changes";
-  // Conversation mode anchors to the in-thread dividers; changes mode to the
-  // chapter sections of the Changes column.
-  const anchorId = (uuid: string) =>
-    inChanges ? changesChapterAnchorId(uuid) : `chapter-${uuid}`;
+  const anchorId = (uuid: string) => `chapter-${uuid}`;
 
   const metrics = useMemo(
     () => chapterMetrics(session.stream, chapters),
@@ -52,20 +37,6 @@ export function ChapterRail({
     return max;
   }, [metrics]);
 
-  const diffstats = useMemo(() => {
-    const map = new Map<string, { adds: number; dels: number }>();
-    for (const c of chapterChanges ?? []) {
-      map.set(c.anchorUuid, { adds: c.adds, dels: c.dels });
-    }
-    return map;
-  }, [chapterChanges]);
-
-  const maxChurn = useMemo(() => {
-    let max = 0;
-    for (const s of diffstats.values()) max = Math.max(max, s.adds + s.dels);
-    return max;
-  }, [diffstats]);
-
   const [currentUuid, setCurrentUuid] = useState<string | null>(
     chapters[0]?.anchor_uuid ?? null,
   );
@@ -77,7 +48,7 @@ export function ChapterRail({
   useEffect(() => {
     if (chapters.length === 0 || typeof window === "undefined") return;
     if (typeof IntersectionObserver === "undefined") return;
-    const prefix = inChanges ? "changes-chapter-" : "chapter-";
+    const prefix = "chapter-";
     const positions = new Map<string, number>();
     const obs = new IntersectionObserver(
       (entries) => {
@@ -103,7 +74,7 @@ export function ChapterRail({
       if (el) obs.observe(el);
     }
     return () => obs.disconnect();
-  }, [chapters, inChanges]);
+  }, [chapters]);
 
   // Keep the active row visible inside the rail's own scroller (never the doc).
   useEffect(() => {
@@ -142,53 +113,6 @@ export function ChapterRail({
       <ol className="chapterrail-list" ref={scrollerRef}>
         {chapters.map((c, i) => {
           const cur = c.anchor_uuid === currentUuid;
-          if (inChanges) {
-            const s = diffstats.get(c.anchor_uuid);
-            const churn = s ? s.adds + s.dels : 0;
-            const pct = maxChurn > 0 ? (churn / maxChurn) * 100 : 0;
-            const empty = churn === 0;
-            return (
-              <li key={c.anchor_uuid}>
-                <button
-                  type="button"
-                  data-chapter-uuid={c.anchor_uuid}
-                  className={
-                    "chapterrail-item" +
-                    (cur && !empty ? " cur" : "") +
-                    (empty ? " empty" : "")
-                  }
-                  onClick={() => jumpTo(c.anchor_uuid)}
-                  disabled={empty}
-                  aria-current={cur && !empty ? "true" : undefined}
-                >
-                  <span className="chapterrail-n">{i + 1}</span>
-                  <span className="chapterrail-body">
-                    <span className="chapterrail-title">{c.title}</span>
-                    {empty ? (
-                      <span className="chapterrail-meta">no changes</span>
-                    ) : (
-                      <span className="chapterrail-arc">
-                        <span className="chapterrail-bar">
-                          <span
-                            className="chapterrail-fill"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </span>
-                        <span className="chapterrail-meta">
-                          {s!.adds > 0 && (
-                            <span className="diff-stat-add">+{s!.adds}</span>
-                          )}
-                          {s!.dels > 0 && (
-                            <span className="diff-stat-del">−{s!.dels}</span>
-                          )}
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          }
           const m = metrics.get(c.anchor_uuid);
           let pct = 0;
           if (m) {

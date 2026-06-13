@@ -9,9 +9,8 @@ import { ChapterRail } from "./ChapterRail";
 import { Hero } from "./Hero";
 import { ThreadControls, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
-import { ChangesView } from "./ChangesView";
-import { FilesRail } from "./FilesRail";
-import { buildChapterChanges, buildFileChanges } from "./changes";
+import { ProvenanceView } from "./ProvenanceView";
+import { buildProvenance } from "./provenance";
 import { useSubagentStreams } from "./useSubagentStreams";
 import { usePersistedBoolean } from "./persistedState";
 
@@ -49,28 +48,18 @@ export function TraceViewer({
 
   const { entries: subagents, loading: subagentsLoading } =
     useSubagentStreams(trace);
-  const changes = useMemo(
-    () => buildFileChanges(session.stream, subagents),
-    [session.stream, subagents],
+  const provenance = useMemo(
+    () => buildProvenance(session, subagents, trace.platform),
+    [session, subagents, trace.platform],
   );
-  const chapterChanges = useMemo(
-    () =>
-      trace.ai_digest?.chapters?.length
-        ? buildChapterChanges(
-            session.stream,
-            subagents,
-            trace.ai_digest.chapters,
-          )
-        : null,
-    [session.stream, subagents, trace.ai_digest],
-  );
+  const hasChanges = provenance.files.length > 0;
 
-  // #changes in the URL deep-links into Changes mode; leaving the mode
-  // (toggle or jump) clears it so shared links stay accurate.
+  // Changes (the provenance diff) is the default; #chat in the URL deep-links
+  // into the conversation. Legacy #changes links land on the default anyway.
   const [mode, setModeState] = useState<ViewMode>(() =>
-    typeof window !== "undefined" && window.location.hash === "#changes"
-      ? "changes"
-      : "conversation",
+    typeof window !== "undefined" && window.location.hash === "#chat"
+      ? "conversation"
+      : "changes",
   );
   const setMode = (m: ViewMode) => {
     setModeState(m);
@@ -79,7 +68,7 @@ export function TraceViewer({
     window.history.replaceState(
       null,
       "",
-      m === "changes" ? `${base}#changes` : base,
+      m === "conversation" ? `${base}#chat` : base,
     );
   };
 
@@ -109,7 +98,10 @@ export function TraceViewer({
   }, [mode]);
 
   const empty = session.stream.length === 0;
-  const inChanges = mode === "changes" && changes.length > 0;
+  const inChanges = mode === "changes" && hasChanges;
+  // Sessions with no edits fall back to the conversation body even while the
+  // mode state says "changes"; the controls should match what's shown.
+  const effectiveMode: ViewMode = inChanges ? "changes" : "conversation";
 
   return (
     <div className="vibeshub-viewer">
@@ -136,17 +128,30 @@ export function TraceViewer({
           This trace has no parseable events.{" "}
           <a href={rawHref}>View raw JSONL ↗</a>
         </div>
+      ) : inChanges ? (
+        <div className="viewer-body viewer-body--prov">
+          <div className="viewer-main">
+            <ThreadControls
+              showSystemEvents={showSystemEvents}
+              setShowSystemEvents={setShowSystemEvents}
+              expandToolCalls={expandToolCalls}
+              setExpandToolCalls={setExpandToolCalls}
+              mode={effectiveMode}
+              setMode={setMode}
+              hasChanges={hasChanges}
+            />
+            <ProvenanceView
+              model={provenance}
+              session={session}
+              subagentsLoading={subagentsLoading}
+              onJump={handleJump}
+            />
+          </div>
+        </div>
       ) : (
         <div className="viewer-body">
           {trace.ai_digest?.chapters?.length ? (
-            <ChapterRail
-              session={session}
-              digest={trace.ai_digest}
-              mode={inChanges ? "changes" : "conversation"}
-              chapterChanges={chapterChanges}
-            />
-          ) : inChanges ? (
-            <FilesRail changes={changes} root={session.meta.cwd} />
+            <ChapterRail session={session} digest={trace.ai_digest} />
           ) : (
             <PromptRail session={session} />
           )}
@@ -156,26 +161,17 @@ export function TraceViewer({
               setShowSystemEvents={setShowSystemEvents}
               expandToolCalls={expandToolCalls}
               setExpandToolCalls={setExpandToolCalls}
-              mode={mode}
+              mode={effectiveMode}
               setMode={setMode}
-              hasChanges={changes.length > 0}
+              hasChanges={hasChanges}
             />
-            {inChanges ? (
-              <ChangesView
-                session={session}
-                changes={changes}
-                chapters={chapterChanges}
-                onJump={handleJump}
-              />
-            ) : (
-              <Thread
-                session={session}
-                shortId={shortId}
-                showSystemEvents={showSystemEvents}
-                expandToolCalls={expandToolCalls}
-                digest={trace.ai_digest}
-              />
-            )}
+            <Thread
+              session={session}
+              shortId={shortId}
+              showSystemEvents={showSystemEvents}
+              expandToolCalls={expandToolCalls}
+              digest={trace.ai_digest}
+            />
           </div>
         </div>
       )}

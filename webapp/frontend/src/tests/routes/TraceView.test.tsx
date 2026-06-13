@@ -75,10 +75,18 @@ function mockFetchSequence(traceSummary: object) {
   });
 }
 
+
+// The provenance diff is now the default mode; conversation-specific tests
+// flip back via the pills first.
+async function toConversation() {
+  fireEvent.click(await screen.findByRole("tab", { name: "Conversation" }));
+}
+
 describe("TraceView", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockUseAuth.mockReturnValue(anonAuth);
+    window.history.replaceState(null, "", "/");
   });
 
   it("renders the hero title and at least one tool card from the parsed trace", async () => {
@@ -111,6 +119,8 @@ describe("TraceView", () => {
     );
     expect(heroTitle.tagName.toLowerCase()).toBe("h1");
 
+    await toConversation();
+
     // At least one tool head button should appear.
     const toolButtons = screen.getAllByRole("button", { expanded: false });
     expect(toolButtons.length).toBeGreaterThan(0);
@@ -138,6 +148,7 @@ describe("TraceView", () => {
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
 
     expect(
       await screen.findByRole("button", { name: /expand tool calls/i }),
@@ -161,6 +172,7 @@ describe("TraceView", () => {
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
 
     const toggle = await screen.findByRole("button", {
       name: /expand tool calls/i,
@@ -196,6 +208,7 @@ describe("TraceView", () => {
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
 
     // Wait for the controls to render — groups are visible by default.
     await screen.findByRole("button", { name: /expand tool calls/i });
@@ -226,6 +239,7 @@ describe("TraceView", () => {
     });
 
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
 
     await screen.findByRole("button", { name: /expand tool calls/i });
 
@@ -519,6 +533,7 @@ describe("DigestPanel integration", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockUseAuth.mockReturnValue(anonAuth);
+    window.history.replaceState(null, "", "/");
   });
 
   it("renders DigestPanel when ai_digest is present", async () => {
@@ -545,6 +560,7 @@ describe("DigestPanel integration", () => {
       ai_digest: digest,
     });
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
     await waitFor(() => {
       expect(screen.getByText("test ask")).toBeInTheDocument();
     });
@@ -609,6 +625,7 @@ describe("DigestPanel integration", () => {
       ai_digest: digest,
     });
     renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
     // The caption renders only inside ChapterDivider. The title appears in
     // both the ChapterRail and the ChapterDivider above the anchored event.
     await waitFor(() => {
@@ -637,6 +654,7 @@ describe("DigestPanel integration", () => {
       created_at: "2026-05-17T00:00:00Z", is_private: false, ai_digest: digest,
     });
     const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
     await waitFor(() =>
       expect(container.querySelector(".chapterrail")).not.toBeNull(),
     );
@@ -656,6 +674,7 @@ describe("DigestPanel integration", () => {
       created_at: "2026-05-17T00:00:00Z", is_private: false, ai_digest: digest,
     });
     const { container } = renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await toConversation();
     await waitFor(() =>
       expect(screen.queryByText(/Loading trace/i)).not.toBeInTheDocument(),
     );

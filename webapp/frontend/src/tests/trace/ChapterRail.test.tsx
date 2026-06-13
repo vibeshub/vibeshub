@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChapterRail } from "../../components/trace/ChapterRail";
-import type { ChapterChange } from "../../components/trace/changes";
 import type { Session, StreamEvent } from "../../components/trace/types";
 import type { TraceDigest } from "../../types";
 
@@ -95,68 +94,5 @@ describe("ChapterRail", () => {
     );
     expect(screen.getByText("Ghost")).toBeInTheDocument();
     expect(container.querySelector(".chapterrail-arc")).toBeNull();
-  });
-});
-
-const CHANGES: ChapterChange[] = [
-  {
-    anchorUuid: "a",
-    title: "First",
-    caption: "",
-    ordinal: 1,
-    adds: 10,
-    dels: 2,
-    files: [],
-  },
-  {
-    anchorUuid: "b",
-    title: "Second",
-    caption: "",
-    ordinal: 2,
-    adds: 0,
-    dels: 0,
-    files: [],
-  },
-];
-
-describe("ChapterRail changes mode", () => {
-  it("shows per-chapter diffstats and fades chapters without changes", () => {
-    render(
-      <ChapterRail
-        session={sessionWith(STREAM)}
-        digest={TWO}
-        mode="changes"
-        chapterChanges={CHANGES}
-      />,
-    );
-    expect(screen.getByText("+10")).toBeInTheDocument();
-    expect(screen.getByText("−2")).toBeInTheDocument();
-    expect(screen.getByText("no changes")).toBeInTheDocument();
-    const empty = screen.getByText("Second").closest("button")!;
-    expect(empty).toBeDisabled();
-    expect(screen.queryByText(/·/)).not.toBeInTheDocument();
-  });
-
-  it("scrolls to the changes-chapter section on click", async () => {
-    const user = userEvent.setup();
-    const scrollSpy = vi.fn();
-    vi.spyOn(document, "getElementById").mockImplementation((id) =>
-      id === "changes-chapter-a"
-        ? ({ scrollIntoView: scrollSpy } as unknown as HTMLElement)
-        : null,
-    );
-    render(
-      <ChapterRail
-        session={sessionWith(STREAM)}
-        digest={TWO}
-        mode="changes"
-        chapterChanges={CHANGES}
-      />,
-    );
-    await user.click(screen.getByText("First"));
-    expect(scrollSpy).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    });
   });
 });

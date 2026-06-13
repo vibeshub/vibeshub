@@ -101,37 +101,48 @@ describe("TraceViewer changes mode", () => {
     vi.unstubAllGlobals();
   });
 
-  it("hides the pills when the session has no file edits", () => {
+  it("hides the pills and shows the conversation when there are no edits", () => {
     renderViewer([EDIT_STREAM[0]]);
     expect(screen.queryByRole("tab", { name: "Changes" })).toBeNull();
+    expect(screen.getByText("Show system events")).toBeTruthy();
   });
 
-  it("switches to the changes view and back", () => {
+  it("defaults to the changes view when the session has edits", () => {
     renderViewer(EDIT_STREAM);
+    expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Show system events")).toBeNull();
+  });
+
+  it("switches to the conversation and back, tracking the #chat hash", () => {
+    renderViewer(EDIT_STREAM);
+    fireEvent.click(screen.getByRole("tab", { name: "Conversation" }));
+    expect(window.location.hash).toBe("#chat");
     expect(screen.getByText("Show system events")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-    expect(window.location.hash).toBe("#changes");
-    // The path renders twice (index strip + card header), so getAllByText.
-    expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Show system events")).toBeNull();
-
-    fireEvent.click(screen.getByRole("tab", { name: "Conversation" }));
     expect(window.location.hash).toBe("");
+    expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
+  });
+
+  it("starts in conversation mode when the URL hash is #chat", () => {
+    window.history.replaceState(null, "", "/#chat");
+    renderViewer(EDIT_STREAM);
     expect(screen.getByText("Show system events")).toBeTruthy();
   });
 
-  it("starts in changes mode when the URL hash is #changes", () => {
+  it("still lands on changes for legacy #changes links", () => {
     window.history.replaceState(null, "", "/#changes");
     renderViewer(EDIT_STREAM);
     expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
   });
 
-  it("jump returns to conversation mode and clears the hash", () => {
+  it("jump returns to conversation mode and scrolls to the edit", () => {
     renderViewer(EDIT_STREAM);
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-    fireEvent.click(screen.getByText("jump ↗"));
-    expect(window.location.hash).toBe("");
+    // The hunk header's ↗ jumps to the tool card in the conversation.
+    fireEvent.click(
+      screen.getByTitle("View this edit in the conversation"),
+    );
+    expect(window.location.hash).toBe("#chat");
     expect(screen.getByText("Show system events")).toBeTruthy();
     // Collapsed tool groups render no [data-uuid] for tools, so the jump
     // falls back to the prompt card and must still scroll.
