@@ -24,6 +24,11 @@ def strip_em_dashes(text: str) -> str:
     return _EM_DASH_RE.sub(", ", text)
 
 
+class FileNote(BaseModel):
+    path: str
+    caption: str = Field(max_length=140)
+
+
 class Chapter(BaseModel):
     anchor_uuid: str
     title: str = Field(max_length=80)
@@ -37,3 +42,4 @@ class Digest(BaseModel):
     tests: str = Field(max_length=200)
     dead_ends: str = Field(max_length=200)
     chapters: list[Chapter] = Field(default_factory=list, max_length=10)
+    file_notes: list[FileNote] = Field(default_factory=list, max_length=20)
