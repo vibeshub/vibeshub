@@ -12,6 +12,11 @@ export interface DigestChapter {
   caption: string;
 }
 
+export interface FileNote {
+  path: string;
+  caption: string;
+}
+
 export interface TraceDigest {
   ask: string;
   decisions: string;
@@ -19,6 +24,7 @@ export interface TraceDigest {
   tests: string;
   dead_ends: string;
   chapters: DigestChapter[];
+  file_notes?: FileNote[];
 }
 
 export interface TraceSummary {
