@@ -40,6 +40,9 @@ _DEFAULT_TARGET_TOKENS = 60_000
 _DEFAULT_HARDCAP_TOKENS = 200_000
 _EXPLORATION_RUN_MIN = 6
 _TOKENS_PER_CHAR = 0.4  # rough estimate; good enough for budget gating
+_EDIT_TOOLS = {"Write", "Edit", "MultiEdit"}
+_EDIT_PREVIEW_LINES = 3
+_EDIT_PREVIEW_LINE_MAX = 80
 
 
 def distill(
@@ -70,6 +73,35 @@ def distill_with_uuids(
     if _est_tokens(lines) > hard_cap_tokens:
         lines = _truncate_middle(lines, hard_cap_tokens)
     return "\n".join(lines), uuids
+
+
+def edited_paths(blob: bytes, *, subagent_blobs: dict[str, bytes]) -> set[str]:
+    """Set of file paths touched by edit tools in the main and subagent
+    streams. The digest pipeline validates file_notes paths against this."""
+    paths: set[str] = set()
+    for b in (blob, *subagent_blobs.values()):
+        for raw in b.splitlines():
+            if not raw.strip():
+                continue
+            try:
+                ev = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("type") != "assistant":
+                continue
+            content = (ev.get("message") or {}).get("content") or []
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if (
+                    isinstance(block, dict)
+                    and block.get("type") == "tool_use"
+                    and block.get("name") in _EDIT_TOOLS
+                ):
+                    fp = (block.get("input") or {}).get("file_path")
+                    if isinstance(fp, str) and fp:
+                        paths.add(fp)
+    return paths
 
 
 def _classify(
@@ -167,6 +199,48 @@ def _render_assistant(
     return " ".join(parts)
 
 
+def _new_lines(inp: dict) -> list[str]:
+    """Non-blank lines an edit introduces (Write content / Edit & MultiEdit
+    new_string), used for the grounding preview and the +count."""
+    texts: list[str] = []
+    if isinstance(inp.get("content"), str):
+        texts.append(inp["content"])
+    if isinstance(inp.get("new_string"), str):
+        texts.append(inp["new_string"])
+    if isinstance(inp.get("edits"), list):
+        for e in inp["edits"]:
+            if isinstance(e, dict) and isinstance(e.get("new_string"), str):
+                texts.append(e["new_string"])
+    out: list[str] = []
+    for t in texts:
+        for ln in t.split("\n"):
+            s = ln.strip()
+            if s:
+                out.append(s)
+    return out
+
+
+def _removed_count(inp: dict) -> int:
+    n = 0
+    if isinstance(inp.get("old_string"), str):
+        n += sum(1 for ln in inp["old_string"].split("\n") if ln.strip())
+    if isinstance(inp.get("edits"), list):
+        for e in inp["edits"]:
+            if isinstance(e, dict) and isinstance(e.get("old_string"), str):
+                n += sum(1 for ln in e["old_string"].split("\n") if ln.strip())
+    return n
+
+
+def _edit_preview(name: str, inp: dict, path: str) -> str:
+    # Rough non-blank add/remove line counts for the LLM preview, not a true diff.
+    added = _new_lines(inp)
+    head = f"{name} {path} (+{len(added)} -{_removed_count(inp)})"
+    if not added:
+        return head
+    shown = [ln[:_EDIT_PREVIEW_LINE_MAX] for ln in added[:_EDIT_PREVIEW_LINES]]
+    return head + ": " + " / ".join(shown)
+
+
 def _tool_use_to_line(
     block: dict, subagent_blobs: dict[str, bytes],
 ) -> str | None:
@@ -186,6 +260,8 @@ def _tool_use_to_line(
         return f"{name}: {cmd}"
     fp = inp.get("file_path")
     if isinstance(fp, str) and fp:
+        if name in _EDIT_TOOLS:
+            return _edit_preview(name, inp, fp)
         return f"{name} {fp}"
     # Grep/Glob carry pattern + path; other tools fall through to a label.
     pattern = inp.get("pattern") or inp.get("query")

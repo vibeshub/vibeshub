@@ -20,11 +20,13 @@ def test_assistant_text_is_verbatim():
     assert "Done." in out
 
 
-def test_tool_use_collapses_to_one_liner():
+def test_edit_line_shows_path_counts_and_preview():
     out = distill(_read("short.jsonl"), subagent_blobs={})
-    assert "Edit webapp/backend/app/main.py" in out
-    # The verbose new_string content must NOT appear
-    assert "NEW WITH LOTS OF CONTENT" not in out
+    # Path + approximate add/remove counts
+    assert "Edit webapp/backend/app/main.py (+1 -1)" in out
+    # The first added line now appears as a grounding preview
+    assert "NEW WITH LOTS OF CONTENT" in out
+    # old_string content is never shown
     assert "OLD" not in out
 
 
@@ -273,3 +275,46 @@ def test_cursor_readfile_renders_path():
     out = distill(blob, subagent_blobs={})
     assert "ReadFile /repo/src/router.tsx" in out
     assert "120" not in out  # extra input keys (limit) must not leak
+
+
+def test_edit_preview_caps_at_three_lines_and_line_length():
+    import json
+    long_line = "x" * 200
+    new_string = "\n".join([long_line, "line two", "line three", "line four"])
+    rec = {
+        "type": "assistant", "uuid": "a9",
+        "message": {"content": [{
+            "type": "tool_use", "name": "Write",
+            "input": {"file_path": "x/y.py", "content": new_string},
+        }]},
+    }
+    blob = (json.dumps(rec) + "\n").encode("utf-8")
+    out = distill(blob, subagent_blobs={})
+    assert "x" * 80 in out          # first line present...
+    assert "x" * 81 not in out      # ...but truncated to 80 chars
+    assert "line two" in out
+    assert "line three" in out
+    assert "line four" not in out   # 4th line dropped by the 3-line cap
+
+
+def test_edited_paths_collects_edit_tool_targets():
+    from app.agents.digest.distill import edited_paths
+    paths = edited_paths(_read("short.jsonl"), subagent_blobs={})
+    assert paths == {"webapp/backend/app/main.py"}
+
+
+def test_edited_paths_includes_subagent_edits():
+    import json
+    from app.agents.digest.distill import edited_paths
+    child = {
+        "type": "assistant", "uuid": "s1",
+        "message": {"content": [{
+            "type": "tool_use", "name": "Edit",
+            "input": {"file_path": "child/only.ts",
+                      "old_string": "a", "new_string": "b"},
+        }]},
+    }
+    child_blob = (json.dumps(child) + "\n").encode("utf-8")
+    paths = edited_paths(_read("short.jsonl"), subagent_blobs={"tu1": child_blob})
+    assert "webapp/backend/app/main.py" in paths
+    assert "child/only.ts" in paths
