@@ -144,6 +144,7 @@ export function TraceViewer({
               model={provenance}
               session={session}
               subagentsLoading={subagentsLoading}
+              digest={trace.ai_digest}
               onJump={handleJump}
             />
           </div>
