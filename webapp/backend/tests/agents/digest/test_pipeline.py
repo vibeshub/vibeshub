@@ -104,7 +104,8 @@ async def test_happy_path_persists_digest_and_records_run(
     assert r.input_tokens == 42
     assert r.output_tokens == 10
     assert r.extra == {"chapters_kept": 1, "chapters_total": 2,
-                       "distill_truncated": False}
+                       "distill_truncated": False,
+                       "file_notes_kept": 0, "file_notes_total": 0}
 
 
 @pytest.mark.asyncio
@@ -381,3 +382,36 @@ async def test_empty_distillate_records_skip_empty(
     rows = (await db_session.execute(select(AgentRun))).scalars().all()
     assert len(rows) == 1
     assert rows[0].outcome == Outcome.SKIP_EMPTY.value
+
+
+@pytest.mark.asyncio
+async def test_file_notes_unknown_path_dropped_and_em_dash_swept(
+    monkeypatch, db_session, _trace_blob, _seeded_trace,
+):
+    monkeypatch.setenv("VIBESHUB_OPENAI_API_KEY", "sk-x")
+    monkeypatch.setenv("VIBESHUB_OPENAI_ENDPOINT", "https://e")
+    monkeypatch.setenv("VIBESHUB_OPENAI_MODEL", "gpt-5.5")
+    payload = dict(VALID_PAYLOAD)
+    payload["file_notes"] = [
+        {"path": "webapp/backend/app/main.py",
+         "caption": "Add the route — wire it in"},
+        {"path": "not/edited.py", "caption": "Phantom file"},
+    ]
+    mock_client = MagicMock()
+    mock_client.responses.parse.return_value = _ok_response(payload)
+    monkeypatch.setattr(
+        "app.agents.digest.pipeline.get_client", lambda: mock_client,
+    )
+
+    digest = await compute_digest(
+        db_session, _seeded_trace, blob=_trace_blob, subagent_blobs={},
+    )
+
+    assert [n.path for n in digest.file_notes] == ["webapp/backend/app/main.py"]
+    assert "—" not in digest.file_notes[0].caption
+    assert digest.file_notes[0].caption == "Add the route, wire it in"
+    rows = (await db_session.execute(
+        select(AgentRun).where(AgentRun.agent_name == "digest"),
+    )).scalars().all()
+    assert rows[0].extra["file_notes_kept"] == 1
+    assert rows[0].extra["file_notes_total"] == 2
