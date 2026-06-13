@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   buildProvenance,
-  hunkTitle,
+  orderRegions,
+  regionPos,
 } from "../../components/trace/provenance";
+import type { BlameHunk } from "../../components/trace/provenance";
+import type { DiffRow } from "../../components/trace/diff";
 import type { SubagentEntry } from "../../components/trace/changes";
 import type {
   Session,
@@ -520,25 +523,85 @@ describe("stats", () => {
   });
 });
 
-describe("hunkTitle", () => {
-  it("prefers exported declarations over other added lines", () => {
+function hunkRow(start: number, lines: number): DiffRow {
+  return {
+    kind: "hunk",
+    oldNo: null,
+    newNo: null,
+    text: `@@ -${start},${lines} +${start},${lines} @@`,
+  };
+}
+function reg(id: string, rows: DiffRow[]): BlameHunk {
+  return { id, rows } as unknown as BlameHunk;
+}
+
+describe("region ordering", () => {
+  it("parses a file-absolute span from the @@ header, null when patch-less", () => {
+    expect(regionPos([hunkRow(113, 7)])).toEqual({ start: 113, end: 120 });
     expect(
-      hunkTitle([
-        { kind: "add", oldNo: null, newNo: 1, text: "import { x } from 'y';" },
-        { kind: "add", oldNo: null, newNo: 2, text: "export function buildThing(" },
-      ]),
-    ).toBe("export function buildThing(");
+      regionPos([{ kind: "add", oldNo: null, newNo: 1, text: "x" }]),
+    ).toBeNull();
   });
 
-  it("falls back to the first changed line, then the @@ range", () => {
+  it("sorts positioned non-overlapping regions by file position", () => {
+    const out = orderRegions([
+      reg("a", [hunkRow(200, 4)]),
+      reg("b", [hunkRow(40, 3)]),
+      reg("c", [hunkRow(113, 2)]),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("keeps edit order when any region is patch-less", () => {
+    const out = orderRegions([
+      reg("a", [hunkRow(200, 4)]),
+      reg("b", [{ kind: "add", oldNo: null, newNo: 1, text: "whole file" }]),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("keeps edit order when positioned regions overlap", () => {
+    const out = orderRegions([
+      reg("a", [hunkRow(100, 10)]),
+      reg("b", [hunkRow(105, 3)]),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("parses the single-count @@ form, defaulting length to 1", () => {
     expect(
-      hunkTitle([
-        { kind: "ctx", oldNo: 1, newNo: 1, text: "before" },
-        { kind: "add", oldNo: null, newNo: 2, text: "  plainLine();" },
-      ]),
-    ).toBe("plainLine();");
-    expect(
-      hunkTitle([{ kind: "hunk", oldNo: null, newNo: null, text: "@@ -1,2 +1,3 @@" }]),
-    ).toBe("@@ -1,2 +1,3 @@");
+      regionPos([{ kind: "hunk", oldNo: null, newNo: null, text: "@@ -5 +7 @@" }]),
+    ).toEqual({ start: 7, end: 8 });
+  });
+
+  it("treats adjacent non-overlapping regions as orderable (half-open interval)", () => {
+    const out = orderRegions([
+      reg("b", [hunkRow(110, 3)]), // 110..113
+      reg("a", [hunkRow(100, 10)]), // 100..110, ends exactly where b starts
+    ]);
+    expect(out.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("retried flag", () => {
+  it("flags a region whose op had failed attempts", () => {
+    const m = build([
+      tool(
+        "Write",
+        "t1",
+        { file_path: "/r/a.ts", content: "v1" },
+        { content: "File has not been read yet.", isError: true },
+      ),
+      tool("Read", "t2", { file_path: "/r/a.ts" }),
+      tool("Write", "t3", { file_path: "/r/a.ts", content: "v1" }),
+    ]);
+    expect(m.files[0].hunks[0].retried).toBe(true);
+  });
+
+  it("leaves a clean edit unretried", () => {
+    const m = build([
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
+    ]);
+    expect(m.files[0].hunks[0].retried).toBe(false);
   });
 });

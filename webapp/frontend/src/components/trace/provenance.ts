@@ -55,7 +55,8 @@ export interface BlameHunk {
   attemptCount: number;
   /** Subagent type when a subagent wrote this hunk, null for the main agent. */
   agentType: string | null;
-  title: string;
+  /** True when this op had at least one failed attempt before landing. */
+  retried: boolean;
   rows: DiffRow[];
   /** Parallel to rows: how many ops on this file emitted that exact line. */
   heat: number[];
@@ -203,36 +204,6 @@ function classifyRun(e: ToolUseEvent, pos: number): VerifyRun | null {
 // ---------------------------------------------------------------------------
 // Per-hunk derivation helpers
 
-const DECL_EXPORT =
-  /^(export\s+(default\s+)?)(async\s+)?(function|class|const|interface|type|enum)\b/;
-const DECL_ANY =
-  /^(public|private|protected|static|async|function|class|interface|type|enum|def|fn|impl|struct|trait|module|namespace)\b/;
-
-function clipTitle(s: string): string {
-  const t = s.trim().replace(/\s+/g, " ");
-  return t.length <= 88 ? t : t.slice(0, 88) + "…";
-}
-
-// A blame hunk's one-line handle: the most declaration-looking added line,
-// else the first changed line, else the @@ range. Prose files skip the code
-// heuristics (their fenced code blocks would win otherwise).
-export function hunkTitle(rows: DiffRow[], path?: string): string {
-  const adds = rows.filter((r) => r.kind === "add" && r.text.trim() !== "");
-  const prose = path !== undefined && /\.(md|mdx|txt|rst)$/.test(path);
-  if (!prose) {
-    const exported = adds.find((r) => DECL_EXPORT.test(r.text.trim()));
-    if (exported) return clipTitle(exported.text);
-    const decl = adds.find((r) => DECL_ANY.test(r.text.trim()));
-    if (decl) return clipTitle(decl.text);
-  }
-  if (adds.length > 0) return clipTitle(adds[0].text);
-  const del = rows.find((r) => r.kind === "del" && r.text.trim() !== "");
-  if (del) return clipTitle(del.text);
-  const hunk = rows.find((r) => r.kind === "hunk");
-  if (hunk) return hunk.text;
-  return "no patch data";
-}
-
 // Lines this short are structural noise ("}", "});") whose recurrence across
 // ops says nothing about rewrites.
 const HEAT_MIN_LINE = 6;
@@ -262,6 +233,39 @@ function heatOf(rows: DiffRow[], index: Map<string, number>): number[] {
     if (key.length < HEAT_MIN_LINE) return 1;
     return Math.min(HEAT_CAP, index.get(key) ?? 1);
   });
+}
+
+// A surviving region's file-absolute line span, parsed from its
+// structuredPatch @@ header. Patch-less regions (whole-file Writes,
+// MultiEdit-without-patch, LCS fallback) have no @@ row, so they return null
+// and keep edit order.
+export function regionPos(
+  rows: DiffRow[],
+): { start: number; end: number } | null {
+  const head = rows.find((r) => r.kind === "hunk");
+  if (!head) return null;
+  const m = /\+(\d+)(?:,(\d+))?/.exec(head.text);
+  if (!m) return null;
+  const start = Number(m[1]);
+  const len = m[2] !== undefined ? Number(m[2]) : 1;
+  return { start, end: start + Math.max(len, 1) };
+}
+
+// Order a file's surviving regions for the merged block: by file position
+// when every region is positioned and none overlap, else keep the given
+// (chronological) order.
+export function orderRegions(regions: BlameHunk[]): BlameHunk[] {
+  if (regions.length < 2) return regions;
+  const pos = regions.map((r) => regionPos(r.rows));
+  if (pos.some((p) => p === null)) return regions;
+  const ranges = pos as Array<{ start: number; end: number }>;
+  const order = regions
+    .map((_, i) => i)
+    .sort((a, b) => ranges[a].start - ranges[b].start);
+  for (let k = 1; k < order.length; k++) {
+    if (ranges[order[k]].start < ranges[order[k - 1]].end) return regions;
+  }
+  return order.map((i) => regions[i]);
 }
 
 function clipText(s: string, n: number): string {
@@ -501,7 +505,7 @@ export function buildProvenance(
         tool: op.tool,
         attemptCount: attempts.length > 0 ? attempts.length : 1,
         agentType: agentTypeOf(op.agentBadge),
-        title: hunkTitle(op.rows, path),
+        retried: attempts.length > 0,
         rows: op.rows,
         heat: heatOf(op.rows, heatIndex),
         adds,
