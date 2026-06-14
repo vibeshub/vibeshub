@@ -325,6 +325,96 @@ describe("verification runs", () => {
     ]);
     expect(m.stats.tests).toBe("298 ✓");
   });
+
+  it("ranks the run that covers the edited file above an earlier build", () => {
+    const m = build([
+      tool("Edit", "t1", {
+        file_path: "/r/src/components/trace/provenance.ts",
+        old_string: "x",
+        new_string: "y",
+      }),
+      bash("b1", "npm run build", okRun("built in 2.1s")),
+      bash(
+        "b2",
+        "npx vitest run",
+        okRun("✓ src/components/trace/provenance.test.ts (26)\n26 passed (26)"),
+      ),
+    ]);
+    const v = m.files[0].hunks[0].verifications;
+    // The covering test sibling leads, even though the build ran first.
+    expect(v[0]).toMatchObject({
+      label: "vitest · 26 passed",
+      relevance: "covers",
+    });
+    expect(v[1]).toMatchObject({
+      label: "npm run build · ok",
+      relevance: "ran-after",
+    });
+  });
+
+  it("does not claim coverage when only an unrelated suite ran after the edit", () => {
+    const m = build([
+      tool("Edit", "t1", {
+        file_path: "/r/src/x.ts",
+        old_string: "x",
+        new_string: "y",
+      }),
+      bash("b1", "pytest backend/", okRun("41 passed")),
+    ]);
+    const v = m.files[0].hunks[0].verifications;
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({
+      status: "pass",
+      label: "pytest · 41 passed",
+      relevance: "ran-after",
+    });
+  });
+
+  it("counts a directory-scoped run as covering files under it", () => {
+    const m = build([
+      tool("Edit", "t1", {
+        file_path: "/r/backend/api/traces.py",
+        old_string: "x",
+        new_string: "y",
+      }),
+      bash("b1", "pytest backend/", okRun("41 passed")),
+    ]);
+    expect(m.files[0].hunks[0].verifications[0]).toMatchObject({
+      label: "pytest · 41 passed",
+      relevance: "covers",
+    });
+  });
+
+  it("matches on path suffix when the op is absolute and the output is repo-relative", () => {
+    const m = build([
+      tool("Edit", "t1", {
+        file_path: "/r/deep/pkg/widget.ts",
+        old_string: "x",
+        new_string: "y",
+      }),
+      bash("b1", "npm run build", okRun("ok")),
+      bash("b2", "npx vitest run", okRun("✓ pkg/widget.ts (3)\n3 passed")),
+    ]);
+    expect(m.files[0].hunks[0].verifications[0]).toMatchObject({
+      label: "vitest · 3 passed",
+      relevance: "covers",
+    });
+  });
+
+  it("treats a whole-suite test run with no path refs as covering", () => {
+    const m = build([
+      tool("Edit", "t1", {
+        file_path: "/r/src/x.ts",
+        old_string: "x",
+        new_string: "y",
+      }),
+      bash("b1", "npm test", okRun("298 passed")),
+    ]);
+    expect(m.files[0].hunks[0].verifications[0]).toMatchObject({
+      label: "npm test · 298 passed",
+      relevance: "covers",
+    });
+  });
 });
 
 describe("rewrite heat", () => {

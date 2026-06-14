@@ -33,6 +33,9 @@ export interface VerificationInfo {
   status: "pass" | "fail" | "none";
   ts: string;
   label: string;
+  /** "covers" when the run has path evidence it exercised this file (or it is a
+   * whole-suite test); "ran-after" when it merely ran later. Absent on "none". */
+  relevance?: "covers" | "ran-after";
 }
 
 export interface ResearchInfo {
@@ -134,6 +137,36 @@ interface VerifyRun {
   label: string;
   /** Pass count when the output reported one, e.g. "298". */
   passCount: string | null;
+  /** File + directory tokens parsed from the command args and runner output;
+   * used to decide which edited files a run actually exercised. */
+  refs: string[];
+}
+
+// Extensions worth treating as a code/test file reference. Bare directory args
+// (`src/tests`, `backend/`) are handled separately in parseRefs.
+const FILE_EXT =
+  "ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|cc|cpp|h|hpp|cs|php|scala|clj|cljs|ex|exs|css|scss|less|html|vue|svelte|json|yaml|yml|toml|sql|sh|md";
+const FILE_TOKEN_G = new RegExp(`[\\w./-]+\\.(?:${FILE_EXT})\\b`, "g");
+const FILE_TOKEN_END = new RegExp(`\\.(?:${FILE_EXT})$`);
+
+// File-ish and bare-directory path tokens carried by a run, parsed from the
+// heredoc-cut but un-quote-stripped command (a quoted `pytest "tests/x.py"`
+// must keep its arg) plus the runner output (vitest/pytest print file paths).
+function parseRefs(cmdHead: string, out: string): string[] {
+  const refs = new Set<string>();
+  const norm = (p: string): string => p.replace(/^\.\//, "");
+  for (const src of [cmdHead, out]) {
+    for (const m of src.matchAll(FILE_TOKEN_G)) refs.add(norm(m[0]));
+  }
+  // Bare directory args from the command (`pytest backend/`, `vitest src/tests`).
+  for (const raw of cmdHead.split(/\s+/)) {
+    const tok = raw.replace(/^["']+|["']+$/g, "");
+    if (!tok || tok.startsWith("-")) continue; // flags
+    if (!tok.includes("/")) continue; // needs a path separator
+    if (FILE_TOKEN_END.test(tok)) continue; // already captured as a file token
+    if (/^[\w.][\w./-]*\/?$/.test(tok)) refs.add(norm(tok));
+  }
+  return [...refs];
 }
 
 function resultText(e: ToolUseEvent): string {
@@ -162,10 +195,13 @@ function commandOf(e: ToolUseEvent): string | null {
 // Classification must look at the command itself, not its string payloads: a
 // `gh pr create --body "$(cat <<EOF …npm test…)"` is not a test run. Cut at
 // the first heredoc and blank out quoted segments.
-function sanitizeCmd(cmd: string): string {
+function cutHeredoc(cmd: string): string {
   const cut = cmd.indexOf("<<");
-  const head = cut >= 0 ? cmd.slice(0, cut) : cmd;
-  return head.replace(/"[^"]*"|'[^']*'/g, '""');
+  return cut >= 0 ? cmd.slice(0, cut) : cmd;
+}
+
+function sanitizeCmd(cmd: string): string {
+  return cutHeredoc(cmd).replace(/"[^"]*"|'[^']*'/g, '""');
 }
 
 // "vitest run src/tests" -> the matched binary plus a pass/fail summary
@@ -173,6 +209,7 @@ function sanitizeCmd(cmd: string): string {
 function classifyRun(e: ToolUseEvent, pos: number): VerifyRun | null {
   const raw = commandOf(e);
   if (!raw) return null;
+  const head = cutHeredoc(raw);
   const cmd = sanitizeCmd(raw);
   const m = TEST_CMD.exec(cmd) ?? BUILD_CMD.exec(cmd) ?? LINT_CMD.exec(cmd);
   if (!m) return null;
@@ -198,7 +235,76 @@ function classifyRun(e: ToolUseEvent, pos: number): VerifyRun | null {
     ok: okFinal,
     label: `${m[1]} · ${summary}`,
     passCount: okFinal && passed ? passed[1] : null,
+    refs: parseRefs(head, out),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Run ⇄ file relevance
+
+function segs(p: string): string[] {
+  return p.split("/").filter(Boolean);
+}
+
+// Op paths are usually absolute (`/Users/…/provenance.ts`) while runner output
+// is repo-relative (`src/…/provenance.ts`) and meta.cwd may be redacted, so we
+// compare on the shared trailing segments (basename at minimum), never equality.
+function suffixMatch(a: string, b: string): boolean {
+  const as = segs(a);
+  const bs = segs(b);
+  const [long, short] = as.length >= bs.length ? [as, bs] : [bs, as];
+  if (short.length === 0) return false;
+  for (let i = 1; i <= short.length; i++) {
+    if (long[long.length - i] !== short[short.length - i]) return false;
+  }
+  return true;
+}
+
+// Basename stem with test/spec markers stripped, so a source file and its test
+// sibling collapse to one key: a.test.ts -> a, foo.spec.tsx -> foo,
+// test_foo.py -> foo, foo_test.py -> foo.
+function stemKey(p: string): string {
+  let b = segs(p).pop() ?? p;
+  b = b.replace(/\.(test|spec)(?=\.[a-z0-9]+$)/i, ""); // a.test.ts -> a.ts
+  b = b.replace(/\.[a-z0-9]+$/i, ""); // drop the extension
+  b = b.replace(/^test_/, "").replace(/_test$/, ""); // python markers
+  return b;
+}
+
+// True when `ref` names a directory that contains `opPath`: its segments occur
+// as a contiguous run inside opPath with at least one segment after them.
+function dirPrefixOf(ref: string, opPath: string): boolean {
+  const rs = segs(ref);
+  const os = segs(opPath);
+  if (rs.length === 0 || rs.length >= os.length) return false;
+  for (let start = 0; start + rs.length < os.length; start++) {
+    let ok = true;
+    for (let j = 0; j < rs.length; j++) {
+      if (os[start + j] !== rs[j]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+// How strongly a run is tied to the edited file (higher wins; ties break on
+// temporal order). 3: exercises the file or its test sibling. 2: runs a
+// directory containing it. 1: whole-suite test with no path refs (legitimately
+// covers everything). 0: ran after but shows no coverage.
+function runTier(run: VerifyRun, opPath: string): 0 | 1 | 2 | 3 {
+  const opStem = stemKey(opPath);
+  for (const ref of run.refs) {
+    if (suffixMatch(ref, opPath)) return 3;
+    if (FILE_TOKEN_END.test(ref) && stemKey(ref) === opStem) return 3;
+  }
+  for (const ref of run.refs) {
+    if (dirPrefixOf(ref, opPath)) return 2;
+  }
+  if (run.kind === "test" && run.refs.length === 0) return 1;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -419,23 +525,29 @@ export function buildProvenance(
     if (run) verifyRuns.push(run);
   });
 
-  const verificationsAfter = (pos: number): VerificationInfo[] => {
+  const noneChip: VerificationInfo = {
+    status: "none",
+    ts: "",
+    label: "no test or build run after this change",
+  };
+  const verificationsAfter = (
+    pos: number,
+    opPath: string,
+  ): VerificationInfo[] => {
     // pos -1 = an unattributable subagent op; "after" is meaningless there.
-    const next =
-      pos < 0 ? [] : verifyRuns.filter((r) => r.pos > pos).slice(0, 2);
-    if (next.length === 0) {
-      return [
-        {
-          status: "none",
-          ts: "",
-          label: "no test or build run after this change",
-        },
-      ];
-    }
-    return next.map((r) => ({
+    const after = pos < 0 ? [] : verifyRuns.filter((r) => r.pos > pos);
+    if (after.length === 0) return [noneChip];
+    // Rank by how strongly each run covers this file, keeping temporal order
+    // (nearest run after the edit first) only as the tiebreaker, then take ≤2.
+    const ranked = after
+      .map((r) => ({ r, tier: runTier(r, opPath) }))
+      .sort((a, b) => b.tier - a.tier || a.r.pos - b.r.pos)
+      .slice(0, 2);
+    return ranked.map(({ r, tier }) => ({
       status: r.ok ? "pass" : "fail",
       ts: r.ts,
       label: r.label,
+      relevance: tier >= 1 ? "covers" : "ran-after",
     }));
   };
 
@@ -512,7 +624,7 @@ export function buildProvenance(
         dels,
         superseded: supersededBy,
         attempts,
-        verifications: verificationsAfter(op.streamPos),
+        verifications: verificationsAfter(op.streamPos, path),
         reasoning:
           op.streamPos >= 0 ? reasoningBefore(stream, op.streamPos) : null,
         research: research
