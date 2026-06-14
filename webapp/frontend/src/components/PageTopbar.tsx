@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { AuthWidget } from "./AuthWidget";
+import { ThemeToggle } from "./ThemeToggle";
 
 export interface Crumb {
   label: string;
@@ -45,6 +46,7 @@ export function PageTopbar({ crumbs }: Props) {
               Upload
             </Link>
           )}
+          <ThemeToggle />
           <AuthWidget />
         </div>
       </div>
