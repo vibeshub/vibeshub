@@ -77,9 +77,10 @@ function mockFetchSequence(traceSummary: object) {
 
 
 // The provenance diff is now the default mode; conversation-specific tests
-// flip back via the pills first.
+// flip back via the view tabs first. The tab label carries a count chip
+// ("Conversation 17 prompts"), so match by the leading label.
 async function toConversation() {
-  fireEvent.click(await screen.findByRole("tab", { name: "Conversation" }));
+  fireEvent.click(await screen.findByRole("tab", { name: /Conversation/ }));
 }
 
 describe("TraceView", () => {
