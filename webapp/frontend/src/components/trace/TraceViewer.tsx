@@ -7,7 +7,7 @@ import { JumpStrip } from "./JumpStrip";
 import { PromptRail } from "./PromptRail";
 import { ChapterRail } from "./ChapterRail";
 import { Hero } from "./Hero";
-import { ThreadControls, type ViewMode } from "./ThreadControls";
+import { ViewTabs, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
 import { ProvenanceView } from "./ProvenanceView";
 import { buildProvenance } from "./provenance";
@@ -53,6 +53,13 @@ export function TraceViewer({
     [session, subagents, trace.platform],
   );
   const hasChanges = provenance.files.length > 0;
+  // Count user turns the same way PromptRail/JumpStrip build their lists, so
+  // the "Conversation · N prompts" tab matches the rail.
+  const promptCount = useMemo(
+    () =>
+      session.stream.filter((e) => e.kind === "user_prompt" && e.uuid).length,
+    [session.stream],
+  );
 
   // Changes (the provenance diff) is the default; #chat in the URL deep-links
   // into the conversation. Legacy #changes links land on the default anyway.
@@ -128,53 +135,50 @@ export function TraceViewer({
           This trace has no parseable events.{" "}
           <a href={rawHref}>View raw JSONL ↗</a>
         </div>
-      ) : inChanges ? (
-        <div className="viewer-body viewer-body--prov">
-          <div className="viewer-main">
-            <ThreadControls
-              showSystemEvents={showSystemEvents}
-              setShowSystemEvents={setShowSystemEvents}
-              expandToolCalls={expandToolCalls}
-              setExpandToolCalls={setExpandToolCalls}
-              mode={effectiveMode}
-              setMode={setMode}
-              hasChanges={hasChanges}
-            />
-            <ProvenanceView
-              model={provenance}
-              session={session}
-              subagentsLoading={subagentsLoading}
-              digest={trace.ai_digest}
-              onJump={handleJump}
-            />
-          </div>
-        </div>
       ) : (
-        <div className="viewer-body">
-          {trace.ai_digest?.chapters?.length ? (
-            <ChapterRail session={session} digest={trace.ai_digest} />
+        <>
+          <ViewTabs
+            mode={effectiveMode}
+            setMode={setMode}
+            hasChanges={hasChanges}
+            promptCount={promptCount}
+            fileCount={provenance.files.length}
+            showSystemEvents={showSystemEvents}
+            setShowSystemEvents={setShowSystemEvents}
+            expandToolCalls={expandToolCalls}
+            setExpandToolCalls={setExpandToolCalls}
+          />
+          {inChanges ? (
+            <div className="viewer-body viewer-body--prov">
+              <div className="viewer-main">
+                <ProvenanceView
+                  model={provenance}
+                  session={session}
+                  subagentsLoading={subagentsLoading}
+                  digest={trace.ai_digest}
+                  onJump={handleJump}
+                />
+              </div>
+            </div>
           ) : (
-            <PromptRail session={session} />
+            <div className="viewer-body">
+              {trace.ai_digest?.chapters?.length ? (
+                <ChapterRail session={session} digest={trace.ai_digest} />
+              ) : (
+                <PromptRail session={session} />
+              )}
+              <div className="viewer-main">
+                <Thread
+                  session={session}
+                  shortId={shortId}
+                  showSystemEvents={showSystemEvents}
+                  expandToolCalls={expandToolCalls}
+                  digest={trace.ai_digest}
+                />
+              </div>
+            </div>
           )}
-          <div className="viewer-main">
-            <ThreadControls
-              showSystemEvents={showSystemEvents}
-              setShowSystemEvents={setShowSystemEvents}
-              expandToolCalls={expandToolCalls}
-              setExpandToolCalls={setExpandToolCalls}
-              mode={effectiveMode}
-              setMode={setMode}
-              hasChanges={hasChanges}
-            />
-            <Thread
-              session={session}
-              shortId={shortId}
-              showSystemEvents={showSystemEvents}
-              expandToolCalls={expandToolCalls}
-              digest={trace.ai_digest}
-            />
-          </div>
-        </div>
+        </>
       )}
       <footer className="viewer-footer">
         <span>session · {session.meta.sessionId ?? ""}</span>

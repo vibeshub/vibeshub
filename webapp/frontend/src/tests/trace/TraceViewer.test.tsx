@@ -115,11 +115,13 @@ describe("TraceViewer changes mode", () => {
 
   it("switches to the conversation and back, tracking the #chat hash", () => {
     renderViewer(EDIT_STREAM);
-    fireEvent.click(screen.getByRole("tab", { name: "Conversation" }));
+    // Tab labels now carry a count chip ("Conversation 1 prompts"), so match
+    // by the leading label rather than the exact accessible name.
+    fireEvent.click(screen.getByRole("tab", { name: /Conversation/ }));
     expect(window.location.hash).toBe("#chat");
     expect(screen.getByText("Show system events")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Changes/ }));
     expect(window.location.hash).toBe("");
     expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
   });
