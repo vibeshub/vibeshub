@@ -31,8 +31,6 @@ interface Props {
   onJump: (jumpUuid: string | null, promptUuid: string | null) => void;
 }
 
-const PROMPT_CLIP = 400;
-const TINY_PROMPT = 24;
 const FILE_FOLD_THRESHOLD = 80;
 const FILE_FOLD_HEAD = 48;
 
@@ -88,39 +86,6 @@ function StatRow({ model }: { model: ProvenanceModel }) {
   );
 }
 
-function Prompts({
-  model,
-  onJump,
-}: {
-  model: ProvenanceModel;
-  onJump: Props["onJump"];
-}) {
-  if (model.prompts.length === 0) return null;
-  return (
-    <div className="prov-prompts">
-      {model.prompts.map((p) => (
-        <div key={p.idx} className="prov-prompt">
-          <span className="t">{fmtTimeOfDay(p.ts)}</span>
-          <span className="n">№{p.idx}</span>
-          <p className={"q" + (p.text.length < TINY_PROMPT ? " tiny" : "")}>
-            “{clip(p.text, PROMPT_CLIP)}”<span className="note">{p.note}</span>
-          </p>
-          {p.uuid && (
-            <button
-              type="button"
-              className="prov-jump"
-              title="Read this turn in the conversation"
-              onClick={() => onJump(p.uuid, p.uuid)}
-            >
-              ↗
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Author colors keyed to the existing tool palette: the main agent is the
 // terminal green, subagents the Task purple.
 function authorVar(key: "ai" | "agent" | "human"): string {
@@ -136,7 +101,7 @@ function Attribution({
   model: ProvenanceModel;
   loading: boolean;
 }) {
-  const { slices, notes } = model.attribution;
+  const { slices } = model.attribution;
   const withLines = slices.filter((s) => s.lines > 0);
   return (
     <div className="prov-attrib">
@@ -160,10 +125,7 @@ function Attribution({
             </b>
           </span>
         ))}
-        <p>
-          {notes.join(" ")} Gutter columns: prompt № · author band · rewrite
-          heat.{loading ? " Loading subagent streams…" : ""}
-        </p>
+        {loading && <p>Loading subagent streams…</p>}
       </div>
     </div>
   );
@@ -456,6 +418,28 @@ function Panel({
           <b>Click any line</b> to walk its provenance chain: the instruction
           that caused it, the reasoning behind it, the attempts it took, and
           what verified it.
+          <dl className="prov-gutter-key" aria-label="What the gutters mean">
+            <div>
+              <dt>
+                <span className="k-num">№</span>
+              </dt>
+              <dd>prompt that wrote the line</dd>
+            </div>
+            <div>
+              <dt>
+                <i className="k-band" />
+              </dt>
+              <dd>author (color matches the legend)</dd>
+            </div>
+            <div>
+              <dt className="k-heat">
+                <i />
+                <i className="on" />
+                <i className="on" />
+              </dt>
+              <dd>rewrite heat (times the line was redone)</dd>
+            </div>
+          </dl>
         </div>
       </aside>
     );
@@ -587,7 +571,6 @@ export function ProvenanceView({
       <div className={"prov-grid" + (sel ? " has-sel" : "")}>
         <div className="prov-main">
           <StatRow model={model} />
-          <Prompts model={model} onJump={onJump} />
           <Attribution model={model} loading={subagentsLoading} />
           <FilesIndex files={model.files} root={root} />
           {model.files.map((file) => (

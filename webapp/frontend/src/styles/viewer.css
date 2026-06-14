@@ -2369,53 +2369,6 @@
   white-space: nowrap;
 }
 
-/* prompt cards */
-.vibeshub-viewer .prov-prompts {
-  display: grid;
-  gap: 8px;
-}
-.vibeshub-viewer .prov-prompt {
-  display: grid;
-  grid-template-columns: 46px 34px 1fr auto;
-  gap: 12px;
-  align-items: baseline;
-  border: 1px solid var(--line-soft);
-  padding: 10px 14px;
-  background: var(--bg-deep);
-}
-.vibeshub-viewer .prov-prompt .t {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-.vibeshub-viewer .prov-prompt .n {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--t-write);
-}
-.vibeshub-viewer .prov-prompt .q {
-  font-family: var(--font-body);
-  font-style: italic;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--txt);
-  margin: 0;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.vibeshub-viewer .prov-prompt .q.tiny {
-  font-size: 17px;
-  color: var(--strong);
-}
-.vibeshub-viewer .prov-prompt .note {
-  display: block;
-  font-family: var(--font-mono);
-  font-style: normal;
-  font-size: 10.5px;
-  color: var(--faint);
-  margin-top: 5px;
-}
 .vibeshub-viewer .prov-jump {
   border: 0;
   background: transparent;
@@ -2782,6 +2735,55 @@
 .vibeshub-viewer .prov-empty b {
   color: var(--txt);
   font-weight: 500;
+}
+/* In-context key for the per-line gutters, mirroring their real glyphs. */
+.vibeshub-viewer .prov-gutter-key {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: 7px;
+}
+.vibeshub-viewer .prov-gutter-key div {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.vibeshub-viewer .prov-gutter-key dt {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.vibeshub-viewer .prov-gutter-key dd {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.vibeshub-viewer .prov-gutter-key .k-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--t-write);
+}
+.vibeshub-viewer .prov-gutter-key .k-band {
+  width: 4px;
+  height: 13px;
+  background: var(--acc);
+  display: block;
+}
+.vibeshub-viewer .prov-gutter-key .k-heat {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.vibeshub-viewer .prov-gutter-key .k-heat i {
+  width: 4px;
+  height: 9px;
+  background: var(--line-soft);
+}
+.vibeshub-viewer .prov-gutter-key .k-heat i.on {
+  background: var(--t-write);
 }
 .vibeshub-viewer .prov-chain {
   position: relative;
