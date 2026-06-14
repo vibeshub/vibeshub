@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useTheme } from "../../useTheme";
+import { ThemeToggle } from "../ThemeToggle";
 import type { Session } from "./types";
-import { IconLink, IconMoon, IconSun } from "./icons";
+import { IconLink } from "./icons";
 
 interface Props {
   session: Session;
@@ -18,7 +18,6 @@ export function ViewerTopbar({
   repoName,
   ownerControls,
 }: Props) {
-  const { theme, toggleTheme } = useTheme();
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
 
@@ -63,17 +62,7 @@ export function ViewerTopbar({
         <div className="topbar-spacer" />
         <div className="topbar-actions">
           {ownerControls}
-          <button
-            className="iconbtn"
-            onClick={toggleTheme}
-            type="button"
-            aria-label={
-              theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
-            }
-            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-          >
-            {theme === "dark" ? <IconSun /> : <IconMoon />}
-          </button>
+          <ThemeToggle />
           <button
             className="iconbtn"
             onClick={copyLink}
