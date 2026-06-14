@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f1411" />
+
+    <!-- Set <html data-theme> and the browser-chrome theme-color before first
+         paint to avoid a flash of the wrong theme. Mirrors the initial-theme
+         logic in src/useTheme.ts. Must run before the stylesheets below apply
+         and before the app bundle. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("vibeshub.theme");
+          if (t !== "light" && t !== "dark")
+            t = matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+          document.documentElement.dataset.theme = t;
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute("content", t === "light" ? "#f4f8f6" : "#0f1411");
+        } catch (e) {}
+      })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="stylesheet" href="/src/styles/tokens.css" />
