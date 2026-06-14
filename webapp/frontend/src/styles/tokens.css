@@ -1,5 +1,5 @@
 /* tokens.css — Terminal theme tokens + base type.
-   Single dark theme: green-on-black, JetBrains Mono chrome, hairline grid. */
+   Dark (default) + Light ("paper terminal") themes. Accent is the green. */
 
 :root {
   /* Terminal theme — single theme, always dark */
@@ -97,4 +97,42 @@
   --shadow-sm: var(--shadow-1);
 
   color-scheme: dark;
+}
+
+/* ============================================================= *
+ *  LIGHT THEME — "paper terminal"                                *
+ *  Same flat, hairline, monospace-chrome system, inverted to     *
+ *  warm off-white paper with dark ink and a deepened green that   *
+ *  holds contrast on light. Only the base tokens flip; every      *
+ *  semantic alias + color-mix derived value recomputes for free.  *
+ *  Activate with  <html data-theme="light">.                      *
+ * ============================================================= */
+:root[data-theme="light"] {
+  --bg:        oklch(0.975 0.005 165);  /* page — soft paper, faint green   */
+  --bg-deep:   oklch(0.995 0.002 165);  /* panels/cards lift toward white   */
+  --line:      oklch(0.885 0.008 165);  /* primary hairline                 */
+  --line-soft: oklch(0.925 0.006 165);  /* row separators                   */
+  --txt:       oklch(0.34 0.016 165);   /* body ink                         */
+  --strong:    oklch(0.20 0.02 165);    /* headings / emphasis (was #fff)   */
+  --dim:       oklch(0.50 0.016 165);   /* secondary text                   */
+  --faint:     oklch(0.62 0.016 165);   /* labels, metadata, timestamps     */
+  --acc:       oklch(0.52 0.13 162);    /* the green, deepened for light bg */
+  --acc-ink:   oklch(0.99 0.012 162);   /* text on top of --acc             */
+  --err:       oklch(0.54 0.18 25);     /* errors, diff deletions           */
+
+  /* tool-category colors — darkened so they read on a light ground */
+  --t-read:  oklch(0.52 0.12 220);
+  --t-bash:  oklch(0.50 0.11 160);
+  --t-write: oklch(0.55 0.11 75);
+  --t-agent: oklch(0.52 0.13 295);
+  --t-skill: oklch(0.54 0.13 340);
+  --t-other: oklch(0.55 0.012 170);
+
+  /* syntax highlighting — darkened for light ground */
+  --syn-keyword:  oklch(0.50 0.15 300);
+  --syn-string:   oklch(0.46 0.11 160);
+  --syn-number:   oklch(0.52 0.11 70);
+  --syn-function: oklch(0.48 0.12 220);
+
+  color-scheme: light;
 }
