@@ -510,9 +510,6 @@ describe("subagents", () => {
       reads: 2,
       editOps: 0,
     });
-    expect(m.attribution.notes[0]).toBe(
-      "The Explore subagent made 2 reads but wrote 0 lines.",
-    );
     // Research-only agents still get a zero-line legend slice.
     expect(
       m.attribution.slices.find((s) => s.label === "Explore subagent"),

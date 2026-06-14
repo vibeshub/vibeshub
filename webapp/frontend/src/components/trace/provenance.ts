@@ -112,7 +112,7 @@ export interface ProvenanceStats {
 export interface ProvenanceModel {
   stats: ProvenanceStats;
   prompts: PromptInfo[];
-  attribution: { slices: AuthorSlice[]; notes: string[] };
+  attribution: { slices: AuthorSlice[] };
   files: BlameFile[];
   outcome: OutcomeEvent[];
 }
@@ -714,22 +714,6 @@ export function buildProvenance(
   }
   slices.push({ key: "human", label: "human", lines: 0, pct: 0 });
 
-  const notes: string[] = [];
-  for (const a of agentFacts) {
-    if (a.editOps === 0 && a.reads > 0) {
-      notes.push(
-        `The ${a.agentType} subagent made ${a.reads} reads but wrote 0 lines.`,
-      );
-    }
-  }
-  if (prompts.length > 0) {
-    notes.push(
-      `The human wrote 0 lines and ${prompts.length} ${
-        prompts.length === 1 ? "prompt" : "prompts"
-      }.`,
-    );
-  }
-
   // -- outcome ---------------------------------------------------------------
   const outcome: OutcomeEvent[] = [];
   const lastTest = [...verifyRuns].reverse().find((r) => r.kind === "test");
@@ -805,7 +789,7 @@ export function buildProvenance(
   return {
     stats,
     prompts,
-    attribution: { slices, notes },
+    attribution: { slices },
     files: blameFiles,
     outcome,
   };
