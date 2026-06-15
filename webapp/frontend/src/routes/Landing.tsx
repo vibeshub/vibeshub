@@ -192,67 +192,69 @@ export function Landing() {
               </div>
             </div>
 
-            {/* right: a session panel showing the install + PR flow */}
+            {/* right: how it works - compact 4-step timeline */}
             <div className={styles.heroRight}>
-              <div className={styles.sess}>
-                <div className={styles.sessHead}>
-                  <span>claude-code</span>
-                  <span>·</span>
-                  <span>session 786fa69e</span>
-                  <button
-                    type="button"
-                    className={styles.cp}
-                    onClick={() => copy("hero", INSTALL_COPY)}
-                  >
-                    {copied === "hero" ? "copied ✓" : "copy install"}
-                  </button>
-                </div>
-                <pre className={styles.sessBody}>
-                  <div>
-                    <span className={styles.d}>&gt; </span>
-                    <span className={styles.u}>
-                      /plugin marketplace add vibeshub/vibeshub
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.d}>&gt; </span>
-                    <span className={styles.u}>
-                      /plugin install vibeshub@vibeshub
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.ok}>
-                      {"  ✓ installed · gh auth = your identity"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.d}>&gt; </span>
-                    <span className={styles.u}>
-                      open a PR for the navbar fix
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.d}>
-                      {"  → PR opened: acme/site#482"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.ok}>
-                      {"  → vibeshub: redacted · uploaded · commented on PR ✓"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.d}>
-                      {"  → digest: ask · key decisions · dead ends"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className={styles.lnk}>
-                      {"  vibeshub.ai/acme/site/pull/482/8m2plq"}
-                    </span>
-                  </div>
-                </pre>
+              <div className={styles.eyebrow}>
+                <span className={styles.dot} /> How it works
               </div>
+              <ol className={styles.heroFlow}>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconTerminal />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>
+                      01 · Install the plugin
+                    </span>
+                    <p className={styles.heroFlowText}>
+                      One command in Claude Code or Codex. Your GitHub auth is
+                      your vibeshub identity, nothing else to set up.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconPrSvg />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>02 · Open a PR</span>
+                    <p className={styles.heroFlowText}>
+                      Open a PR from your Claude Code or Codex session, the way
+                      you already do. Nothing changes about how you work.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconCheck />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>
+                      03 · It posts itself
+                    </span>
+                    <p className={styles.heroFlowText}>
+                      The trace uploads and the PR comment arrives with the
+                      link, automatically. No commands to remember, no links to
+                      paste.
+                    </p>
+                  </div>
+                </li>
+                <li className={styles.heroFlowStep}>
+                  <span className={styles.heroFlowMark}>
+                    <IconSparkle />
+                  </span>
+                  <div>
+                    <span className={styles.heroFlowNum}>
+                      04 · The AI digest kicks in
+                    </span>
+                    <p className={styles.heroFlowText}>
+                      vibeshub distills the whole session into five lines plus
+                      jump links to the key moments. Reviewers start from the
+                      story, not message one of 257.
+                    </p>
+                  </div>
+                </li>
+              </ol>
             </div>
           </div>
         </section>
@@ -847,5 +849,73 @@ function BrowseRow({ trace }: { trace: TraceSummary }) {
         <div>{trace.short_id}</div>
       </div>
     </Link>
+  );
+}
+
+/* ---------- hero "how it works" timeline icons ---------- */
+
+function IconTerminal() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="4 17 10 11 4 5" />
+      <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  );
+}
+
+function IconPrSvg() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <path d="M13 6h3a2 2 0 0 1 2 2v7" />
+      <line x1="6" y1="9" x2="6" y2="21" />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m5 12 5 5 9-11" />
+    </svg>
+  );
+}
+
+function IconSparkle() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      <path d="M20 3v4" />
+      <path d="M22 5h-4" />
+    </svg>
   );
 }
