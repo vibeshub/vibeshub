@@ -194,9 +194,76 @@
   flex-direction: column;
   justify-content: center;
 }
-.sess {
-  border: 1px solid var(--line);
-  background: var(--bg-deep);
+/* hero "how it works" — compact 4-step vertical timeline */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--acc);
+  display: inline-block;
+}
+.heroFlow {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.heroFlowStep {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 16px;
+  padding-bottom: 26px;
+}
+.heroFlowStep:last-child {
+  padding-bottom: 0;
+}
+.heroFlowStep:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 42px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--border);
+}
+.heroFlowMark {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius);
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid var(--border-subtle);
+}
+.heroFlowMark svg {
+  width: 17px;
+  height: 17px;
+}
+.heroFlowNum {
+  display: block;
+  margin-top: 3px;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+.heroFlowText {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
 }
 .sessHead {
   display: flex;
@@ -225,27 +292,11 @@
 .cp:hover {
   color: var(--strong);
 }
-.sessBody {
-  margin: 0;
-  padding: 18px 16px;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  line-height: 2.05;
-  overflow-x: auto;
-}
-.u {
-  color: var(--strong);
-}
 .d {
   color: var(--faint);
 }
 .ok {
   color: var(--acc);
-}
-.lnk {
-  color: var(--acc);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* ── three ways in ───────────────────────────────── */
