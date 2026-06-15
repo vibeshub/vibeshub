@@ -104,6 +104,14 @@ export function TraceView() {
     `${head.trace.message_count} messages` +
     (head.trace.repo_full_name ? ` · ${head.trace.repo_full_name}` : "");
 
+  // Public traces get a dynamic per-trace social card (rendered server-side
+  // at /api/og/<id>.png). Keep the client-injected og:image in sync with the
+  // SSR meta from spa_seo so JS-executing preview tools see the same card.
+  const cardImage =
+    head.trace.is_private || typeof window === "undefined"
+      ? undefined
+      : `${window.location.origin}/api/og/${head.trace.short_id}.png`;
+
   return (
     <div className={styles.container}>
       <SeoHead
@@ -111,6 +119,7 @@ export function TraceView() {
         description={description}
         path={canonicalPath}
         ogType="article"
+        image={cardImage}
         noindex={head.trace.is_private}
       />
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}

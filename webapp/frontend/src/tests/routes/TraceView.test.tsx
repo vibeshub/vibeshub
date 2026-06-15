@@ -132,6 +132,32 @@ describe("TraceView", () => {
     ).toBeInTheDocument();
   });
 
+  it("points og:image at the per-trace social card for a public trace", async () => {
+    mockFetchSequence({
+      trace_id: "id",
+      short_id: SHORT_ID,
+      owner_login: "alice",
+      repo_full_name: "alice/repo",
+      pr_number: 7,
+      pr_title: "Add thing",
+      platform: "claude-code",
+      byte_size: FIXTURE.length,
+      message_count: 100,
+      created_at: "2026-05-17T00:00:00Z",
+      is_private: false,
+    });
+
+    renderAt(`/alice/repo/pull/7/${SHORT_ID}`);
+    await waitFor(() => {
+      expect(screen.getAllByText(/SESSION ·/i).length).toBeGreaterThan(0);
+    });
+
+    const images = Array.from(
+      document.head.querySelectorAll('meta[property="og:image"]'),
+    ).map((m) => m.getAttribute("content") ?? "");
+    expect(images.some((c) => c.includes(`/api/og/${SHORT_ID}.png`))).toBe(true);
+  });
+
   it("renders an Expand tool calls toggle in the thread controls", async () => {
     mockFetchSequence({
       trace_id: "id",
