@@ -9,7 +9,6 @@ import styles from "./Landing.module.css";
 // Keep in sync with plugins/cli/.claude-plugin/plugin.json.
 const PLUGIN_VERSION = "0.4.0";
 const PLUGIN_MINOR_VERSION = PLUGIN_VERSION.split(".").slice(0, 2).join(".");
-const VERSION_LABEL = `v${PLUGIN_MINOR_VERSION}`;
 
 // The runnable install commands - single source of truth for both copy buttons.
 // Claude Code runs them as slash commands inside the CLI; Codex runs them in the
@@ -165,22 +164,22 @@ export function Landing() {
               <div className={styles.status}>
                 <span className={styles.live}>
                   <i />
-                  {VERSION_LABEL}
+                  session traces for AI-built PRs
                 </span>
                 <span>public &amp; private</span>
                 <span>for vibe coding teams</span>
               </div>
               <h1 className={styles.heroH1}>
-                Don&rsquo;t just ship the diff -
-                <br />
-                share the <span className={styles.grn}>vibe</span>.
+                Don&rsquo;t just review the diff -{" "}
+                <span className={styles.grn}>replay the session</span> that
+                built it.
                 <span className={styles.cursor} aria-hidden="true" />
               </h1>
               <p className={styles.sub}>
-                Your Claude Code and Codex sessions, including every subagent
-                they spawn, become shareable, replayable traces your whole team
-                can read. Reviewers and teammates see how you actually shipped
-                it, not just the final diff.
+                Every PR your team opens can carry the Claude Code or Codex
+                session that built it, every subagent included. Reviewers and
+                new teammates replay how it actually shipped, instead of
+                reverse-engineering the final diff.
               </p>
               <div className={styles.ctas}>
                 <a className={styles.cta1} href="#install">
@@ -259,79 +258,10 @@ export function Landing() {
           </div>
         </section>
 
-        {/* ====================== three ways in ====================== */}
-        <section className={styles.section} id="ways">
-          <div className={`${styles.wrap} ${styles.ways}`}>
-            <SectionHead title="Three ways in" count="01 / 05" />
-            <p className={styles.slede}>
-              Three ways to get a session onto vibeshub, from fully automatic
-              to a one-off upload. Reach for whichever suits the moment, they
-              all land in the same place.
-            </p>
-            <div className={styles.waysGrid}>
-              <div className={styles.way}>
-                <div className={styles.kicker}>01 / Automatic</div>
-                <h3>Posts on every PR you open or update</h3>
-                <p>
-                  Open or update a PR from your Claude Code session and the
-                  trace lands on the PR as a comment automatically. Reviewers
-                  see how you actually built it before they read the diff. You
-                  change nothing about how you work.
-                </p>
-                <pre className={styles.wayMini}>
-                  <span className={styles.wayMiniCmd}>
-                    &gt; open a PR for the navbar fix
-                  </span>
-                  {"\n"}
-                  <span className={styles.ok}>
-                    → uploaded · commented on PR ✓
-                  </span>
-                </pre>
-              </div>
-              <div className={styles.way}>
-                <div className={styles.kicker}>02 / Slash command</div>
-                <h3>
-                  Share any session with <code>/share-trace</code>
-                </h3>
-                <p>
-                  Share a single session on demand: a clever debug, a tough
-                  refactor, a moment you want a second pair of eyes on.{" "}
-                  <code>/share-trace delete</code> takes it down just as fast.
-                </p>
-                <pre className={styles.wayMini}>
-                  <span className={styles.wayMiniCmd}>&gt; /share-trace</span>
-                  {"\n"}
-                  <span className={styles.ok}>
-                    → vibeshub.ai/acme/…/8m2plq ✓
-                  </span>
-                </pre>
-              </div>
-              <div className={styles.way}>
-                <div className={styles.kicker}>03 / Web upload</div>
-                <h3>
-                  Drop your <code>.jsonl</code> on the web
-                </h3>
-                <p>
-                  Publish a trace from any browser. Useful when the session
-                  lives on a teammate&rsquo;s laptop, or on a machine where
-                  you&rsquo;d rather not install anything.
-                </p>
-                <Link to="/vibeviewer" className={styles.wayMini}>
-                  <span className={styles.wayMiniCmd}>
-                    drop .jsonl / .json here
-                  </span>
-                  {"\n"}
-                  <span className={styles.ok}>↑ or click to choose a file</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ====================== collaborate (teams) ====================== */}
         <section className={styles.section} id="teams">
           <div className={`${styles.wrap} ${styles.collab}`}>
-            <SectionHead title="Collaborate" count="02 / 05" />
+            <SectionHead title="Collaborate" count="01 / 05" />
             <div className={styles.collabGrid}>
               <div>
                 <h3 className={styles.bigq}>
@@ -442,6 +372,75 @@ export function Landing() {
                     vibeshub.ai/{BROWSE_FULL}/pull/69/7ntgpt45el ↗
                   </a>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================== three ways in ====================== */}
+        <section className={styles.section} id="ways">
+          <div className={`${styles.wrap} ${styles.ways}`}>
+            <SectionHead title="Three ways in" count="02 / 05" />
+            <p className={styles.slede}>
+              Three ways to get a session onto vibeshub, from fully automatic
+              to a one-off upload. Reach for whichever suits the moment, they
+              all land in the same place.
+            </p>
+            <div className={styles.waysGrid}>
+              <div className={styles.way}>
+                <div className={styles.kicker}>01 / Automatic</div>
+                <h3>Posts on every PR you open or update</h3>
+                <p>
+                  Open or update a PR from your Claude Code session and the
+                  trace lands on the PR as a comment automatically. Reviewers
+                  see how you actually built it before they read the diff. You
+                  change nothing about how you work.
+                </p>
+                <pre className={styles.wayMini}>
+                  <span className={styles.wayMiniCmd}>
+                    &gt; open a PR for the navbar fix
+                  </span>
+                  {"\n"}
+                  <span className={styles.ok}>
+                    → uploaded · commented on PR ✓
+                  </span>
+                </pre>
+              </div>
+              <div className={styles.way}>
+                <div className={styles.kicker}>02 / Slash command</div>
+                <h3>
+                  Share any session with <code>/share-trace</code>
+                </h3>
+                <p>
+                  Share a single session on demand: a clever debug, a tough
+                  refactor, a moment you want a second pair of eyes on.{" "}
+                  <code>/share-trace delete</code> takes it down just as fast.
+                </p>
+                <pre className={styles.wayMini}>
+                  <span className={styles.wayMiniCmd}>&gt; /share-trace</span>
+                  {"\n"}
+                  <span className={styles.ok}>
+                    → vibeshub.ai/acme/…/8m2plq ✓
+                  </span>
+                </pre>
+              </div>
+              <div className={styles.way}>
+                <div className={styles.kicker}>03 / Web upload</div>
+                <h3>
+                  Drop your <code>.jsonl</code> on the web
+                </h3>
+                <p>
+                  Publish a trace from any browser. Useful when the session
+                  lives on a teammate&rsquo;s laptop, or on a machine where
+                  you&rsquo;d rather not install anything.
+                </p>
+                <Link to="/vibeviewer" className={styles.wayMini}>
+                  <span className={styles.wayMiniCmd}>
+                    drop .jsonl / .json here
+                  </span>
+                  {"\n"}
+                  <span className={styles.ok}>↑ or click to choose a file</span>
+                </Link>
               </div>
             </div>
           </div>
