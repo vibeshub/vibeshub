@@ -251,6 +251,37 @@
   width: 17px;
   height: 17px;
 }
+/* steps 01–02 are things you do: keep them quiet. 03–04 happen on their
+   own, so they keep the accent fill and visually "light up". */
+.heroFlowMarkManual {
+  color: var(--text-muted);
+  background: var(--bg-deep);
+  border-color: var(--border);
+}
+/* handoff from the manual steps to the automatic ones */
+.heroFlowHandoff {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 0 0 22px;
+  margin-top: -6px;
+}
+.heroFlowHandoffLine {
+  width: 2px;
+  height: 30px;
+  margin-left: 18px;
+  background: repeating-linear-gradient(
+    var(--border) 0 3px,
+    transparent 3px 7px
+  );
+}
+.heroFlowHandoffLabel {
+  font: 600 10px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent-strong);
+}
 .heroFlowNum {
   display: block;
   margin-top: 3px;

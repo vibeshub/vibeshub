@@ -198,7 +198,9 @@ export function Landing() {
               </div>
               <ol className={styles.heroFlow}>
                 <li className={styles.heroFlowStep}>
-                  <span className={styles.heroFlowMark}>
+                  <span
+                    className={`${styles.heroFlowMark} ${styles.heroFlowMarkManual}`}
+                  >
                     <IconTerminal />
                   </span>
                   <div>
@@ -206,22 +208,29 @@ export function Landing() {
                       01 · Install the plugin
                     </span>
                     <p className={styles.heroFlowText}>
-                      One command in Claude Code or Codex. Your GitHub auth is
-                      your vibeshub identity, nothing else to set up.
+                      One command in Claude Code or Codex, and your GitHub auth
+                      is your vibeshub identity.
                     </p>
                   </div>
                 </li>
                 <li className={styles.heroFlowStep}>
-                  <span className={styles.heroFlowMark}>
+                  <span
+                    className={`${styles.heroFlowMark} ${styles.heroFlowMarkManual}`}
+                  >
                     <IconPrSvg />
                   </span>
                   <div>
                     <span className={styles.heroFlowNum}>02 · Open a PR</span>
                     <p className={styles.heroFlowText}>
-                      Open a PR from your Claude Code or Codex session, the way
-                      you already do. Nothing changes about how you work.
+                      Open a PR from your session, exactly the way you do today.
                     </p>
                   </div>
+                </li>
+                <li className={styles.heroFlowHandoff} aria-hidden="true">
+                  <span className={styles.heroFlowHandoffLine} />
+                  <span className={styles.heroFlowHandoffLabel}>
+                    then vibeshub takes over
+                  </span>
                 </li>
                 <li className={styles.heroFlowStep}>
                   <span className={styles.heroFlowMark}>
@@ -229,12 +238,11 @@ export function Landing() {
                   </span>
                   <div>
                     <span className={styles.heroFlowNum}>
-                      03 · It posts itself
+                      03 · The trace lands on the PR
                     </span>
                     <p className={styles.heroFlowText}>
-                      The trace uploads and the PR comment arrives with the
-                      link, automatically. No commands to remember, no links to
-                      paste.
+                      It uploads and the PR comment arrives with the link,
+                      automatically. No commands to remember, no links to paste.
                     </p>
                   </div>
                 </li>
