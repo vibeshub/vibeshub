@@ -160,6 +160,7 @@ def _render_card_head(
     og_type: str,
     base_url: str,
     image_filename: str = "og-default.png",
+    image_url: str | None = None,
 ) -> str:
     """Render the full <title>/<meta>/<link> block for an SSR card.
 
@@ -170,9 +171,11 @@ def _render_card_head(
     canonical, og:type, and og:image vary by route. `image_filename` is a
     file at the site root (Vite `public/` output); it defaults to the
     shared og-default.png and is overridden for pages with bespoke art.
+    Pass `image_url` to use a fully-qualified image URL instead (e.g. the
+    per-trace dynamic card route).
     """
     base = base_url.rstrip("/")
-    image = f"{base}/{image_filename}"
+    image = image_url if image_url is not None else f"{base}/{image_filename}"
 
     t = html_escape(title)
     d = html_escape(description, quote=True)
@@ -246,7 +249,17 @@ def _render_trace_head(trace: Trace, base_url: str) -> str:
         desc_parts.append(trace.repo_full_name)
     description = " · ".join(desc_parts)
 
-    return _render_card_head(title, description, canonical, "article", base_url)
+    # og:image is the per-trace social card. Computing the URL is cheap (just
+    # the content hash; no PNG is rendered here). The image route renders and
+    # caches lazily when a scraper actually fetches it. Deferred import avoids
+    # a module-load cycle: app.og.card imports _agent_label from this module.
+    from app.og.cache import card_tag
+    from app.og.card import build_card_data
+
+    image_url = f"{base}/api/og/{short_id}.png?v={card_tag(build_card_data(trace))}"
+    return _render_card_head(
+        title, description, canonical, "article", base_url, image_url=image_url,
+    )
 
 
 def _render_user_head(owner: str, count: int, base_url: str) -> str:

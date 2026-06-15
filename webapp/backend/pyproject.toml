@@ -16,6 +16,9 @@ dependencies = [
     "itsdangerous>=2.2",
     "cryptography>=43",
     "openai>=1.50",
+    # Renders the per-trace social card (app/og). Pure manylinux wheel, no
+    # system libs — keeps the python:3.13-slim image apt-change-free.
+    "pillow>=11",
     # Required at FastAPI import time for the Form/File parameters on
     # POST /api/uploads — without it, the whole app crashes on boot.
     "python-multipart>=0.0.9",

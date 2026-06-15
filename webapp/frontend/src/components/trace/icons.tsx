@@ -46,6 +46,15 @@ export function IconLink() {
   );
 }
 
+// The X (Twitter) wordmark glyph, filled to read at icon size.
+export function IconX() {
+  return (
+    <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M9.27 6.94 14.32 1h-1.2L8.74 6.16 5.23 1H1.18l5.3 7.78L1.18 15h1.2l4.63-5.43L10.77 15h4.05L9.27 6.94Zm-1.64 1.93-.54-.78L2.8 1.91h1.84l3.45 5 .54.78 4.48 6.5h-1.84l-3.66-5.3Z" />
+    </svg>
+  );
+}
+
 export function IconSun() {
   return (
     <svg className="iconbtn-icon" viewBox="0 0 16 16" fill="none" aria-hidden>

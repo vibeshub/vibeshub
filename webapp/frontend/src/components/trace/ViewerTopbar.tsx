@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "../ThemeToggle";
+import type { TraceSummary } from "../../types";
 import type { Session } from "./types";
-import { IconLink } from "./icons";
+import { IconX } from "./icons";
+import { tweetIntentUrl } from "./share";
 
 interface Props {
   session: Session;
+  trace: TraceSummary;
   repoOwner?: string;
   repoName?: string;
   /** Optional owner-only controls rendered in the actions row. */
@@ -14,6 +17,7 @@ interface Props {
 
 export function ViewerTopbar({
   session,
+  trace,
   repoOwner,
   repoName,
   ownerControls,
@@ -21,12 +25,11 @@ export function ViewerTopbar({
   const meta = session.meta;
   const id = meta.sessionId ? meta.sessionId.slice(0, 8) : "";
 
-  const copyLink = () => {
-    if (typeof window === "undefined") return;
-    void window.navigator.clipboard
-      ?.writeText(window.location.href)
-      .catch(() => undefined);
-  };
+  // A public trace link is a shareable artifact: posting it to X renders the
+  // per-trace social card. Private traces are gated, so sharing them is
+  // pointless and we hide the affordance.
+  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareHref = trace.is_private ? null : tweetIntentUrl(trace, pageUrl);
 
   return (
     <header className="topbar">
@@ -63,15 +66,18 @@ export function ViewerTopbar({
         <div className="topbar-actions">
           {ownerControls}
           <ThemeToggle />
-          <button
-            className="iconbtn"
-            onClick={copyLink}
-            type="button"
-            aria-label="Copy share link"
-          >
-            <IconLink />
-            <span className="share-label">Share</span>
-          </button>
+          {shareHref && (
+            <a
+              className="iconbtn"
+              href={shareHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Share on X"
+            >
+              <IconX />
+              <span className="share-label">Share</span>
+            </a>
+          )}
         </div>
       </div>
     </header>

@@ -12,6 +12,7 @@ from app.api import (
     github_stats as github_stats_api,
     health,
     ingest as ingest_api,
+    og as og_api,
     seo as seo_api,
     traces as traces_api,
     uploads as uploads_api,
@@ -65,6 +66,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_api.router)
     app.include_router(github_stats_api.router)
     app.include_router(github_picker_api.router)
+    # Dynamic social-card images (/api/og/<id>.png) — before the SPA catch-all
+    # so the route claims the path instead of index.html.
+    app.include_router(og_api.router)
     # SEO routes (/robots.txt, /sitemap.xml) must be included before the SPA
     # catch-all below — otherwise the catch-all swallows them and returns
     # index.html instead of the XML/text response.

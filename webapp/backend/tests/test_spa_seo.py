@@ -280,6 +280,45 @@ async def test_private_trace_emits_noindex_without_leaking_title(spa_client):
 
 
 @pytest.mark.asyncio
+async def test_public_trace_og_image_is_dynamic_card(spa_client):
+    SessionLocal = spa_client.app.state.session_maker
+    async with SessionLocal() as session:
+        session.add(_make_trace(
+            short_id=SHORT_OK, owner_login="alice", message_count=257,
+        ))
+        await session.commit()
+
+    body = spa_client.get(f"/t/{SHORT_OK}").text
+    # og:image and twitter:image point at the per-trace card route with a
+    # content-hash cache-buster, not the shared default art.
+    assert f"/api/og/{SHORT_OK}.png?v=" in body
+    assert (
+        f'property="og:image" content="https://vibeshub.test/api/og/{SHORT_OK}.png?v='
+        in body
+    )
+    assert (
+        f'name="twitter:image" content="https://vibeshub.test/api/og/{SHORT_OK}.png?v='
+        in body
+    )
+    assert "og-default.png" not in body
+
+
+@pytest.mark.asyncio
+async def test_private_trace_has_no_og_image(spa_client):
+    SessionLocal = spa_client.app.state.session_maker
+    async with SessionLocal() as session:
+        session.add(_make_trace(
+            short_id=SHORT_OK, owner_login="alice", is_private=True,
+        ))
+        await session.commit()
+
+    body = spa_client.get(f"/t/{SHORT_OK}").text
+    # No card is generated or referenced for private traces.
+    assert "og:image" not in body
+    assert "/api/og/" not in body
+
+
+@pytest.mark.asyncio
 async def test_deleted_trace_falls_back_to_default(spa_client):
     SessionLocal = spa_client.app.state.session_maker
     async with SessionLocal() as session:
