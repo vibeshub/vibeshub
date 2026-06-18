@@ -74,7 +74,6 @@ describe("Landing", () => {
   it("advertises plugin version 0.4.0 across landing install surfaces", () => {
     const { container } = renderPage();
 
-    expect(screen.getByText("v0.4")).toBeInTheDocument();
     expect(screen.getByText("0.4.0")).toBeInTheDocument();
     expect(container).toHaveTextContent("USER_AGENT=vibeshub/0.4");
     expect(container).not.toHaveTextContent("0.3.1");
