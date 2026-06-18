@@ -135,13 +135,12 @@ export function Landing() {
             <span>vibeshub</span>
           </Link>
 
-          {/* Real destinations only: the live viewer plus Blog/FAQ (our SEO
-              assets), and the in-page browse anchor. Privacy/Contact stay in
+          {/* Real destinations only: the live viewer plus the FAQ (our SEO
+              asset), and the in-page browse anchor. Privacy/Contact stay in
               the footer. */}
           <nav className={styles.navLinks} aria-label="Main">
             <a href="#browse">browse</a>
             <Link to="/vibeviewer">viewer</Link>
-            <Link to="/blog">blog</Link>
             <Link to="/faq">faq</Link>
           </nav>
 
@@ -651,7 +650,6 @@ export function Landing() {
               <a href="https://github.com/vibeshub/vibeshub">GitHub</a>
               <a href="#browse">Browse</a>
               <Link to="/vibeviewer">Viewer</Link>
-              <Link to="/blog">Blog</Link>
               <Link to="/faq">FAQ</Link>
               <Link to="/privacy">Privacy</Link>
               <Link to="/contact">Contact</Link>
