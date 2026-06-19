@@ -2252,26 +2252,57 @@
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--dim);
-  padding: 16px 4px 14px;
-  margin: 0 12px 0 0;
-  border-bottom: 2px solid transparent;
+  padding: 15px 11px 13px;
+  margin: 0 6px 0 0;
   position: relative;
   top: 1px; /* overlap the bar's bottom border */
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+/* The underline lives in ::after so an unselected tab can show a faint "slot"
+   at rest and fill green on hover — a preview of what selecting it does —
+   without any layout shift. Together the two tabs read as one switch with one
+   half lit and the other waiting, instead of a label sitting next to a
+   disabled-looking chip. */
+.vibeshub-viewer .view-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--line);
+  transition: background-color 150ms ease;
 }
 .vibeshub-viewer .view-tab:hover {
   color: var(--strong);
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
+}
+.vibeshub-viewer .view-tab:not(.on):hover::after {
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
 }
 .vibeshub-viewer .view-tab.on {
   color: var(--strong);
-  border-bottom-color: var(--accent);
   font-weight: 600;
+}
+.vibeshub-viewer .view-tab.on::after {
+  background: var(--accent);
+  height: 2.5px;
 }
 .vibeshub-viewer .view-tab .cnt {
   font-size: 11px;
-  color: var(--faint);
+  color: var(--dim);
   white-space: nowrap;
   border: 1px solid var(--line);
   padding: 1px 7px;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+.vibeshub-viewer .view-tab:not(.on):hover .cnt {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
 }
 .vibeshub-viewer .view-tab.on .cnt {
   color: var(--accent);
