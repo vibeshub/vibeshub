@@ -34,11 +34,7 @@ cd /tmp/vibeshub-cursor
 git add -A
 git commit -m "Generate from vibeshub@$(git -C /path/to/vibeshub rev-parse --short HEAD)"
 git push
-git tag "v$(python3 - <<'PY'
-import re,io
-print(re.search(r'"([^"]+)"', open('/path/to/vibeshub/plugins/cli/vibeshub_client/version.py').read()).group(1))
-PY
-)"
+git tag "v$(python3 -c 'from vibeshub_client.version import PLUGIN_VERSION; print(PLUGIN_VERSION)')"
 git push --tags
 ```
 
