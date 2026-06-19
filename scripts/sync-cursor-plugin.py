@@ -178,9 +178,10 @@ echo '{{"command":"git push","cwd":"'"$(pwd)"'"}}' \\
 
 If the Hooks output channel reports that `./hooks/on-pr-share.sh` cannot be
 found, Cursor did not resolve the command relative to the plugin root. Edit
-`hooks/hooks.json` to use an absolute path to `on-pr-share.sh`, or fall back to
-the user-level hook installer in the main repo
-(`plugins/cli/commands/install-cursor.py`).
+`hooks/hooks.json` to use an absolute path to `on-pr-share.sh`, or install the
+plugin locally by symlinking this directory into
+`~/.cursor/plugins/local/vibeshub-cursor` (see "Local development / testing"
+above) so Cursor resolves the hook from a fixed path.
 
 ## License
 

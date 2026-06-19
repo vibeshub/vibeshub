@@ -29,21 +29,28 @@ You'll also need:
 
 ## Cursor
 
-Cursor runs the same share logic through its own hook system. Install the
-user-level hook once per machine:
+Cursor runs the same share logic through its own hook system, packaged as a
+separate plugin generated from this one by `scripts/sync-cursor-plugin.py` and
+published at [vibeshub/vibeshub-cursor](https://github.com/vibeshub/vibeshub-cursor).
+
+Install **vibeshub** from the Cursor marketplace, then Reload Window.
+
+To install without the marketplace (local development or air-gapped machines),
+symlink the generated plugin tree into Cursor's local plugins directory:
 
 ```
-python3 path/to/plugins/cli/commands/install-cursor.py
+ln -s /path/to/vibeshub-cursor ~/.cursor/plugins/local/vibeshub-cursor
 ```
 
-This merges an `afterShellExecution` hook into `~/.cursor/hooks.json`
-(preserving any hooks you already have) that runs the plugin's share script
-after a `git push`, tagged with `VIBESHUB_PLATFORM=cursor`. It reads the Cursor
-agent transcript from `~/.cursor/projects/<project>/agent-transcripts/<id>/`
-(including any subagents) and uploads it the same way. Restart Cursor, or
-re-save `hooks.json`, to load it. Cursor transcripts record the conversation
-and tool calls but not tool outputs, token counts, or the model name, so those
-fields are blank in the viewer.
+Enable Settings → Features → "Include third-party Plugins, Skills, and other
+configs", then Reload Window.
+
+Either way, an `afterShellExecution` hook runs the plugin's share script after a
+`git push`, tagged with `VIBESHUB_PLATFORM=cursor`. It reads the Cursor agent
+transcript from `~/.cursor/projects/<project>/agent-transcripts/<id>/`
+(including any subagents) and uploads it the same way. Cursor transcripts record
+the conversation and tool calls but not tool outputs, token counts, or the model
+name, so those fields are blank in the viewer.
 
 ## Configure
 

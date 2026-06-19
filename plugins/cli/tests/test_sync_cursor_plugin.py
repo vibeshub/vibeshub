@@ -2,7 +2,7 @@
 
 The generator lives at the repo root (scripts/) and packages this plugin
 (plugins/cli) into a self-contained Cursor plugin tree. Loaded via importlib
-because the filename is hyphenated (matches test_install_cursor.py's pattern).
+because the script's filename is hyphenated.
 """
 import importlib.util
 import json
