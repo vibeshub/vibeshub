@@ -228,10 +228,15 @@ describe("ProvenanceView net panel", () => {
 
   it("opens the attributed prompt chain when an added line is clicked", () => {
     renderNet();
-    const add = document.querySelector('.diff-row.net-click[role="button"]') as HTMLElement;
+    // There is exactly one added line ("x"); target it specifically rather
+    // than the first net-click row (which is the context row "a" and opens the
+    // file-level panel instead of the per-op provenance chain).
+    const add = document.querySelector(".diff-row.diff-add") as HTMLElement;
     fireEvent.click(add);
-    // The op was made under prompt "edit it"; the chain quotes it.
-    expect(screen.getByText(/edit it/)).toBeInTheDocument();
+    // The per-op chain renders an "Instruction №1 · …" heading; the file-level
+    // panel uses "Prompts that touched this file" and never says "Instruction",
+    // so this proves the add-row click opened the per-op chain.
+    expect(screen.getByText(/Instruction/)).toBeInTheDocument();
   });
 
   it("opens the file-level view when a context line is clicked", () => {
