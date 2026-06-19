@@ -7,6 +7,7 @@ import type {
 } from "./provenance";
 import { orderRegions } from "./provenance";
 import type { DiffRow } from "./diff";
+import type { NetRow } from "./netdiff";
 import { changeAnchorId } from "./changes";
 import { fmtTimeOfDay, shortenPath } from "./format";
 import { highlightLine, langFromPath } from "./highlight";
@@ -139,8 +140,8 @@ function FilesIndex({
   root: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const adds = files.reduce((n, f) => n + f.adds, 0);
-  const dels = files.reduce((n, f) => n + f.dels, 0);
+  const adds = files.reduce((n, f) => n + (f.hasNetData ? f.netAdds : f.adds), 0);
+  const dels = files.reduce((n, f) => n + (f.hasNetData ? f.netDels : f.dels), 0);
   const total = adds + dels;
   return (
     <header className="prov-summary">
@@ -169,29 +170,29 @@ function FilesIndex({
       </div>
       {open && (
         <nav className="prov-index" aria-label="Changed files">
-          {files.map((f) => (
-            <button
-              key={f.path}
-              type="button"
-              className="prov-index-item"
-              onClick={() =>
-                document
-                  .getElementById(changeAnchorId(f.path))
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }
-            >
-              <span className="prov-index-path">
-                {shortenPath(f.path, root)}
-              </span>
-              {f.status !== "mod" && (
-                <span className={"prov-index-status " + f.status}>
-                  {f.status}
-                </span>
-              )}
-              {f.adds > 0 && <span className="diff-stat-add">+{f.adds}</span>}
-              {f.dels > 0 && <span className="diff-stat-del">−{f.dels}</span>}
-            </button>
-          ))}
+          {files.map((f) => {
+            const fa = f.hasNetData ? f.netAdds : f.adds;
+            const fd = f.hasNetData ? f.netDels : f.dels;
+            return (
+              <button
+                key={f.path}
+                type="button"
+                className="prov-index-item"
+                onClick={() =>
+                  document
+                    .getElementById(changeAnchorId(f.path))
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                <span className="prov-index-path">{shortenPath(f.path, root)}</span>
+                {f.status !== "mod" && (
+                  <span className={"prov-index-status " + f.status}>{f.status}</span>
+                )}
+                {fa > 0 && <span className="diff-stat-add">+{fa}</span>}
+                {fd > 0 && <span className="diff-stat-del">−{fd}</span>}
+              </button>
+            );
+          })}
         </nav>
       )}
     </header>
@@ -284,6 +285,70 @@ function FlatRowView({
   );
 }
 
+const NET_MARK: Record<DiffRow["kind"], string> = {
+  add: "+",
+  del: "-",
+  ctx: "",
+  hunk: "",
+};
+
+function NetRowView({
+  row,
+  lang,
+  selectedHunkId,
+  onPick,
+}: {
+  row: NetRow;
+  lang: string | null;
+  selectedHunkId: string | null;
+  onPick: (hunkId: string) => void;
+}) {
+  if (row.kind === "hunk") {
+    return (
+      <div className="diff-row diff-hunk">
+        <span className="diff-gutter" />
+        <span className="diff-gutter" />
+        <span className="diff-mark" />
+        <span className="diff-code">{row.text}</span>
+      </div>
+    );
+  }
+  const clickable = row.kind === "add" && row.hunkId !== null;
+  const isSel =
+    selectedHunkId !== null && row.hunkId === selectedHunkId && clickable;
+  const pick = clickable ? () => onPick(row.hunkId as string) : undefined;
+  return (
+    <div
+      className={
+        `diff-row diff-${row.kind}` +
+        (clickable ? " net-click" : "") +
+        (isSel ? " net-sel" : "")
+      }
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={pick}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                pick?.();
+              }
+            }
+          : undefined
+      }
+    >
+      <span className="diff-gutter">{row.oldNo ?? ""}</span>
+      <span className="diff-gutter">{row.newNo ?? ""}</span>
+      <span className="diff-mark">{NET_MARK[row.kind]}</span>
+      <span
+        className="diff-code"
+        dangerouslySetInnerHTML={{ __html: highlightLine(row.text || " ", lang) }}
+      />
+    </div>
+  );
+}
+
 function FileBlock({
   file,
   root,
@@ -299,6 +364,71 @@ function FileBlock({
 }) {
   const [expanded, setExpanded] = useState(false);
   const lang = langFromPath(file.path);
+
+  if (file.hasNetData) {
+    const rows = file.netRows;
+    const folded =
+      rows.length > FILE_FOLD_THRESHOLD && !expanded
+        ? rows.slice(0, FILE_FOLD_HEAD)
+        : rows;
+    const hidden = rows.length - folded.length;
+    const selectHunk = (hunkId: string) => {
+      const hunk = file.hunks.find((h) => h.id === hunkId);
+      if (hunk) onSelect({ file, hunk, rowIdx: null });
+    };
+    return (
+      <section
+        id={changeAnchorId(file.path)}
+        className={"prov-file" + (file.status === "ephemeral" ? " ephemeral" : "")}
+      >
+        <div className="prov-fhead">
+          <span className="prov-fpath" title={file.path}>
+            {shortenPath(file.path, root)}
+          </span>
+          <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
+          <span className="prov-fstats">
+            {file.netAdds > 0 && <span className="diff-stat-add">+{file.netAdds}</span>}
+            {file.netDels > 0 && <span className="diff-stat-del">−{file.netDels}</span>}
+          </span>
+        </div>
+        {caption && <p className="prov-fcaption">{caption}</p>}
+        {rows.length === 0 ? (
+          <div className="prov-nodata">no net change</div>
+        ) : (
+          <div className="prov-code net">
+            {folded.map((row, i) => (
+              <NetRowView
+                key={i}
+                row={row}
+                lang={lang}
+                selectedHunkId={sel && sel.file.path === file.path ? sel.hunk.id : null}
+                onPick={selectHunk}
+              />
+            ))}
+            {hidden > 0 && (
+              <button
+                type="button"
+                className="diff-expand"
+                onClick={() => setExpanded(true)}
+              >
+                ▸ show {hidden} more lines
+              </button>
+            )}
+            {expanded && rows.length > FILE_FOLD_THRESHOLD && (
+              <button
+                type="button"
+                className="diff-expand"
+                onClick={() => setExpanded(false)}
+              >
+                ▾ collapse
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   const regions = orderRegions(file.hunks.filter((h) => !h.superseded));
   const flat: FlatRow[] = [];
   for (const region of regions) {

@@ -2986,3 +2986,15 @@
     padding-right: 16px;
   }
 }
+
+/* Net-diff rows: clickable added lines + selected state */
+.prov-code.net .diff-row.net-click {
+  cursor: pointer;
+}
+.prov-code.net .diff-row.net-click:hover {
+  filter: brightness(1.08);
+}
+.prov-code.net .diff-row.net-sel {
+  outline: 1px solid var(--acc);
+  outline-offset: -1px;
+}
