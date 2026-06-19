@@ -80,6 +80,16 @@ function failRun(stdout: string): ToolResult {
   return { content: stdout, isError: true, toolUseResult: { stdout } };
 }
 
+function fileResult(originalFile: string | null, content: string): ToolResult {
+  return {
+    content: "ok",
+    toolUseResult: {
+      ...(originalFile === null ? {} : { originalFile }),
+      content,
+    },
+  };
+}
+
 function agent(over: Partial<AgentSummary> = {}): AgentSummary {
   return {
     agent_id: "a1",
@@ -690,5 +700,37 @@ describe("retried flag", () => {
       tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
     ]);
     expect(m.files[0].hunks[0].retried).toBe(false);
+  });
+});
+
+describe("net diff on BlameFile", () => {
+  it("reconstructs the net before/after for an edited file", () => {
+    const m = build([
+      tool(
+        "Edit",
+        "t1",
+        { file_path: "/r/a.ts", old_string: "b", new_string: "x" },
+        fileResult("a\nb\nc", "a\nx\nc"),
+      ),
+    ]);
+    const f = m.files[0];
+    expect(f.hasNetData).toBe(true);
+    expect(f.netAdds).toBe(1);
+    expect(f.netDels).toBe(1);
+    expect(f.netRows.map((r) => [r.kind, r.text])).toEqual([
+      ["ctx", "a"],
+      ["del", "b"],
+      ["add", "x"],
+      ["ctx", "c"],
+    ]);
+    expect(f.netRows.find((r) => r.kind === "add")!.hunkId).toBe(f.hunks[0].id);
+  });
+
+  it("falls back (hasNetData false) when content was not captured", () => {
+    const m = build([
+      tool("Edit", "t1", { file_path: "/r/a.ts", old_string: "x", new_string: "y" }),
+    ]);
+    expect(m.files[0].hasNetData).toBe(false);
+    expect(m.files[0].netRows).toEqual([]);
   });
 });
