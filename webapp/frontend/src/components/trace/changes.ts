@@ -104,6 +104,8 @@ export interface EditOp {
   rows: DiffRow[];
   newContents: string[]; // emitted content, supersede targets
   oldStrings: string[]; // supersede sources
+  originalFile: string | null; // full pre-edit file content, when captured
+  finalContent: string | null; // full post-edit file content, when captured
 }
 
 function opsFromTool(
@@ -116,6 +118,11 @@ function opsFromTool(
   const path = typeof e.input.file_path === "string" ? e.input.file_path : null;
   if (!path) return [];
   const patch = extractPatch(e.result?.toolUseResult?.structuredPatch);
+  const tur = e.result?.toolUseResult;
+  const originalFile =
+    tur && typeof tur.originalFile === "string" ? tur.originalFile : null;
+  const finalContent =
+    tur && typeof tur.content === "string" ? tur.content : null;
   // seq is assigned post-hoc in collectOps once all ops are collected.
   const base = {
     path,
@@ -128,6 +135,8 @@ function opsFromTool(
     agentBadge,
     failed: !!e.result?.isError,
     errorText: resultErrorText(e),
+    originalFile,
+    finalContent,
   };
 
   if (e.name === "MultiEdit" && Array.isArray(e.input.edits) && !patch) {
