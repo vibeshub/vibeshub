@@ -1,0 +1,24 @@
+{
+  "name": "vibeshub",
+  "owner": {
+    "name": "vibeshub",
+    "email": "team@vibeshub.ai"
+  },
+  "metadata": {
+    "description": "Share and showcase your Cursor agent coding sessions on vibeshub."
+  },
+  "plugins": [
+    {
+      "name": "vibeshub",
+      "source": ".",
+      "description": "Upload your Cursor agent conversation traces to vibeshub when you open or update a pull request.",
+      "category": "Engineering",
+      "keywords": [
+        "cursor",
+        "traces",
+        "pull-requests",
+        "ai-coding"
+      ]
+    }
+  ]
+}

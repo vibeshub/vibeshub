@@ -1,0 +1,41 @@
+name: Cursor plugin sync
+
+# Fail any change that desyncs the committed cursor-plugin/ snapshot from a
+# fresh generate of plugins/cli. The snapshot is what we push to
+# vibeshub/vibeshub-cursor, so this keeps the published plugin from drifting.
+on:
+  pull_request:
+    paths:
+      - "plugins/cli/**"
+      - "scripts/sync-cursor-plugin.py"
+      - "cursor-plugin/**"
+      - ".github/workflows/cursor-sync.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/cli/**"
+      - "scripts/sync-cursor-plugin.py"
+      - "cursor-plugin/**"
+
+jobs:
+  sync-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cursor snapshot is in sync with plugins/cli
+        run: python3 scripts/sync-cursor-plugin.py --check --out cursor-plugin
+
+      - name: Cursor plugin tests
+        run: |
+          python3 -m pip install --quiet pytest
+          python3 -m pytest \
+            plugins/cli/tests/test_sync_cursor_plugin.py \
+            plugins/cli/tests/test_cursor_reader.py \
+            plugins/cli/tests/test_cursor_subagent_link.py \
+            plugins/cli/tests/test_platform_adapter.py \
+            -q

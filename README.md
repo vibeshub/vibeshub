@@ -40,7 +40,7 @@ Install the plugin in your AI coding tool. The next time you run `gh pr create`,
 ```bash
 claude plugin install vibeshub/claude-code
 # Codex: same package, auto-detected at runtime
-# Cursor: python3 plugins/cli/commands/install-cursor.py
+# Cursor: install vibeshub from the Cursor marketplace
 ```
 
 ## Supported platforms
@@ -49,7 +49,7 @@ claude plugin install vibeshub/claude-code
 |----------|---------|
 | Claude Code | Marketplace plugin, see [plugins/cli/README.md](plugins/cli/README.md#install) |
 | Codex | Marketplace plugin, same package, auto-detected at runtime |
-| Cursor | One-time hook install: `python3 plugins/cli/commands/install-cursor.py` |
+| Cursor | Marketplace plugin: install **vibeshub** from the Cursor marketplace ([vibeshub/vibeshub-cursor](https://github.com/vibeshub/vibeshub-cursor)) |
 
 All three share the same upload pipeline, redaction, and PR comment logic. Platform-specific hook surfaces and transcript paths are documented in [plugins/cli/README.md](plugins/cli/README.md).
 

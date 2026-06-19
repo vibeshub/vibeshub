@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "afterShellExecution": [
+      {
+        "command": "./hooks/on-pr-share.sh",
+        "matcher": "gh pr (create|edit)|git\\s+push"
+      }
+    ]
+  }
+}
