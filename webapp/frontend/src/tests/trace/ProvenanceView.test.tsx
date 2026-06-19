@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 
 import { ProvenanceView } from "../../components/trace/ProvenanceView";
 import { buildProvenance } from "../../components/trace/provenance";
@@ -209,5 +209,37 @@ describe("ProvenanceView net diff", () => {
     expect(head).not.toBeNull();
     expect(within(head).getByText("+1")).toBeInTheDocument();
     expect(within(head).getByText("−1")).toBeInTheDocument();
+  });
+});
+
+describe("ProvenanceView net panel", () => {
+  function renderNet() {
+    const model = buildProvenance(session(netStream()), [], "claude-code");
+    render(
+      <ProvenanceView
+        model={model}
+        session={session(netStream())}
+        subagentsLoading={false}
+        digest={null}
+        onJump={() => {}}
+      />,
+    );
+  }
+
+  it("opens the attributed prompt chain when an added line is clicked", () => {
+    renderNet();
+    const add = document.querySelector('.diff-row.net-click[role="button"]') as HTMLElement;
+    fireEvent.click(add);
+    // The op was made under prompt "edit it"; the chain quotes it.
+    expect(screen.getByText(/edit it/)).toBeInTheDocument();
+  });
+
+  it("opens the file-level view when a context line is clicked", () => {
+    renderNet();
+    const ctx = [...document.querySelectorAll(".diff-row.diff-ctx")].find((el) =>
+      el.textContent?.includes("a"),
+    ) as HTMLElement;
+    fireEvent.click(ctx);
+    expect(screen.getByText(/Prompts that touched this file/)).toBeInTheDocument();
   });
 });

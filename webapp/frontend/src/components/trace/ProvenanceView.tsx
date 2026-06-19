@@ -20,7 +20,7 @@ import type { TraceDigest } from "../../types";
 
 interface Sel {
   file: BlameFile;
-  hunk: BlameHunk;
+  hunk: BlameHunk | null; // null = file-level provenance
   rowIdx: number | null;
 }
 
@@ -239,7 +239,7 @@ function FlatRowView({
   }
   const changed = row.kind !== "ctx";
   const isSel =
-    sel !== null && sel.hunk.id === region.id && sel.rowIdx === localIdx;
+    sel !== null && sel.hunk !== null && sel.hunk.id === region.id && sel.rowIdx === localIdx;
   const author = region.agentType ? "agent" : "ai";
   const select = () => onSelect({ file, hunk: region, rowIdx: localIdx });
   return (
@@ -301,7 +301,7 @@ function NetRowView({
   row: NetRow;
   lang: string | null;
   selectedHunkId: string | null;
-  onPick: (hunkId: string) => void;
+  onPick: (hunkId: string | null) => void;
 }) {
   if (row.kind === "hunk") {
     return (
@@ -313,30 +313,23 @@ function NetRowView({
       </div>
     );
   }
-  const clickable = row.kind === "add" && row.hunkId !== null;
-  const isSel =
-    selectedHunkId !== null && row.hunkId === selectedHunkId && clickable;
-  const pick = clickable ? () => onPick(row.hunkId as string) : undefined;
+  const attributed = row.kind === "add" && row.hunkId !== null;
+  const isSel = attributed && selectedHunkId !== null && row.hunkId === selectedHunkId;
+  const pick = () => onPick(attributed ? (row.hunkId as string) : null);
   return (
     <div
       className={
-        `diff-row diff-${row.kind}` +
-        (clickable ? " net-click" : "") +
-        (isSel ? " net-sel" : "")
+        `diff-row diff-${row.kind} net-click` + (isSel ? " net-sel" : "")
       }
-      role={clickable ? "button" : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      role="button"
+      tabIndex={0}
       onClick={pick}
-      onKeyDown={
-        clickable
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                pick?.();
-              }
-            }
-          : undefined
-      }
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          pick();
+        }
+      }}
     >
       <span className="diff-gutter">{row.oldNo ?? ""}</span>
       <span className="diff-gutter">{row.newNo ?? ""}</span>
@@ -372,9 +365,9 @@ function FileBlock({
         ? rows.slice(0, FILE_FOLD_HEAD)
         : rows;
     const hidden = rows.length - folded.length;
-    const selectHunk = (hunkId: string) => {
-      const hunk = file.hunks.find((h) => h.id === hunkId);
-      if (hunk) onSelect({ file, hunk, rowIdx: null });
+    const selectRow = (hunkId: string | null) => {
+      const hunk = hunkId ? file.hunks.find((h) => h.id === hunkId) ?? null : null;
+      onSelect({ file, hunk, rowIdx: null });
     };
     return (
       <section
@@ -401,8 +394,10 @@ function FileBlock({
                 key={i}
                 row={row}
                 lang={lang}
-                selectedHunkId={sel && sel.file.path === file.path ? sel.hunk.id : null}
-                onPick={selectHunk}
+                selectedHunkId={
+                  sel && sel.file.path === file.path && sel.hunk ? sel.hunk.id : null
+                }
+                onPick={selectRow}
               />
             ))}
             {hidden > 0 && (
@@ -570,6 +565,68 @@ function Panel({
               <dd>rewrite heat (times the line was redone)</dd>
             </div>
           </dl>
+        </div>
+      </aside>
+    );
+  }
+
+  if (sel.hunk === null) {
+    const f = sel.file;
+    const editCount = f.hunks.length;
+    const retried = f.hunks.filter((h) => h.retried).length;
+    const promptIdxs = [
+      ...new Set(f.hunks.map((h) => h.promptIdx).filter((i) => i > 0)),
+    ];
+    const seen = new Set<string>();
+    const verifs = f.hunks
+      .flatMap((h) => h.verifications)
+      .filter((v) => v.status !== "none")
+      .filter((v) => (seen.has(v.label) ? false : (seen.add(v.label), true)));
+    return (
+      <aside className="prov-panel has-sel">
+        <button type="button" className="prov-panel-close" onClick={onClose}>
+          ✕
+        </button>
+        <h2>File · {shortenPath(f.path, root).split("/").pop()}</h2>
+        <div className="prov-chain">
+          <div className="prov-step">
+            <h3>
+              {editCount} {editCount === 1 ? "edit" : "edits"}
+              {retried > 0 ? `, ${retried} retried` : ""}
+            </h3>
+          </div>
+          <div className="prov-step prompt">
+            <h3>Prompts that touched this file</h3>
+            {promptIdxs.map((idx) => {
+              const p = model.prompts[idx - 1];
+              return p ? (
+                <p className="q" key={idx}>
+                  №{p.idx} “{clip(p.text, 200)}”
+                  {p.uuid && (
+                    <button
+                      type="button"
+                      className="prov-jump"
+                      onClick={() => onJump(p.uuid, p.uuid)}
+                    >
+                      ↗
+                    </button>
+                  )}
+                </p>
+              ) : null;
+            })}
+          </div>
+          {verifs.length > 0 && (
+            <div className="prov-step verify">
+              <h3>Verified by</h3>
+              <div className="prov-vrow">
+                {verifs.map((v, i) => (
+                  <span key={i} className={"prov-vchip " + v.status}>
+                    {v.status === "pass" ? "✓" : v.status === "fail" ? "✗" : "○"} {v.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     );
