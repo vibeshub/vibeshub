@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { Session } from "./types";
 import type {
   BlameFile,
@@ -342,6 +342,42 @@ function NetRowView({
   );
 }
 
+// Shared file-card header for both the net and per-op views. The two differ
+// only in which counts they show (net vs surviving) and whether a per-edit
+// summary span is present, so those are props/slots rather than duplicated.
+function FileHead({
+  file,
+  root,
+  adds,
+  dels,
+  caption,
+  summary,
+}: {
+  file: BlameFile;
+  root: string | null;
+  adds: number;
+  dels: number;
+  caption: string | undefined;
+  summary?: ReactNode;
+}) {
+  return (
+    <>
+      <div className="prov-fhead">
+        <span className="prov-fpath" title={file.path}>
+          {shortenPath(file.path, root)}
+        </span>
+        <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
+        <span className="prov-fstats">
+          {adds > 0 && <span className="diff-stat-add">+{adds}</span>}
+          {dels > 0 && <span className="diff-stat-del">−{dels}</span>}
+        </span>
+        {summary}
+      </div>
+      {caption && <p className="prov-fcaption">{caption}</p>}
+    </>
+  );
+}
+
 function FileBlock({
   file,
   root,
@@ -374,17 +410,13 @@ function FileBlock({
         id={changeAnchorId(file.path)}
         className={"prov-file" + (file.status === "ephemeral" ? " ephemeral" : "")}
       >
-        <div className="prov-fhead">
-          <span className="prov-fpath" title={file.path}>
-            {shortenPath(file.path, root)}
-          </span>
-          <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
-          <span className="prov-fstats">
-            {file.netAdds > 0 && <span className="diff-stat-add">+{file.netAdds}</span>}
-            {file.netDels > 0 && <span className="diff-stat-del">−{file.netDels}</span>}
-          </span>
-        </div>
-        {caption && <p className="prov-fcaption">{caption}</p>}
+        <FileHead
+          file={file}
+          root={root}
+          adds={file.netAdds}
+          dels={file.netDels}
+          caption={caption}
+        />
         {rows.length === 0 ? (
           <div className="prov-nodata">no net change</div>
         ) : (
@@ -440,21 +472,19 @@ function FileBlock({
       id={changeAnchorId(file.path)}
       className={"prov-file" + (file.status === "ephemeral" ? " ephemeral" : "")}
     >
-      <div className="prov-fhead">
-        <span className="prov-fpath" title={file.path}>
-          {shortenPath(file.path, root)}
-        </span>
-        <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
-        <span className="prov-fstats">
-          {file.adds > 0 && <span className="diff-stat-add">+{file.adds}</span>}
-          {file.dels > 0 && <span className="diff-stat-del">−{file.dels}</span>}
-        </span>
-        <span className="prov-fsummary">
-          · {regions.length} {regions.length === 1 ? "edit" : "edits"}
-          {retriedCount > 0 ? `, ${retriedCount} retried` : ""}
-        </span>
-      </div>
-      {caption && <p className="prov-fcaption">{caption}</p>}
+      <FileHead
+        file={file}
+        root={root}
+        adds={file.adds}
+        dels={file.dels}
+        caption={caption}
+        summary={
+          <span className="prov-fsummary">
+            · {regions.length} {regions.length === 1 ? "edit" : "edits"}
+            {retriedCount > 0 ? `, ${retriedCount} retried` : ""}
+          </span>
+        }
+      />
       {flat.length === 0 ? (
         <div className="prov-nodata">no patch data</div>
       ) : (
