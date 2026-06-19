@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 
 import { ProvenanceView } from "../../components/trace/ProvenanceView";
 import { buildProvenance } from "../../components/trace/provenance";
 import type { Session, StreamEvent } from "../../components/trace/types";
+import type { ToolResult } from "../../components/trace/types";
 import type { TraceDigest } from "../../types";
 
 function ev(): StreamEvent[] {
@@ -54,6 +55,32 @@ function retriedStream(): StreamEvent[] {
       msgId: "m1",
       uuid: "t3",
       result: null,
+    },
+  ];
+}
+
+function netResult(originalFile: string | null, content: string): ToolResult {
+  return {
+    content: "ok",
+    toolUseResult: {
+      ...(originalFile === null ? {} : { originalFile }),
+      content,
+    },
+  };
+}
+
+function netStream(): StreamEvent[] {
+  return [
+    { kind: "user_prompt", text: "edit it", ts: "2026-06-13T10:00:00Z", uuid: "p1" },
+    {
+      kind: "tool_use",
+      name: "Edit",
+      input: { file_path: "/r/a.ts", old_string: "b", new_string: "x" },
+      id: "id-t1",
+      ts: "2026-06-13T10:00:01Z",
+      msgId: "m1",
+      uuid: "t1",
+      result: netResult("a\nb\nc", "a\nx\nc"),
     },
   ];
 }
@@ -139,5 +166,85 @@ describe("ProvenanceView merged blocks", () => {
       />,
     );
     expect(document.querySelector(".prov-fcaption")).toBeNull();
+  });
+});
+
+describe("ProvenanceView net diff", () => {
+  function renderNet() {
+    const model = buildProvenance(session(netStream()), [], "claude-code");
+    render(
+      <ProvenanceView
+        model={model}
+        session={session(netStream())}
+        subagentsLoading={false}
+        digest={null}
+        onJump={() => {}}
+      />,
+    );
+  }
+
+  it("renders one consolidated diff with net add/del rows", () => {
+    renderNet();
+    const code = document.querySelector(".prov-code.net");
+    expect(code).not.toBeNull();
+    const add = [...document.querySelectorAll(".diff-row.diff-add")].find((el) =>
+      el.textContent?.includes("x"),
+    );
+    expect(add).toBeTruthy();
+    expect(document.querySelector(".diff-row.diff-del")).not.toBeNull();
+  });
+
+  it("makes added rows clickable buttons", () => {
+    renderNet();
+    const btn = document.querySelector('.diff-row.net-click[role="button"]');
+    expect(btn).not.toBeNull();
+    expect((btn as HTMLElement).tabIndex).toBe(0);
+  });
+
+  it("shows the net change counts in the file header", () => {
+    renderNet();
+    // The FilesIndex summary line also renders the aggregate +1/−1, so scope
+    // the assertion to the file header (.prov-fhead) the test is about.
+    const head = document.querySelector(".prov-fhead") as HTMLElement;
+    expect(head).not.toBeNull();
+    expect(within(head).getByText("+1")).toBeInTheDocument();
+    expect(within(head).getByText("−1")).toBeInTheDocument();
+  });
+});
+
+describe("ProvenanceView net panel", () => {
+  function renderNet() {
+    const model = buildProvenance(session(netStream()), [], "claude-code");
+    render(
+      <ProvenanceView
+        model={model}
+        session={session(netStream())}
+        subagentsLoading={false}
+        digest={null}
+        onJump={() => {}}
+      />,
+    );
+  }
+
+  it("opens the attributed prompt chain when an added line is clicked", () => {
+    renderNet();
+    // There is exactly one added line ("x"); target it specifically rather
+    // than the first net-click row (which is the context row "a" and opens the
+    // file-level panel instead of the per-op provenance chain).
+    const add = document.querySelector(".diff-row.diff-add") as HTMLElement;
+    fireEvent.click(add);
+    // The per-op chain renders an "Instruction №1 · …" heading; the file-level
+    // panel uses "Prompts that touched this file" and never says "Instruction",
+    // so this proves the add-row click opened the per-op chain.
+    expect(screen.getByText(/Instruction/)).toBeInTheDocument();
+  });
+
+  it("opens the file-level view when a context line is clicked", () => {
+    renderNet();
+    const ctx = [...document.querySelectorAll(".diff-row.diff-ctx")].find((el) =>
+      el.textContent?.includes("a"),
+    ) as HTMLElement;
+    fireEvent.click(ctx);
+    expect(screen.getByText(/Prompts that touched this file/)).toBeInTheDocument();
   });
 });

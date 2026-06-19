@@ -8,6 +8,8 @@ import {
   sortOps,
 } from "./changes";
 import type { DiffRow } from "./diff";
+import { buildNetFile } from "./netdiff";
+import type { NetRow } from "./netdiff";
 
 // provenance.ts — derives the Provenance Blame model from a parsed session:
 // per-prompt attribution, per-op rewrite heat, failed attempts, verification
@@ -82,6 +84,12 @@ export interface BlameFile {
   adds: number; // surviving hunks only
   dels: number;
   hunks: BlameHunk[];
+  // Net before/after of the whole file (Task 2). netAdds/netDels are the
+  // net counts; hasNetData is false when the view must fall back to hunks.
+  netRows: NetRow[];
+  netAdds: number;
+  netDels: number;
+  hasNetData: boolean;
 }
 
 export interface AuthorSlice {
@@ -646,8 +654,19 @@ export function buildProvenance(
         ? "new"
         : "mod";
 
+    const net = buildNetFile(path, okOps, status === "ephemeral");
     files.push({
-      file: { path, status, adds: fileAdds, dels: fileDels, hunks },
+      file: {
+        path,
+        status,
+        adds: fileAdds,
+        dels: fileDels,
+        hunks,
+        netRows: net.netRows,
+        netAdds: net.netAdds,
+        netDels: net.netDels,
+        hasNetData: net.hasNetData,
+      },
       firstTs: first.ts,
       firstSeq: first.seq,
     });
