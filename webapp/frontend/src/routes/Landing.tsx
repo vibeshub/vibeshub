@@ -135,13 +135,12 @@ export function Landing() {
             <span>vibeshub</span>
           </Link>
 
-          {/* Real destinations only: the live viewer plus the FAQ (our SEO
-              asset), and the in-page browse anchor. Privacy/Contact stay in
-              the footer. */}
+          {/* Real destinations only: the live viewer plus the blog. The blog
+              lives outside the SPA, so it's a full-page link, not a router
+              Link. Privacy/Contact stay in the footer. */}
           <nav className={styles.navLinks} aria-label="Main">
-            <a href="#browse">browse</a>
             <Link to="/vibeviewer">viewer</Link>
-            <Link to="/faq">faq</Link>
+            <a href="/blog">blog</a>
           </nav>
 
           <div className="topbar-spacer" />
