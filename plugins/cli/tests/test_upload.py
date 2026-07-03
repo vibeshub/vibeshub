@@ -266,6 +266,24 @@ async def test_upload_repo_only_sends_repo_header_not_pr_header():
     assert captured["headers"]["X-vibeshub-repo"] == "alice/repo"
 
 
+@pytest.mark.asyncio
+async def test_upload_sends_plugin_user_agent():
+    """Cloudflare bot protection bans urllib's default Python-urllib/x.y
+    signature (403 error code 1010), so the uploader must identify itself
+    with an explicit User-Agent."""
+    captured: dict = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.header_items())
+        return _ok_response()
+
+    with patch("vibeshub_client.upload.urllib_request.urlopen", side_effect=fake_urlopen):
+        await _upload(plugin_version="0.5.0")
+
+    # urllib title-cases header names
+    assert captured["headers"].get("User-agent") == "vibeshub-plugin/0.5.0"
+
+
 _CERT_ERR = urllib_error.URLError(
     "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
     "self signed certificate in certificate chain (_ssl.c:997)"
