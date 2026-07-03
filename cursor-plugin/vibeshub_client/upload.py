@@ -189,6 +189,9 @@ async def upload_bundle(
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/x-tar",
+        # Cloudflare bot protection bans urllib's default Python-urllib/x.y
+        # signature (403 error code 1010).
+        "User-Agent": f"vibeshub-plugin/{plugin_version}",
         "X-Vibeshub-Platform": platform,
         "X-Vibeshub-Plugin-Version": plugin_version,
         "X-Vibeshub-Client-Redactions": str(redaction_count_client),
