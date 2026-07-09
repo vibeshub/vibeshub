@@ -51,6 +51,27 @@ def _bail(message: str) -> None:
     sys.exit(0)
 
 
+def _repo_dir(payload: dict) -> str | None:
+    """Directory gh should run in. Claude Code and Codex payloads carry `cwd`;
+    Cursor's afterShellExecution payload has no `cwd` (and the hook process
+    itself runs from `~/.cursor`, outside any repo), so fall back to the
+    first workspace root."""
+    if payload.get("cwd"):
+        return payload["cwd"]
+    roots = payload.get("workspace_roots")
+    if isinstance(roots, list) and roots:
+        return roots[0]
+    return None
+
+
+def _gh_error(e: Exception) -> str:
+    """Render a gh failure for the log, including stderr when available —
+    the exit status alone can't distinguish "no open PR" from e.g.
+    "not a git repository"."""
+    detail = (getattr(e, "stderr", "") or "").strip()
+    return f"{e}: {detail}" if detail else str(e)
+
+
 def main() -> None:
     global _SESSION_ID
 
@@ -98,16 +119,22 @@ def main() -> None:
             stdout = tool_response.get("stdout", "") or tool_response.get("output", "")
         elif isinstance(tool_response, str):
             stdout = tool_response
+        if not stdout:
+            # Cursor's afterShellExecution payload carries no `tool_response`;
+            # the command's stdout (with the new PR URL) is in `output`.
+            stdout = payload.get("output") or ""
         pr_url = extract_pr_url_from_gh_stdout(stdout)
         if not pr_url and "tool_response" not in payload:
-            # Cursor's afterShellExecution payload carries no `tool_response`,
-            # so the new PR URL is not available from stdout. The PR was just
-            # created, so resolve the open PR for the current branch — same as
-            # the push/edit path below.
+            # No URL in the captured output. The PR was just created, so
+            # resolve the open PR for the current branch — same as the
+            # push/edit path below.
             try:
-                pr_url = resolve_pr_url(None, cwd=payload.get("cwd"))
+                pr_url = resolve_pr_url(None, cwd=_repo_dir(payload))
             except (subprocess.SubprocessError, OSError) as e:
-                _log(f"skipped: gh pr create, but no open PR for current branch ({e})")
+                _log(
+                    "skipped: gh pr create, but no open PR for current branch "
+                    f"({_gh_error(e)})"
+                )
                 return
         if not pr_url:
             _log("skipped: no PR URL in gh stdout (command likely failed)")
@@ -124,9 +151,9 @@ def main() -> None:
         # (The `create` path bails when stdout has no PR URL only because a
         # failed `gh pr create` leaves no PR to attach a trace to.)
         try:
-            pr_url = resolve_pr_url(None, cwd=payload.get("cwd"))
+            pr_url = resolve_pr_url(None, cwd=_repo_dir(payload))
         except (subprocess.SubprocessError, OSError) as e:
-            _log(f"skipped: no open PR for current branch ({e})")
+            _log(f"skipped: no open PR for current branch ({_gh_error(e)})")
             return
         if not pr_url:
             _log("skipped: no open PR for current branch")
