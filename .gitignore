@@ -22,6 +22,7 @@ dist/
 *.pem
 
 # IDE / editor
+.cursor/
 .vscode/
 .idea/
 *.swp
