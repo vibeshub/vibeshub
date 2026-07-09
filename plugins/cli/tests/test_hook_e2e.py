@@ -12,17 +12,25 @@ import uvicorn
 from fastapi import FastAPI, Header, Request
 
 
-def _write_fake_gh(directory: Path, *, pr_view_url: str | None) -> Path:
+def _write_fake_gh(
+    directory: Path, *, pr_view_url: str | None, pr_view_pwd: Path | None = None
+) -> Path:
     """Write a fake `gh` script into `directory` and return `directory`.
 
     `gh auth token` and `gh pr comment` always succeed. `gh pr view` echoes
-    `pr_view_url` and exits 0, or exits 1 when `pr_view_url` is None (the
-    branch has no open PR). Anything else exits 1.
+    `pr_view_url` and exits 0, or fails like the real gh outside a PR branch
+    (stderr message, exit 1) when `pr_view_url` is None. With `pr_view_pwd`,
+    `pr view` succeeds only when run in that directory — like the real gh,
+    which resolves the PR from the repo it is invoked in. Anything else
+    exits 1.
     """
+    fail = "echo 'no pull requests found for branch \"main\"' >&2; exit 1"
     if pr_view_url is None:
-        pr_view = "exit 1"
+        pr_view = fail
     else:
         pr_view = f"echo '{pr_view_url}'; exit 0"
+        if pr_view_pwd is not None:
+            pr_view = f'if [ "$PWD" = \'{pr_view_pwd}\' ]; then {pr_view}; else {fail}; fi'
     gh = directory / "gh"
     gh.write_text(
         "#!/usr/bin/env bash\n"
@@ -265,10 +273,14 @@ def test_hook_uploads_cursor_platform(
     plugin_root = Path(__file__).resolve().parents[1]
     hook_script = plugin_root / "hooks" / "on-pr-share.py"
 
-    payload = {
+    payload = {  # real Cursor afterShellExecution shape: no cwd, no tool_response
+        "conversation_id": uuid,
         "session_id": uuid,
-        "cwd": str(cwd),
-        "command": "git push origin HEAD",  # Cursor afterShellExecution shape
+        "hook_event_name": "afterShellExecution",
+        "command": "git push origin HEAD",
+        "output": "",
+        "sandbox": False,
+        "workspace_roots": [str(cwd)],
     }
     env = os.environ.copy()
     env["HOME"] = str(fake_home)
@@ -294,16 +306,17 @@ def test_hook_uploads_cursor_platform(
 
 def test_hook_uploads_cursor_gh_pr_create(
     tmp_path: Path,
-    fake_gh_dir: Path,
+    fake_gh_dir_no_pr: Path,
     fake_server,
 ):
-    """Cursor's afterShellExecution payload carries no `tool_response`, so the
-    `gh pr create` path cannot read the new PR URL from stdout. It must fall
-    back to resolving the open PR for the current branch (like push/edit),
-    rather than bailing with "no PR URL in gh stdout"."""
+    """Cursor's afterShellExecution payload carries no `tool_response` and no
+    `cwd`, but its `output` field holds the command's stdout — including the
+    new PR URL after `gh pr create`. The hook must read the URL from `output`;
+    the fake gh fails `pr view`, so a gh fallback cannot rescue the test (in
+    production gh runs in `~/.cursor`, outside any repo, and always fails)."""
     fake_home = tmp_path / "home"
-    cwd = tmp_path / "repo"
-    cwd.mkdir()
+    repo = tmp_path / "repo"
+    repo.mkdir()
     uuid = "09fbacda-2df4-47a7-a12e-2534c6d55047"
     tdir = fake_home / ".cursor" / "projects" / "Repo" / "agent-transcripts" / uuid
     tdir.mkdir(parents=True)
@@ -317,10 +330,15 @@ def test_hook_uploads_cursor_gh_pr_create(
     hook_script = plugin_root / "hooks" / "on-pr-share.py"
     hook_log = tmp_path / "hook.log"
 
-    payload = {
+    payload = {  # real Cursor afterShellExecution shape (cursor_version 3.10)
+        "conversation_id": uuid,
         "session_id": uuid,
-        "cwd": str(cwd),
-        "command": "gh pr create --fill",  # Cursor shape: no tool_response
+        "hook_event_name": "afterShellExecution",
+        "command": "gh pr create --fill",
+        "output": "https://github.com/alice/repo/pull/3\n",
+        "duration": 2734.025,
+        "sandbox": False,
+        "workspace_roots": [str(repo)],
     }
     env = os.environ.copy()
     env["HOME"] = str(fake_home)
@@ -328,7 +346,7 @@ def test_hook_uploads_cursor_gh_pr_create(
     env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
     env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
     env["VIBESHUB_HOOK_LOG"] = str(hook_log)
-    env["PATH"] = str(fake_gh_dir) + os.pathsep + env.get("PATH", "")
+    env["PATH"] = str(fake_gh_dir_no_pr) + os.pathsep + env.get("PATH", "")
 
     proc = _run_hook(hook_script, payload, env)
 
@@ -342,6 +360,94 @@ def test_hook_uploads_cursor_gh_pr_create(
     assert body["platform"] == "cursor"
     assert body["pr_url"] == "https://github.com/alice/repo/pull/3"
     assert "[vibeshub] trace uploaded" in proc.stderr
+
+
+def test_hook_cursor_push_resolves_pr_from_workspace_root(
+    tmp_path: Path, fake_server,
+):
+    """With no `cwd` in the payload (Cursor), the hook must run gh in the
+    first workspace root. Cursor launches user hooks from `~/.cursor`, so the
+    inherited working directory is never the repo; the fake gh resolves the
+    PR only when invoked in the workspace root."""
+    fake_home = tmp_path / "home"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ghbin = tmp_path / "ghbin"
+    ghbin.mkdir()
+    _write_fake_gh(
+        ghbin,
+        pr_view_url="https://github.com/alice/repo/pull/3",
+        pr_view_pwd=repo,
+    )
+    uuid = "19fbacda-2df4-47a7-a12e-2534c6d55047"
+    tdir = fake_home / ".cursor" / "projects" / "Repo" / "agent-transcripts" / uuid
+    tdir.mkdir(parents=True)
+    (tdir / f"{uuid}.jsonl").write_text(
+        '{"role":"user","message":{"content":[{"type":"text",'
+        '"text":"<user_query>push it</user_query>"}]}}\n',
+        encoding="utf-8",
+    )
+
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    hook_log = tmp_path / "hook.log"
+
+    payload = {  # real Cursor afterShellExecution shape: no cwd
+        "conversation_id": uuid,
+        "session_id": uuid,
+        "hook_event_name": "afterShellExecution",
+        "command": "git push origin HEAD",
+        "output": "",
+        "sandbox": False,
+        "workspace_roots": [str(repo)],
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["VIBESHUB_PLATFORM"] = "cursor"
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_SERVER_URL"] = "http://127.0.0.1:9999"
+    env["VIBESHUB_HOOK_LOG"] = str(hook_log)
+    env["PATH"] = str(ghbin) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0, proc.stderr
+    assert len(fake_server) == 1, (
+        "expected one upload; "
+        f"stderr={proc.stderr!r} "
+        f"log={hook_log.read_text() if hook_log.exists() else '(none)'}"
+    )
+    assert fake_server[0]["pr_url"] == "https://github.com/alice/repo/pull/3"
+
+
+def test_hook_logs_gh_stderr_when_pr_resolve_fails(
+    tmp_path: Path, fake_gh_dir_no_pr: Path,
+):
+    """When `gh pr view` fails, the skip line in the hook log must carry gh's
+    stderr — the exit status alone can't distinguish "no open PR" from
+    "not a git repository"."""
+    fake_home, cwd, session_id = _setup_transcript(tmp_path)
+    plugin_root = Path(__file__).resolve().parents[1]
+    hook_script = plugin_root / "hooks" / "on-pr-share.py"
+    hook_log = tmp_path / "hook.log"
+
+    payload = {
+        "session_id": session_id,
+        "cwd": str(cwd),
+        "tool_input": {"command": "git push"},
+        "tool_response": {"stdout": "", "stderr": ""},
+    }
+    env = os.environ.copy()
+    env["HOME"] = str(fake_home)
+    env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
+    env["VIBESHUB_HOOK_LOG"] = str(hook_log)
+    env["PATH"] = str(fake_gh_dir_no_pr) + os.pathsep + env.get("PATH", "")
+
+    proc = _run_hook(hook_script, payload, env)
+
+    assert proc.returncode == 0
+    log_text = hook_log.read_text()
+    assert 'no pull requests found for branch "main"' in log_text, log_text
 
 
 def test_hook_no_op_when_command_is_not_gh_pr_create(tmp_path: Path):
