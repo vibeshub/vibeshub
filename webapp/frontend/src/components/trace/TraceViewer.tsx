@@ -61,13 +61,12 @@ export function TraceViewer({
     [session.stream],
   );
 
-  // Changes (the provenance diff) is the default; #chat in the URL deep-links
-  // into the conversation. Legacy #changes links land on the default anyway.
-  const [mode, setModeState] = useState<ViewMode>(() =>
-    typeof window !== "undefined" && window.location.hash === "#chat"
-      ? "conversation"
-      : "changes",
-  );
+  // Conversation is the default; #changes in the URL deep-links into the
+  // provenance diff. Legacy #chat links still open conversation.
+  const [mode, setModeState] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "conversation";
+    return window.location.hash === "#changes" ? "changes" : "conversation";
+  });
   const setMode = (m: ViewMode) => {
     setModeState(m);
     if (typeof window === "undefined") return;
@@ -75,7 +74,7 @@ export function TraceViewer({
     window.history.replaceState(
       null,
       "",
-      m === "conversation" ? `${base}#chat` : base,
+      m === "changes" ? `${base}#changes` : base,
     );
   };
 
