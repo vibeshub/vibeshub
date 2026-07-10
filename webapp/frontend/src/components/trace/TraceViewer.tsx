@@ -11,6 +11,8 @@ import { ViewTabs, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
 import { ProvenanceView } from "./ProvenanceView";
 import { buildProvenance } from "./provenance";
+import { changeAnchorId } from "./changes";
+import { chapterRanges, filesByChapter } from "./chapterLink";
 import { useSubagentStreams } from "./useSubagentStreams";
 import { usePersistedBoolean } from "./persistedState";
 
@@ -116,6 +118,23 @@ export function TraceViewer({
     });
   }, [mode]);
 
+  const chapterFiles = useMemo(() => {
+    const ranges = chapterRanges(
+      session.stream,
+      trace.ai_digest?.chapters ?? [],
+    );
+    return filesByChapter(provenance.files, ranges);
+  }, [session.stream, trace.ai_digest, provenance.files]);
+  const handleOpenFile = (path: string) => {
+    setMode("changes");
+    // Wait one frame so the ProvenanceView is mounted before scrolling.
+    requestAnimationFrame(() => {
+      document
+        .getElementById(changeAnchorId(path))
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const empty = session.stream.length === 0;
   const inChanges = mode === "changes" && hasChanges;
   // Sessions with no edits fall back to the conversation body even while the
@@ -142,6 +161,7 @@ export function TraceViewer({
         subagentsLoading={subagentsLoading}
         canEdit={canEditTitle}
         onTraceUpdated={onTraceUpdated}
+        onOpenFile={handleOpenFile}
       />
       {empty ? (
         <div className="empty-state">
@@ -177,7 +197,12 @@ export function TraceViewer({
           ) : (
             <div className="viewer-body">
               {trace.ai_digest?.chapters?.length ? (
-                <ChapterRail session={session} digest={trace.ai_digest} />
+                <ChapterRail
+                  session={session}
+                  digest={trace.ai_digest}
+                  chapterFiles={chapterFiles}
+                  onOpenFile={handleOpenFile}
+                />
               ) : (
                 <PromptRail session={session} />
               )}

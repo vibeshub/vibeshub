@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Outcome } from "../../components/trace/Outcome";
 import type { Session } from "../../components/trace/types";
@@ -125,5 +125,33 @@ describe("Outcome files touched", () => {
     ];
     renderOutcome(session, makeTrace({ agents: [] }));
     expect(screen.getByText(/a\.ts/)).toBeTruthy();
+  });
+
+  it("opens the diff when a touched file is clicked", () => {
+    const onOpenFile = vi.fn();
+    const session = makeSession({ toolCounts: { Edit: 1 }, toolCallCount: 1 });
+    session.stream = [
+      {
+        kind: "tool_use",
+        name: "Edit",
+        id: "e1",
+        input: { file_path: "/repo/src/a.ts" },
+        ts: "",
+        result: null,
+      } as unknown as Session["stream"][number],
+    ];
+    render(
+      <MemoryRouter>
+        <Outcome
+          session={session}
+          trace={makeTrace()}
+          subagents={[]}
+          subagentsLoading={false}
+          onOpenFile={onOpenFile}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /a\.ts/ }));
+    expect(onOpenFile).toHaveBeenCalledWith("/repo/src/a.ts");
   });
 });

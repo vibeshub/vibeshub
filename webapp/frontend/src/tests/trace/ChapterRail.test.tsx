@@ -109,4 +109,23 @@ describe("ChapterRail", () => {
     expect(screen.getByText("Ghost")).toBeInTheDocument();
     expect(container.querySelector(".chapterrail-arc")).toBeNull();
   });
+
+  it("shows file badges for a chapter and opens the diff on click", async () => {
+    const user = userEvent.setup();
+    const onOpenFile = vi.fn();
+    const chapterFiles = new Map([
+      ["a", [{ path: "/repo/src/TraceViewer.tsx", adds: 4, dels: 2 }]],
+    ]);
+    render(
+      <ChapterRail
+        session={sessionWith(STREAM)}
+        digest={TWO}
+        chapterFiles={chapterFiles}
+        onOpenFile={onOpenFile}
+      />,
+    );
+    const badge = screen.getByRole("button", { name: /TraceViewer\.tsx/ });
+    await user.click(badge);
+    expect(onOpenFile).toHaveBeenCalledWith("/repo/src/TraceViewer.tsx");
+  });
 });

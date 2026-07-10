@@ -16,6 +16,7 @@ interface Props {
   subagentsLoading: boolean;
   canEdit?: boolean;
   onTraceUpdated?: (trace: TraceSummary) => void;
+  onOpenFile?: (path: string) => void;
 }
 
 function HeroEyebrow({
@@ -176,6 +177,7 @@ export function Hero({
   subagentsLoading,
   canEdit,
   onTraceUpdated,
+  onOpenFile,
 }: Props) {
   const meta = session.meta;
   // The ask quote repeats the opening prompt under the title; show it whenever
@@ -208,6 +210,7 @@ export function Hero({
         trace={trace}
         subagents={subagents}
         subagentsLoading={subagentsLoading}
+        onOpenFile={onOpenFile}
       />
       <MetaLine session={session} />
       <Timeline session={session} />

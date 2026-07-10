@@ -9,10 +9,12 @@ interface Props {
   trace: TraceSummary;
   subagents: SubagentEntry[];
   subagentsLoading: boolean;
+  onOpenFile?: (path: string) => void;
 }
 
 interface TouchedFile {
-  path: string;
+  path: string; // display path (shortened)
+  fullPath: string; // absolute path, the changes-tab anchor key
   kind: "new" | "mod";
 }
 
@@ -60,7 +62,7 @@ function deriveFiles(
   }
   const out: TouchedFile[] = [];
   for (const [path, kind] of kindByPath) {
-    out.push({ path: tightPath(path, root), kind });
+    out.push({ path: tightPath(path, root), fullPath: path, kind });
   }
   return out;
 }
@@ -80,6 +82,7 @@ export function Outcome({
   trace,
   subagents,
   subagentsLoading,
+  onOpenFile,
 }: Props) {
   const { meta, stream } = session;
   const subStreams = useMemo(
@@ -177,13 +180,24 @@ export function Outcome({
         ) : (
           <ul className="outcome-files">
             {visibleFiles.map((f) => (
-              <li key={f.path} className="outcome-file">
+              <li key={f.fullPath} className="outcome-file">
                 <span className={"outcome-badge " + f.kind}>
                   {f.kind === "new" ? "new" : "mod"}
                 </span>
-                <span className="outcome-path" title={f.path}>
-                  {f.path}
-                </span>
+                {onOpenFile ? (
+                  <button
+                    type="button"
+                    className="outcome-path outcome-path--link"
+                    title={`View diff: ${f.fullPath}`}
+                    onClick={() => onOpenFile(f.fullPath)}
+                  >
+                    {f.path}
+                  </button>
+                ) : (
+                  <span className="outcome-path" title={f.path}>
+                    {f.path}
+                  </span>
+                )}
               </li>
             ))}
             {extraFiles > 0 && (

@@ -450,6 +450,43 @@
   color: var(--text-faint);
   white-space: nowrap;
 }
+.vibeshub-viewer .chapterrail-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 0 26px;
+}
+.vibeshub-viewer .chapterrail-file {
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dim);
+  font: 10.5px/1.7 var(--font-mono);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.vibeshub-viewer .chapterrail-file:hover {
+  border-color: var(--faint);
+  color: var(--strong);
+}
+.vibeshub-viewer .chapterrail-file-more {
+  color: var(--faint);
+  font: 10.5px/1.7 var(--font-mono);
+}
+.vibeshub-viewer .outcome-path--link {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dotted transparent;
+  transition: all 120ms ease;
+}
+.vibeshub-viewer .outcome-path--link:hover {
+  color: var(--strong);
+  text-decoration-color: var(--faint);
+}
 /* Hide the rail when there isn't room for the 2-col layout; the JumpStrip
    in the header handles nav at this width. */
 @media (max-width: 1079px) {
