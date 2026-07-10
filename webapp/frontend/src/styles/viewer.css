@@ -2193,9 +2193,9 @@
   background: none;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--dim);
-  padding: 15px 11px 13px;
+  padding: 15px 14px 13px;
   margin: 0 6px 0 0;
   position: relative;
   top: 1px; /* overlap the bar's bottom border */
@@ -2228,10 +2228,13 @@
 .vibeshub-viewer .view-tab.on {
   color: var(--strong);
   font-weight: 600;
+  /* A persistent soft tint (the hover preview, kept lit) so the selected tab
+     reads as a pane, not just an underlined label. */
+  background: color-mix(in oklab, var(--accent) 9%, transparent);
 }
 .vibeshub-viewer .view-tab.on::after {
   background: var(--accent);
-  height: 2.5px;
+  height: 3px;
 }
 .vibeshub-viewer .view-tab .cnt {
   font-size: 11px;
