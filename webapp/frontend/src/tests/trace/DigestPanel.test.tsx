@@ -33,4 +33,22 @@ describe("DigestPanel", () => {
     expect(screen.queryByText("Land")).not.toBeInTheDocument();
     expect(screen.queryByText(/Jump to/i)).not.toBeInTheDocument();
   });
+
+  it("hides rows whose value is empty or a bare 'none'", () => {
+    render(
+      <DigestPanel digest={{ ...sampleDigest, dead_ends: "none." }} />,
+    );
+    expect(screen.queryByText(/dead ends/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("none.")).not.toBeInTheDocument();
+    expect(screen.getByText("Add /healthcheck")).toBeInTheDocument();
+  });
+
+  it("renders nothing when every bullet is empty", () => {
+    const { container } = render(
+      <DigestPanel
+        digest={{ ...sampleDigest, ask: "", decisions: " ", dead_ends: "n/a" }}
+      />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
 });
