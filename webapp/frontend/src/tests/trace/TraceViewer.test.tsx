@@ -107,39 +107,40 @@ describe("TraceViewer changes mode", () => {
     expect(screen.getByText("Show system events")).toBeTruthy();
   });
 
-  it("defaults to the changes view when the session has edits", () => {
+  it("defaults to the conversation view even when the session has edits", () => {
     renderViewer(EDIT_STREAM);
-    expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Show system events")).toBeNull();
+    expect(screen.getByText("Show system events")).toBeTruthy();
+    expect(document.querySelector(".prov-ln")).toBeNull();
   });
 
-  it("switches to the conversation and back, tracking the #chat hash", () => {
+  it("switches to the changes view and back, tracking the #changes hash", () => {
     renderViewer(EDIT_STREAM);
-    // Tab labels now carry a count chip ("Conversation 1 prompts"), so match
-    // by the leading label rather than the exact accessible name.
-    fireEvent.click(screen.getByRole("tab", { name: /Conversation/ }));
-    expect(window.location.hash).toBe("#chat");
-    expect(screen.getByText("Show system events")).toBeTruthy();
-
+    // Tab labels now carry a count chip ("Changes 1 files"), so match by the
+    // leading label rather than the exact accessible name.
     fireEvent.click(screen.getByRole("tab", { name: /Changes/ }));
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#changes");
     expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
-  });
 
-  it("starts in conversation mode when the URL hash is #chat", () => {
-    window.history.replaceState(null, "", "/#chat");
-    renderViewer(EDIT_STREAM);
+    fireEvent.click(screen.getByRole("tab", { name: /Conversation/ }));
+    expect(window.location.hash).toBe("");
     expect(screen.getByText("Show system events")).toBeTruthy();
   });
 
-  it("still lands on changes for legacy #changes links", () => {
+  it("starts in changes mode when the URL hash is #changes", () => {
     window.history.replaceState(null, "", "/#changes");
     renderViewer(EDIT_STREAM);
     expect(screen.getAllByText("/r/src/x.ts").length).toBeGreaterThan(0);
   });
 
+  it("still lands on the conversation for legacy #chat links", () => {
+    window.history.replaceState(null, "", "/#chat");
+    renderViewer(EDIT_STREAM);
+    expect(screen.getByText("Show system events")).toBeTruthy();
+  });
+
   it("jump returns to conversation mode and scrolls to the edit", () => {
     renderViewer(EDIT_STREAM);
+    fireEvent.click(screen.getByRole("tab", { name: /Changes/ }));
     // The per-hunk ↗ header was removed when files merged into one block.
     // Select a blame row to open its provenance panel, then use the panel's
     // "open this edit in the conversation" button (same jump handler).
@@ -147,7 +148,7 @@ describe("TraceViewer changes mode", () => {
     expect(row).not.toBeNull();
     fireEvent.click(row as Element);
     fireEvent.click(screen.getByText(/open this edit in the conversation/));
-    expect(window.location.hash).toBe("#chat");
+    expect(window.location.hash).toBe("");
     expect(screen.getByText("Show system events")).toBeTruthy();
     // File edits render as standalone cards (never folded), so the jump
     // finds the edit's own [data-uuid] anchor and scrolls to it.
