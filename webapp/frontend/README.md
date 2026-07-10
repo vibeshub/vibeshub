@@ -27,6 +27,8 @@ theme) is stored via `persistedState.ts`.
 
 ## Local dev
 
+Requires **Node 22** (what CI uses in [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml)).
+
 From this directory:
 
 ```bash
@@ -37,11 +39,26 @@ npm run dev          # starts at http://127.0.0.1:5173 with /api proxy → backe
 The dev server proxies `/api/*` to `http://127.0.0.1:8000`, so a backend running
 at `webapp/backend` is implicitly required.
 
+Typecheck (also runs as part of `npm run build`):
+
+```bash
+npx tsc -b
+```
+
+There is no separate lint script today.
+
 ## Tests
 
 ```bash
 npm run test         # vitest unit tests
-npm run test:e2e     # playwright (boots the dev server)
+```
+
+E2E uses Playwright and boots the Vite dev server. Install browsers once after
+`npm install` (or after upgrading `@playwright/test`):
+
+```bash
+npx playwright install
+npm run test:e2e
 ```
 
 ## Deploy build
