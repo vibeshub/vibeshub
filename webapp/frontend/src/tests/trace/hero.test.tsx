@@ -115,6 +115,23 @@ describe("Hero metadata strip", () => {
     expect(badges).not.toContain("msgs");
   });
 
+  it("singularizes the prompt, reply, and tool-call chips at a count of 1", () => {
+    const { container } = renderHero(
+      makeSession({
+        userPromptCount: 1,
+        assistantTextCount: 1,
+        toolCallCount: 1,
+      }),
+      makeTrace(),
+    );
+    const badges = container.querySelector(".hero-badges")!.textContent!;
+    expect(badges).toContain("1 prompt");
+    expect(badges).toContain("1 reply");
+    expect(badges).toContain("1 tool call");
+    expect(badges).not.toContain("1 replies");
+    expect(badges).not.toContain("1 tool calls");
+  });
+
   it("omits the duration chip when timestamps are missing", () => {
     const { container } = renderHero(
       makeSession({ userPromptCount: 1, toolCallCount: 3 }),

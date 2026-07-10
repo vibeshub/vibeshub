@@ -465,6 +465,10 @@
   font: 10.5px/1.7 var(--font-mono);
   cursor: pointer;
   transition: all 120ms ease;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .vibeshub-viewer .chapterrail-file:hover {
   border-color: var(--faint);

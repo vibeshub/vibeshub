@@ -48,7 +48,7 @@ test("PrTracesList shows the uploaded trace and links to TraceView", async ({
   await expect(page).toHaveURL(/\/alice\/repo\/pull\/3\/abc1234567$/);
 });
 
-test("TraceView renders the hero, tools chips, timeline, and thread", async ({
+test("TraceView renders the hero, badges, timeline, and thread", async ({
   page,
 }) => {
   await page.goto("/alice/repo/pull/3/abc1234567");
@@ -57,7 +57,7 @@ test("TraceView renders the hero, tools chips, timeline, and thread", async ({
     page.getByRole("heading", { name: "Add startup credential smoke-check" }),
   ).toBeVisible();
 
-  await expect(page.locator(".tools-chips-label")).toBeVisible();
+  await expect(page.locator(".hero-badges")).toBeVisible();
 
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
 });

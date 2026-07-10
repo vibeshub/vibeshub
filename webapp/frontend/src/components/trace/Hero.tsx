@@ -106,9 +106,15 @@ function HeroBadges({ session, trace }: Pick<Props, "session" | "trace">) {
         {meta.userPromptCount} {meta.userPromptCount === 1 ? "prompt" : "prompts"}
       </span>
       {meta.assistantTextCount > 0 && (
-        <span className="hero-tag">{meta.assistantTextCount} replies</span>
+        <span className="hero-tag">
+          {meta.assistantTextCount}{" "}
+          {meta.assistantTextCount === 1 ? "reply" : "replies"}
+        </span>
       )}
-      <span className="hero-tag">{meta.toolCallCount} tool calls</span>
+      <span className="hero-tag">
+        {meta.toolCallCount}{" "}
+        {meta.toolCallCount === 1 ? "tool call" : "tool calls"}
+      </span>
       {wall > 0 && <span className="hero-tag">{fmtDuration(wall)}</span>}
       <span className="hero-tag">{sizeLabel}</span>
       {trace.is_private && (

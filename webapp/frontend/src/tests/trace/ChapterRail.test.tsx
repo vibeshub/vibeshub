@@ -85,6 +85,19 @@ describe("ChapterRail", () => {
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
   });
 
+  it("renders hour-plus chapter durations as hours and minutes", () => {
+    render(
+      <ChapterRail
+        session={sessionWith([
+          up("a", "2026-01-01T00:00:00Z"),
+          tool("t1", "2026-01-01T01:01:01Z"),
+        ])}
+        digest={digest([{ anchor_uuid: "a", title: "Long", caption: "" }])}
+      />,
+    );
+    expect(screen.getByText("1 tool · 1h 1m")).toBeInTheDocument();
+  });
+
   it("omits a zero duration instead of rendering 0s", () => {
     render(
       <ChapterRail
