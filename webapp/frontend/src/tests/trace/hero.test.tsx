@@ -92,3 +92,44 @@ describe("Hero eyebrow", () => {
     );
   });
 });
+
+describe("Hero metadata strip", () => {
+  afterEach(() => cleanup());
+
+  it("shows prompts, replies, tool calls and wall duration as quiet chips", () => {
+    const { container } = renderHero(
+      makeSession({
+        userPromptCount: 2,
+        assistantTextCount: 12,
+        toolCallCount: 23,
+        startedAt: "2026-07-09T12:41:00Z",
+        endedAt: "2026-07-09T12:44:00Z",
+      }),
+      makeTrace(),
+    );
+    const badges = container.querySelector(".hero-badges")!.textContent!;
+    expect(badges).toContain("2 prompts");
+    expect(badges).toContain("12 replies");
+    expect(badges).toContain("23 tool calls");
+    expect(badges).toContain("3m 0s");
+    expect(badges).not.toContain("msgs");
+  });
+
+  it("omits the duration chip when timestamps are missing", () => {
+    const { container } = renderHero(
+      makeSession({ userPromptCount: 1, toolCallCount: 3 }),
+      makeTrace(),
+    );
+    const badges = container.querySelector(".hero-badges")!.textContent!;
+    expect(badges).toContain("1 prompt");
+    expect(badges).not.toMatch(/\d+m \d+s/);
+  });
+
+  it("renders no tools chip row", () => {
+    const { container } = renderHero(
+      makeSession({ toolCounts: { Grep: 6, Bash: 6 } }),
+      makeTrace(),
+    );
+    expect(container.querySelector(".tools-chips")).toBeNull();
+  });
+});

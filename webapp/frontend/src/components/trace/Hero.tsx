@@ -1,9 +1,7 @@
-import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Session } from "./types";
 import type { TraceSummary } from "../../types";
-import { fmtTokens } from "./format";
-import { toolCat, toolLabel } from "./tools";
+import { fmtDuration, fmtTokens } from "./format";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
 import { HeroTitle, titleSource } from "./HeroTitle";
@@ -72,7 +70,8 @@ function HeroEyebrow({
   );
 }
 
-function HeroBadges({ trace }: { trace: TraceSummary }) {
+function HeroBadges({ session, trace }: Pick<Props, "session" | "trace">) {
+  const meta = session.meta;
   const sizeKb = Math.max(1, Math.round(trace.byte_size / 1024));
   const sizeLabel =
     sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
@@ -84,6 +83,9 @@ function HeroBadges({ trace }: { trace: TraceSummary }) {
     hour12: false,
   });
   const hasPr = trace.pr_url && trace.pr_number != null;
+  const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
+  const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
+  const wall = start && end ? Math.max(0, end - start) : 0;
   return (
     <div className="hero-badges">
       {hasPr && (
@@ -99,7 +101,14 @@ function HeroBadges({ trace }: { trace: TraceSummary }) {
           )}
         </a>
       )}
-      <span className="hero-tag">{trace.message_count} msgs</span>
+      <span className="hero-tag">
+        {meta.userPromptCount} {meta.userPromptCount === 1 ? "prompt" : "prompts"}
+      </span>
+      {meta.assistantTextCount > 0 && (
+        <span className="hero-tag">{meta.assistantTextCount} replies</span>
+      )}
+      <span className="hero-tag">{meta.toolCallCount} tool calls</span>
+      {wall > 0 && <span className="hero-tag">{fmtDuration(wall)}</span>}
       <span className="hero-tag">{sizeLabel}</span>
       {trace.is_private && (
         <span className="hero-tag hero-tag--private">🔒 Private</span>
@@ -133,9 +142,7 @@ export function MetaLine({ session }: { session: Session }) {
     });
   }
   const imported = meta.sourceFormat === "terminal";
-  const isCodex = meta.sourceFormat === "codex";
-  const isCursor = meta.sourceFormat === "cursor";
-  if (items.length === 0 && !imported && !isCodex && !isCursor) return null;
+  if (items.length === 0 && !imported) return null;
   return (
     <div className="meta-wrap">
       <div className="metaline">
@@ -145,22 +152,6 @@ export function MetaLine({ session }: { session: Session }) {
             title="Reconstructed from a Claude Code text export. Token counts, timings, and thinking are not available."
           >
             Imported from text export
-          </span>
-        )}
-        {isCodex && (
-          <span
-            className="metaline-item meta-import-chip"
-            title="Captured from an OpenAI Codex CLI rollout."
-          >
-            Codex CLI
-          </span>
-        )}
-        {isCursor && (
-          <span
-            className="metaline-item meta-import-chip"
-            title="Captured from a Cursor agent transcript. Tool outputs, token counts, and model name are not recorded by Cursor."
-          >
-            Cursor
           </span>
         )}
         {items.map((it, i) => (
@@ -173,30 +164,6 @@ export function MetaLine({ session }: { session: Session }) {
           </span>
         ))}
       </div>
-    </div>
-  );
-}
-
-function ToolsChips({ session }: { session: Session }) {
-  const counts = session.meta.toolCounts;
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) return null;
-  return (
-    <div className="tools-chips">
-      <span className="tools-chips-label">tools</span>
-      {entries.map(([name, n]) => {
-        const cat = toolCat(name);
-        const style = {
-          ["--dot" as string]: `var(--tool-${cat})`,
-        } as CSSProperties;
-        return (
-          <span className="tool-chip" key={name} style={style}>
-            <span className="dot" />
-            {toolLabel(name)}
-            <span className="count">{n}</span>
-          </span>
-        );
-      })}
     </div>
   );
 }
@@ -233,7 +200,7 @@ export function Hero({
             <span className="q">{meta.firstPrompt}</span>
           </div>
         )}
-        <HeroBadges trace={trace} />
+        <HeroBadges session={session} trace={trace} />
       </div>
       {trace.ai_digest && <DigestPanel digest={trace.ai_digest} />}
       <Outcome
@@ -243,7 +210,6 @@ export function Hero({
         subagentsLoading={subagentsLoading}
       />
       <MetaLine session={session} />
-      <ToolsChips session={session} />
       <Timeline session={session} />
     </section>
   );

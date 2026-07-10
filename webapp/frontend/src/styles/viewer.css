@@ -1053,50 +1053,6 @@
   opacity: 0.6;
 }
 
-/* ---------- tools chip strip ---------- */
-.vibeshub-viewer .tools-chips {
-  max-width: var(--header-width);
-  margin: 24px auto 0;
-  padding: 0 44px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.vibeshub-viewer .tools-chips-label {
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--faint);
-  margin-right: 4px;
-}
-.vibeshub-viewer .tool-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
-  background: none;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--dim);
-  white-space: nowrap;
-}
-.vibeshub-viewer .tool-chip .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--dot, var(--t-other));
-}
-.vibeshub-viewer .tool-chip .count {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--txt);
-  font-weight: 500;
-  font-feature-settings: "tnum";
-}
-
 /* ---------- timeline strip ---------- */
 .vibeshub-viewer .timeline-wrap {
   max-width: var(--header-width);
@@ -2177,7 +2133,6 @@
   }
   .vibeshub-viewer .outcome-grid,
   .vibeshub-viewer .meta-wrap,
-  .vibeshub-viewer .tools-chips,
   .vibeshub-viewer .timeline-wrap {
     padding-left: 16px;
     padding-right: 16px;

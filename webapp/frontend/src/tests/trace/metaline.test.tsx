@@ -50,4 +50,12 @@ describe("MetaLine", () => {
     render(<MetaLine session={makeSession({ model: "claude-opus-4-8" })} />);
     expect(screen.queryByText(/Imported from text export/i)).toBeNull();
   });
+
+  it("renders no platform chip for cursor or codex traces (platform lives in the eyebrow)", () => {
+    const { container } = render(
+      <MetaLine session={makeSession({ sourceFormat: "cursor" })} />,
+    );
+    expect(screen.queryByText("Cursor")).toBeNull();
+    expect(container.firstChild).toBeNull();
+  });
 });
