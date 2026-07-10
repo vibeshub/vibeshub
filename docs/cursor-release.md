@@ -8,8 +8,19 @@ remote; regenerate instead.
 
 ## Cut a release (in this repo, via PR)
 
-1. Bump the version in `plugins/cli/vibeshub_client/version.py`
-   (`PLUGIN_VERSION`). The generated `plugin.json` reads this.
+1. Bump the single product version in
+   `plugins/cli/vibeshub_client/version.py` (`PLUGIN_VERSION`), then mirror
+   it everywhere the lockstep test checks:
+   - `plugins/cli/.claude-plugin/plugin.json`
+   - `plugins/cli/.codex-plugin/plugin.json`
+   - `plugins/cli/pyproject.toml`
+   - `webapp/backend/pyproject.toml`
+   - `webapp/backend/app/main.py` (FastAPI `version=`)
+   - `webapp/frontend/package.json` (and `package-lock.json`)
+   - Root `README.md` version badge
+
+   The Cursor `plugin.json` is generated from `PLUGIN_VERSION` in the next
+   step — do not hand-edit it.
 2. Regenerate the committed snapshot:
    ```sh
    python3 scripts/sync-cursor-plugin.py --out cursor-plugin

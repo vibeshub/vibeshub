@@ -11,7 +11,7 @@
 <!-- BADGES -->
 <p align="center">
   <a href="https://vibeshub.ai"><img alt="deploy" src="https://img.shields.io/badge/deploy-vibeshub.ai-3fb950"></a>
-  <img alt="version" src="https://img.shields.io/badge/version-v0.5.2-1f6feb">
+  <img alt="version" src="https://img.shields.io/badge/version-v0.5.2-1f6feb" title="Single product version (plugin + webapp)">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-3-D07843">
   <img alt="python" src="https://img.shields.io/badge/python-plugin%203.9%2B%20%7C%20backend%203.12%E2%80%933.13-8957e5">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-6e7681">
@@ -126,6 +126,13 @@ Per-component docs:
 - [webapp/backend/app/agents/digest/README.md](webapp/backend/app/agents/digest/README.md), summary agent flow, OpenAI env vars, degradation modes, operations queries
 - [webapp/frontend/README.md](webapp/frontend/README.md), routes, dev server, build, tests
 - [plugins/cli/README.md](plugins/cli/README.md), install, hook config, slash command
+
+**Versioning:** one product version for plugin + webapp. Source of truth is
+`PLUGIN_VERSION` in [`plugins/cli/vibeshub_client/version.py`](plugins/cli/vibeshub_client/version.py);
+mirrors (Claude/Codex manifests, plugin + backend `pyproject.toml`, frontend
+`package.json`, FastAPI metadata, this README badge) are kept in lockstep by
+test. Cursor's `plugin.json` is generated from the same value — see
+[docs/cursor-release.md](docs/cursor-release.md).
 
 </details>
 
