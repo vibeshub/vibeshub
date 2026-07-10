@@ -6,7 +6,7 @@ import { fmtTokens } from "./format";
 import { toolCat, toolLabel } from "./tools";
 import { Timeline } from "./Timeline";
 import { Outcome } from "./Outcome";
-import { HeroTitle } from "./HeroTitle";
+import { HeroTitle, titleSource } from "./HeroTitle";
 import { DigestPanel } from "./DigestPanel";
 import type { SubagentEntry } from "./changes";
 
@@ -211,9 +211,11 @@ export function Hero({
   onTraceUpdated,
 }: Props) {
   const meta = session.meta;
-  // The ask quote repeats the opening prompt under the title; skip it when the
-  // title itself is already derived from that prompt.
-  const showAsk = !!meta.firstPrompt && !!(trace.title || meta.aiTitle);
+  // The ask quote repeats the opening prompt under the title; show it whenever
+  // the title came from anywhere other than that prompt.
+  const source = titleSource(trace, meta.aiTitle, meta.firstPrompt);
+  const showAsk =
+    !!meta.firstPrompt && source !== "prompt" && source !== "none";
   return (
     <section>
       <div className="hero">

@@ -124,6 +124,49 @@ describe("HeroTitle", () => {
     expect(collapsed[kept.length]).toBe(" ");
   });
 
+  it("falls back to the PR title before the raw prompt", () => {
+    render(
+      <HeroTitle
+        trace={makeTrace({
+          pr_number: 154,
+          pr_url: "https://github.com/a/b/pull/154",
+          pr_title: "Default trace viewer to Conversation tab",
+        })}
+        aiTitle={null}
+        firstPrompt="on the page to view traces can you make conversation the default?"
+        canEdit={false}
+        onUpdated={() => {}}
+      />,
+    );
+    expect(screen.getByRole("heading").textContent).toBe(
+      "Default trace viewer to Conversation tab",
+    );
+  });
+
+  it("falls back to the digest ask when there is no PR title", () => {
+    render(
+      <HeroTitle
+        trace={makeTrace({
+          ai_digest: {
+            ask: "Make the trace viewer default to Conversation.",
+            decisions: "",
+            files: "",
+            tests: "",
+            dead_ends: "",
+            chapters: [],
+          },
+        })}
+        aiTitle={null}
+        firstPrompt="on the page to view traces can you make conversation the default?"
+        canEdit={false}
+        onUpdated={() => {}}
+      />,
+    );
+    expect(screen.getByRole("heading").textContent).toBe(
+      "Make the trace viewer default to Conversation.",
+    );
+  });
+
   it("hides the edit button for non-owners", () => {
     render(
       <HeroTitle
