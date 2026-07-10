@@ -1803,10 +1803,10 @@
 .vibeshub-viewer .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 28px;
+  height: 26px;
   padding: 0 12px;
   border: 1px solid var(--line);
+  border-radius: 999px;
   background: none;
   color: var(--dim);
   font-family: var(--font-mono);
@@ -1816,31 +1816,12 @@
 }
 .vibeshub-viewer .toggle.on {
   color: var(--strong);
-  border-color: var(--faint);
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 .vibeshub-viewer .toggle:hover {
   border-color: var(--faint);
   color: var(--strong);
-}
-.vibeshub-viewer .toggle .check {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--text-faint);
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-}
-.vibeshub-viewer .toggle.on .check {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.vibeshub-viewer .toggle.on .check::after {
-  content: "";
-  width: 4px;
-  height: 6px;
-  border: solid var(--accent-fg);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg) translateY(-1px);
 }
 
 /* Empty state */
