@@ -119,10 +119,13 @@ export function ChapterRail({ session, digest }: Props) {
             if (maxDur > 0 && m.durationMs) pct = (m.durationMs / maxDur) * 100;
             else if (maxDur === 0 && maxTools > 0) pct = (m.toolCount / maxTools) * 100;
           }
+          const tools = m
+            ? `${m.toolCount} ${m.toolCount === 1 ? "tool" : "tools"}`
+            : "";
           const meta = m
-            ? m.durationMs != null
-              ? `${m.toolCount}t · ${fmtDur(m.durationMs)}`
-              : `${m.toolCount}t`
+            ? m.durationMs != null && m.durationMs >= 1000
+              ? `${tools} · ${fmtDur(m.durationMs)}`
+              : tools
             : "";
           return (
             <li key={c.anchor_uuid}>

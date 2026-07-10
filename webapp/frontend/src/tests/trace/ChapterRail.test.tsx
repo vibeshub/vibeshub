@@ -48,8 +48,8 @@ describe("ChapterRail", () => {
     render(<ChapterRail session={sessionWith(STREAM)} digest={TWO} />);
     expect(screen.getByText("First")).toBeInTheDocument();
     expect(screen.getByText("Second")).toBeInTheDocument();
-    expect(screen.getByText("1t · 1m")).toBeInTheDocument();
-    expect(screen.getByText("2t · 20s")).toBeInTheDocument();
+    expect(screen.getByText("1 tool · 1m")).toBeInTheDocument();
+    expect(screen.getByText("2 tools · 20s")).toBeInTheDocument();
   });
 
   it("sizes bars relative to the longest chapter (longest = 100%)", () => {
@@ -81,8 +81,22 @@ describe("ChapterRail", () => {
         digest={digest([{ anchor_uuid: "a", title: "Only", caption: "" }])}
       />,
     );
-    expect(screen.getByText("2t")).toBeInTheDocument();
+    expect(screen.getByText("2 tools")).toBeInTheDocument();
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
+  });
+
+  it("omits a zero duration instead of rendering 0s", () => {
+    render(
+      <ChapterRail
+        session={sessionWith([
+          up("a", "2026-01-01T00:00:00Z"),
+          tool("t1", "2026-01-01T00:00:00Z"),
+        ])}
+        digest={digest([{ anchor_uuid: "a", title: "Only", caption: "" }])}
+      />,
+    );
+    expect(screen.getByText("1 tool")).toBeInTheDocument();
+    expect(screen.queryByText(/0s/)).not.toBeInTheDocument();
   });
 
   it("renders an unresolved-anchor chapter title-only (never dropped)", () => {
