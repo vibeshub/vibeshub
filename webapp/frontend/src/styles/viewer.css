@@ -1441,6 +1441,12 @@
 .vibeshub-viewer .tool-summary .arg-val {
   color: var(--dim);
 }
+.vibeshub-viewer .tool-diffstat {
+  display: inline-flex;
+  gap: 6px;
+  flex: none;
+  font: 11px/1 var(--font-mono);
+}
 .vibeshub-viewer .tool-meta-r {
   flex: none;
   font-size: 11px;

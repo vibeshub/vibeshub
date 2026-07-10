@@ -10,6 +10,7 @@ import { ChapterDivider } from "./ChapterDivider";
 import { ToolCard } from "./tool/ToolCard";
 import { ToolGroup, type ToolGroupItem } from "./tool/ToolGroup";
 import { progressByTool } from "./parser";
+import { FILE_EDIT_TOOLS } from "./changes";
 
 interface Props {
   session: Session;
@@ -153,6 +154,27 @@ export function Thread({
         followingPrompt: nextPrompt[i],
         progress: hooksByTool.get(e.id) ?? [],
       };
+      // File edits are the load-bearing moments of a session: they never fold
+      // into a collapsed run, so a reader scanning the conversation sees
+      // "what changed" without expanding anything.
+      const isEdit =
+        FILE_EDIT_TOOLS.has(e.name) && typeof e.input.file_path === "string";
+      if (isEdit && !expandToolCalls) {
+        flushRun();
+        pushEvent(
+          e.uuid,
+          <ToolCard
+            event={e}
+            root={root}
+            followingPrompt={item.followingPrompt}
+            shortId={shortId}
+            agents={agents}
+            progress={item.progress}
+          />,
+          key,
+        );
+        continue;
+      }
       if (!expandToolCalls) {
         // A chapter can anchor on a tool_use. In collapsed mode the tool is
         // folded into a ToolGroup and never passes through pushEvent, so emit

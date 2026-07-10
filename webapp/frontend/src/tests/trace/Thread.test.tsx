@@ -68,6 +68,49 @@ const midRunDigest: TraceDigest = {
   chapters: [{ anchor_uuid: "t1", title: "Run it", caption: "Runs the command." }],
 };
 
+function makeEditSession(): Session {
+  const s = makeMidRunSession();
+  s.stream = [
+    { kind: "user_prompt", text: "do it", ts: "2026-01-01T00:00:00Z", uuid: "p1" },
+    {
+      kind: "tool_use", name: "Bash", input: { command: "ls" },
+      id: "t0", ts: "2026-01-01T00:00:01Z", msgId: "m1", uuid: "t0",
+      result: null,
+    },
+    {
+      kind: "tool_use", name: "Edit",
+      input: { file_path: "/repo/src/a.ts", old_string: "x", new_string: "y" },
+      id: "e1", ts: "2026-01-01T00:00:02Z", msgId: "m1", uuid: "e1",
+      result: null,
+    },
+    {
+      kind: "tool_use", name: "Bash", input: { command: "pwd" },
+      id: "t1", ts: "2026-01-01T00:00:03Z", msgId: "m1", uuid: "t1",
+      result: null,
+    },
+  ] as Session["stream"];
+  return s;
+}
+
+describe("Thread inline edit cards", () => {
+  it("renders file edits as standalone cards outside collapsed runs", () => {
+    const { container } = render(
+      <Thread
+        session={makeEditSession()}
+        shortId="abc"
+        showSystemEvents={false}
+        expandToolCalls={false}
+      />,
+    );
+    // The edit stands alone with its uuid anchor.
+    expect(container.querySelector('.tool-card[data-uuid="e1"]')).not.toBeNull();
+    // The surrounding Bash calls form two runs, split by the edit.
+    expect(
+      screen.getAllByRole("button", { name: /1 tool call/i }).length,
+    ).toBe(2);
+  });
+});
+
 describe("Thread chapter anchors", () => {
   it("emits a chapter divider for a tool_use anchor in a collapsed group", () => {
     const { container } = render(
