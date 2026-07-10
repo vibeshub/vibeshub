@@ -780,23 +780,6 @@
   flex-direction: column;
   gap: 10px;
 }
-/* Negative margins + padding must mirror .outcome-card padding (16px 18px) so
-   the stat row bleeds flush to the card edges and the bottom border reads as
-   a true card divider. */
-.vibeshub-viewer .outcome-stats {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 16px;
-  margin: -16px -18px 0;
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.vibeshub-viewer .outcome-stat {
-  background: none;
-  padding: 0;
-  gap: 4px;
-}
 .vibeshub-viewer .outcome-loading {
   text-transform: none;
   letter-spacing: 0;
@@ -845,6 +828,13 @@
 .vibeshub-viewer .outcome-status.neutral .dot {
   background: var(--faint);
 }
+.vibeshub-viewer a.outcome-status {
+  text-decoration: none;
+  cursor: pointer;
+}
+.vibeshub-viewer a.outcome-status:hover {
+  border-color: var(--faint);
+}
 .vibeshub-viewer .outcome-summary {
   font-size: 13.5px;
   color: var(--text);
@@ -884,44 +874,6 @@
   font-size: 13px;
   font-style: italic;
   flex: 1;
-}
-.vibeshub-viewer .outcome-pr {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-subtle);
-  font-size: 12px;
-  text-decoration: none !important;
-  color: var(--text);
-  margin-top: auto;
-  max-width: 100%;
-}
-.vibeshub-viewer .outcome-pr:hover {
-  border-color: var(--border-strong);
-}
-.vibeshub-viewer .outcome-pr .pr-num {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text-muted);
-  flex: none;
-}
-.vibeshub-viewer .outcome-pr .pr-title {
-  color: var(--text);
-  /* Allow long PR titles to wrap onto a second line so the end of the title
-     isn't lost to single-line ellipsis; cap at 2 lines to keep the card tidy. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.vibeshub-viewer .outcome-pr {
-  /* The PR row can now span two lines, so don't force it to a single line. */
-  align-items: flex-start;
 }
 .vibeshub-viewer .outcome-files {
   list-style: none;
