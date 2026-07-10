@@ -52,6 +52,9 @@ export interface BlameHunk {
   jumpUuid: string | null;
   promptIdx: number; // 0 = before the first prompt
   promptUuid: string | null;
+  /** Main-stream index of the op (Task dispatch position for subagent ops,
+   * -1 when unattributable). Lets views bucket hunks into digest chapters. */
+  streamPos: number;
   /** First failed attempt's ts when retried, else the op ts. */
   startTs: string;
   ts: string;
@@ -620,6 +623,7 @@ export function buildProvenance(
         jumpUuid: op.jumpUuid,
         promptIdx: op.prompt.ordinal,
         promptUuid: op.prompt.uuid,
+        streamPos: op.streamPos,
         startTs: attempts.length > 0 ? attempts[0].ts : op.ts,
         ts: op.ts,
         tool: op.tool,
