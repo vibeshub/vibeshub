@@ -20,6 +20,13 @@ hook redacts the current Cursor agent transcript, uploads it to vibeshub, and
 
 Install **vibeshub** from the Cursor marketplace, then reload the window.
 
+### Requirements
+
+- [`gh`](https://cli.github.com/) installed and authenticated (`gh auth login`)
+- Python 3.9 or newer available as `python3`
+- A GitHub remote and, for `git push` or `gh pr edit`, an open pull request for
+  the current branch
+
 ## Local development / testing (no marketplace needed)
 
 Cursor loads plugins straight from a directory:
