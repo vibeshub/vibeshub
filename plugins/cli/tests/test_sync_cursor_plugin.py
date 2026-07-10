@@ -141,6 +141,14 @@ def test_regenerate_preserves_unmanaged_and_is_idempotent(tmp_path):
     assert sync.check(out, source=_PLUGIN_SRC), "regenerate is not idempotent"
 
 
+def test_readme_version_badge_matches_plugin_version():
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    version = sync._read_version(_PLUGIN_SRC)
+    assert f"version-v{version}-" in readme, (
+        f"README badge should show v{version} (from PLUGIN_VERSION)"
+    )
+
+
 def test_check_detects_drift(tmp_path):
     out = tmp_path / "vibeshub-cursor"
     sync.generate(out=out, source=_PLUGIN_SRC)
