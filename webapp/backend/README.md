@@ -1,7 +1,9 @@
 # vibeshub backend
 
-FastAPI service that ingests Claude Code transcripts, hosts GitHub OAuth sign-in,
-and serves the SPA viewer.
+FastAPI service that ingests AI coding transcripts (Claude Code, Codex, Cursor),
+hosts GitHub OAuth sign-in, and serves the SPA viewer. Codex and Cursor uploads
+are converted to Claude-shaped JSONL at ingest so the viewer and digest agent
+share one pipeline.
 
 Requires Python 3.12–3.13.
 

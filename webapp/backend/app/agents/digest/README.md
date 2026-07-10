@@ -1,8 +1,9 @@
 # Trace digest agent
 
 Generates a 5-line digest + 3-8 semantic chapter anchors for an uploaded
-Claude Code trace. Surfaces in the trace viewer's Hero panel and in the
-PR comment body posted by the plugin.
+trace (Claude Code, Codex, or Cursor — always Claude-shaped after conversion).
+Surfaces in the trace viewer's Hero panel and in the PR comment body posted
+by the plugin.
 
 ## Flow
 
