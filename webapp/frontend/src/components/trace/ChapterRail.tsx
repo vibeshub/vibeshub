@@ -2,21 +2,30 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "./types";
 import type { TraceDigest } from "../../types";
 import { chapterMetrics } from "./chapterMetrics";
+import type { ChapterFileStat } from "./chapterLink";
 
 interface Props {
   session: Session;
   digest: TraceDigest;
+  /** Files each chapter touched, keyed by anchor_uuid (from filesByChapter). */
+  chapterFiles?: Map<string, ChapterFileStat[]>;
+  /** Opens a file's diff in the Changes tab. */
+  onOpenFile?: (path: string) => void;
 }
 
 function fmtDur(ms: number): string {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
   const rem = s % 60;
   return rem ? `${m}m${String(rem).padStart(2, "0")}s` : `${m}m`;
 }
 
-export function ChapterRail({ session, digest }: Props) {
+export function ChapterRail({ session, digest, chapterFiles, onOpenFile }: Props) {
   const chapters = digest.chapters;
   const anchorId = (uuid: string) => `chapter-${uuid}`;
 
@@ -119,10 +128,13 @@ export function ChapterRail({ session, digest }: Props) {
             if (maxDur > 0 && m.durationMs) pct = (m.durationMs / maxDur) * 100;
             else if (maxDur === 0 && maxTools > 0) pct = (m.toolCount / maxTools) * 100;
           }
+          const tools = m
+            ? `${m.toolCount} ${m.toolCount === 1 ? "tool" : "tools"}`
+            : "";
           const meta = m
-            ? m.durationMs != null
-              ? `${m.toolCount}t · ${fmtDur(m.durationMs)}`
-              : `${m.toolCount}t`
+            ? m.durationMs != null && m.durationMs >= 1000
+              ? `${tools} · ${fmtDur(m.durationMs)}`
+              : tools
             : "";
           return (
             <li key={c.anchor_uuid}>
@@ -146,6 +158,31 @@ export function ChapterRail({ session, digest }: Props) {
                   )}
                 </span>
               </button>
+              {(() => {
+                const files = chapterFiles?.get(c.anchor_uuid) ?? [];
+                if (files.length === 0) return null;
+                const shown = files.slice(0, 2);
+                return (
+                  <span className="chapterrail-files">
+                    {shown.map((f) => (
+                      <button
+                        key={f.path}
+                        type="button"
+                        className="chapterrail-file"
+                        title={`View diff: ${f.path}`}
+                        onClick={() => onOpenFile?.(f.path)}
+                      >
+                        {f.path.split("/").pop()}
+                      </button>
+                    ))}
+                    {files.length > shown.length && (
+                      <span className="chapterrail-file-more">
+                        +{files.length - shown.length}
+                      </span>
+                    )}
+                  </span>
+                );
+              })()}
             </li>
           );
         })}

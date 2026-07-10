@@ -11,6 +11,8 @@ import { AgentBody } from "./AgentBody";
 import { PlanBody } from "./PlanBody";
 import { SkillBody } from "./SkillBody";
 import { GenericBody } from "./GenericBody";
+import { FILE_EDIT_TOOLS } from "../changes";
+import { buildWriteRows, extractPatch } from "../diff";
 
 interface Props {
   event: ToolUseEvent;
@@ -110,6 +112,28 @@ function renderBody(
   }
 }
 
+// +N/−N for file-edit tools, computed from the same rows the diff body
+// renders (structuredPatch when captured, else the input strings).
+function editStats(
+  event: ToolUseEvent,
+): { adds: number; dels: number } | null {
+  if (!FILE_EDIT_TOOLS.has(event.name)) return null;
+  if (typeof event.input.file_path !== "string") return null;
+  // A failed call changed nothing, so there is no diff to advertise.
+  if (event.result?.isError) return null;
+  const rows = buildWriteRows(
+    event.input,
+    extractPatch(event.result?.toolUseResult?.structuredPatch),
+  );
+  let adds = 0;
+  let dels = 0;
+  for (const r of rows) {
+    if (r.kind === "add") adds += 1;
+    else if (r.kind === "del") dels += 1;
+  }
+  return adds + dels > 0 ? { adds, dels } : null;
+}
+
 export function ToolCard({
   event,
   root,
@@ -123,6 +147,7 @@ export function ToolCard({
   const label = toolLabel(event.name);
   const summary = toolSummary(event.name, event.input, root);
   const isErr = !!event.result?.isError;
+  const stats = editStats(event);
 
   return (
     <div
@@ -145,6 +170,16 @@ export function ToolCard({
           <span className="tool-summary">
             {summary || <span className="muted">—</span>}
           </span>
+          {stats && (
+            <span className="tool-diffstat">
+              {stats.adds > 0 && (
+                <span className="diff-stat-add">+{stats.adds}</span>
+              )}
+              {stats.dels > 0 && (
+                <span className="diff-stat-del">−{stats.dels}</span>
+              )}
+            </span>
+          )}
           {isErr && <span className="tool-error-dot" title="error" />}
           {progress.length > 0 && (
             <span className="tool-hook-badge" title="hooks ran during this tool call">

@@ -34,14 +34,43 @@ function titleFromPrompt(prompt: string | null): string | null {
   return `${cut}…`;
 }
 
+export type TitleSource = "custom" | "ai" | "pr" | "digest" | "prompt" | "none";
+
+// Where the H1 comes from, in preference order. The verbatim prompt is the
+// last resort: a PR title or the digest's ask reads as a title, a raw prompt
+// truncated mid-sentence does not.
+export function titleSource(
+  trace: TraceSummary,
+  aiTitle: string | null,
+  firstPrompt: string | null,
+): TitleSource {
+  if (trace.title) return "custom";
+  if (aiTitle) return "ai";
+  if (trace.pr_title) return "pr";
+  if (titleFromPrompt(trace.ai_digest?.ask ?? null)) return "digest";
+  if (titleFromPrompt(firstPrompt)) return "prompt";
+  return "none";
+}
+
 function displayTitle(
   trace: TraceSummary,
   aiTitle: string | null,
   firstPrompt: string | null,
 ): string {
-  return (
-    trace.title || aiTitle || titleFromPrompt(firstPrompt) || "Untitled session"
-  );
+  switch (titleSource(trace, aiTitle, firstPrompt)) {
+    case "custom":
+      return trace.title!;
+    case "ai":
+      return aiTitle!;
+    case "pr":
+      return trace.pr_title!;
+    case "digest":
+      return titleFromPrompt(trace.ai_digest!.ask)!;
+    case "prompt":
+      return titleFromPrompt(firstPrompt)!;
+    default:
+      return "Untitled session";
+  }
 }
 
 function errMessage(e: unknown): string {

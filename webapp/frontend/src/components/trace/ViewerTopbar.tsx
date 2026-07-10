@@ -34,9 +34,14 @@ export function ViewerTopbar({
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <Link className="brand" to="/" style={{ textDecoration: "none" }}>
+        <Link
+          className="brand"
+          to="/"
+          style={{ textDecoration: "none" }}
+          aria-label="vibeshub home"
+        >
           <span className="brand-mark">v</span>
-          <span>vibeshub</span>
+          {!repoOwner && <span>vibeshub</span>}
         </Link>
         {repoOwner && (
           <>

@@ -28,7 +28,6 @@ function Toggle({
       type="button"
       aria-pressed={on}
     >
-      <span className="check" />
       {label}
     </button>
   );

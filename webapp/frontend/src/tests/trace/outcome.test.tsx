@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Outcome } from "../../components/trace/Outcome";
 import type { Session } from "../../components/trace/types";
@@ -68,24 +68,39 @@ function renderOutcome(session: Session, trace: TraceSummary) {
   );
 }
 
-describe("Outcome Active Time", () => {
+describe("Outcome result", () => {
   afterEach(() => cleanup());
 
-  it("shows 'not available' for text-import traces", () => {
-    renderOutcome(makeSession({ sourceFormat: "terminal" }), makeTrace());
-    expect(screen.getByText(/not available for text imports/i)).toBeTruthy();
-    expect(screen.queryByText(/^wall:/)).toBeNull();
+  it("renders no stat grid (session metadata lives in the hero strip)", () => {
+    const { container } = renderOutcome(
+      makeSession({ assistantThinkMs: 5000 }),
+      makeTrace(),
+    );
+    expect(container.querySelector(".outcome-stats")).toBeNull();
+    expect(screen.queryByText(/Active Time/i)).toBeNull();
+    expect(screen.queryByText(/distinct tools/i)).toBeNull();
   });
 
-  it("shows a duration and wall time for ordinary traces", () => {
-    const session = makeSession({
-      assistantThinkMs: 5000,
-      startedAt: "2026-05-20T10:00:00Z",
-      endedAt: "2026-05-20T10:01:00Z",
-    });
-    renderOutcome(session, makeTrace());
-    expect(screen.queryByText(/not available for text imports/i)).toBeNull();
-    expect(screen.getByText(/^wall:/)).toBeTruthy();
+  it("links the result status straight to the PR", () => {
+    renderOutcome(
+      makeSession(),
+      makeTrace({
+        pr_number: 154,
+        pr_url: "https://github.com/acme/site/pull/154",
+        pr_title: "Default trace viewer to Conversation tab",
+      }),
+    );
+    const link = screen.getByRole("link", { name: /linked pr #154/i });
+    expect(link.getAttribute("href")).toBe(
+      "https://github.com/acme/site/pull/154",
+    );
+    // The PR title lives in the hero chip; the card does not repeat it.
+    expect(screen.queryByText("Default trace viewer to Conversation tab")).toBeNull();
+  });
+
+  it("keeps the standalone-session status for PR-less traces", () => {
+    renderOutcome(makeSession(), makeTrace());
+    expect(screen.getByText(/standalone session/i)).toBeTruthy();
   });
 });
 
@@ -110,5 +125,33 @@ describe("Outcome files touched", () => {
     ];
     renderOutcome(session, makeTrace({ agents: [] }));
     expect(screen.getByText(/a\.ts/)).toBeTruthy();
+  });
+
+  it("opens the diff when a touched file is clicked", () => {
+    const onOpenFile = vi.fn();
+    const session = makeSession({ toolCounts: { Edit: 1 }, toolCallCount: 1 });
+    session.stream = [
+      {
+        kind: "tool_use",
+        name: "Edit",
+        id: "e1",
+        input: { file_path: "/repo/src/a.ts" },
+        ts: "",
+        result: null,
+      } as unknown as Session["stream"][number],
+    ];
+    render(
+      <MemoryRouter>
+        <Outcome
+          session={session}
+          trace={makeTrace()}
+          subagents={[]}
+          subagentsLoading={false}
+          onOpenFile={onOpenFile}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /a\.ts/ }));
+    expect(onOpenFile).toHaveBeenCalledWith("/repo/src/a.ts");
   });
 });

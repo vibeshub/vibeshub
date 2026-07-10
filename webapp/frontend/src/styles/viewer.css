@@ -450,6 +450,47 @@
   color: var(--text-faint);
   white-space: nowrap;
 }
+.vibeshub-viewer .chapterrail-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 0 26px;
+}
+.vibeshub-viewer .chapterrail-file {
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dim);
+  font: 10.5px/1.7 var(--font-mono);
+  cursor: pointer;
+  transition: all 120ms ease;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vibeshub-viewer .chapterrail-file:hover {
+  border-color: var(--faint);
+  color: var(--strong);
+}
+.vibeshub-viewer .chapterrail-file-more {
+  color: var(--faint);
+  font: 10.5px/1.7 var(--font-mono);
+}
+.vibeshub-viewer .outcome-path--link {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dotted transparent;
+  transition: all 120ms ease;
+}
+.vibeshub-viewer .outcome-path--link:hover {
+  color: var(--strong);
+  text-decoration-color: var(--faint);
+}
 /* Hide the rail when there isn't room for the 2-col layout; the JumpStrip
    in the header handles nav at this width. */
 @media (max-width: 1079px) {
@@ -780,23 +821,6 @@
   flex-direction: column;
   gap: 10px;
 }
-/* Negative margins + padding must mirror .outcome-card padding (16px 18px) so
-   the stat row bleeds flush to the card edges and the bottom border reads as
-   a true card divider. */
-.vibeshub-viewer .outcome-stats {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 16px;
-  margin: -16px -18px 0;
-  padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.vibeshub-viewer .outcome-stat {
-  background: none;
-  padding: 0;
-  gap: 4px;
-}
 .vibeshub-viewer .outcome-loading {
   text-transform: none;
   letter-spacing: 0;
@@ -845,6 +869,13 @@
 .vibeshub-viewer .outcome-status.neutral .dot {
   background: var(--faint);
 }
+.vibeshub-viewer a.outcome-status {
+  text-decoration: none;
+  cursor: pointer;
+}
+.vibeshub-viewer a.outcome-status:hover {
+  border-color: var(--faint);
+}
 .vibeshub-viewer .outcome-summary {
   font-size: 13.5px;
   color: var(--text);
@@ -884,44 +915,6 @@
   font-size: 13px;
   font-style: italic;
   flex: 1;
-}
-.vibeshub-viewer .outcome-pr {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-subtle);
-  font-size: 12px;
-  text-decoration: none !important;
-  color: var(--text);
-  margin-top: auto;
-  max-width: 100%;
-}
-.vibeshub-viewer .outcome-pr:hover {
-  border-color: var(--border-strong);
-}
-.vibeshub-viewer .outcome-pr .pr-num {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text-muted);
-  flex: none;
-}
-.vibeshub-viewer .outcome-pr .pr-title {
-  color: var(--text);
-  /* Allow long PR titles to wrap onto a second line so the end of the title
-     isn't lost to single-line ellipsis; cap at 2 lines to keep the card tidy. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.vibeshub-viewer .outcome-pr {
-  /* The PR row can now span two lines, so don't force it to a single line. */
-  align-items: flex-start;
 }
 .vibeshub-viewer .outcome-files {
   list-style: none;
@@ -1051,50 +1044,6 @@
 .vibeshub-viewer .metaline-sep {
   color: var(--faint);
   opacity: 0.6;
-}
-
-/* ---------- tools chip strip ---------- */
-.vibeshub-viewer .tools-chips {
-  max-width: var(--header-width);
-  margin: 24px auto 0;
-  padding: 0 44px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.vibeshub-viewer .tools-chips-label {
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--faint);
-  margin-right: 4px;
-}
-.vibeshub-viewer .tool-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
-  background: none;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--dim);
-  white-space: nowrap;
-}
-.vibeshub-viewer .tool-chip .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--dot, var(--t-other));
-}
-.vibeshub-viewer .tool-chip .count {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--txt);
-  font-weight: 500;
-  font-feature-settings: "tnum";
 }
 
 /* ---------- timeline strip ---------- */
@@ -1265,6 +1214,14 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+.vibeshub-viewer .redaction-chip {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  color: var(--faint);
+  font: 11px/1.6 var(--font-mono);
 }
 
 /* Slash-command invocation (e.g. /share-pr) shown in place of prompt text. */
@@ -1487,6 +1444,12 @@
 }
 .vibeshub-viewer .tool-summary .arg-val {
   color: var(--dim);
+}
+.vibeshub-viewer .tool-diffstat {
+  display: inline-flex;
+  gap: 6px;
+  flex: none;
+  font: 11px/1 var(--font-mono);
 }
 .vibeshub-viewer .tool-meta-r {
   flex: none;
@@ -1895,10 +1858,10 @@
 .vibeshub-viewer .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 28px;
+  height: 26px;
   padding: 0 12px;
   border: 1px solid var(--line);
+  border-radius: 999px;
   background: none;
   color: var(--dim);
   font-family: var(--font-mono);
@@ -1908,31 +1871,12 @@
 }
 .vibeshub-viewer .toggle.on {
   color: var(--strong);
-  border-color: var(--faint);
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 .vibeshub-viewer .toggle:hover {
   border-color: var(--faint);
   color: var(--strong);
-}
-.vibeshub-viewer .toggle .check {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--text-faint);
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-}
-.vibeshub-viewer .toggle.on .check {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.vibeshub-viewer .toggle.on .check::after {
-  content: "";
-  width: 4px;
-  height: 6px;
-  border: solid var(--accent-fg);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg) translateY(-1px);
 }
 
 /* Empty state */
@@ -2177,7 +2121,6 @@
   }
   .vibeshub-viewer .outcome-grid,
   .vibeshub-viewer .meta-wrap,
-  .vibeshub-viewer .tools-chips,
   .vibeshub-viewer .timeline-wrap {
     padding-left: 16px;
     padding-right: 16px;
@@ -2571,6 +2514,23 @@
   color: var(--t-write);
   border-color: color-mix(in oklab, var(--t-write) 40%, transparent);
   border-style: dashed;
+}
+.vibeshub-viewer .prov-fchapter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dim);
+  font: 11px/1.6 var(--font-mono);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.vibeshub-viewer .prov-fchapter:hover {
+  border-color: var(--faint);
+  color: var(--strong);
 }
 .vibeshub-viewer .prov-fstats {
   margin-left: auto;

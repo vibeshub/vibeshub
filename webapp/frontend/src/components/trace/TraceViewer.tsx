@@ -11,6 +11,8 @@ import { ViewTabs, type ViewMode } from "./ThreadControls";
 import { Thread } from "./Thread";
 import { ProvenanceView } from "./ProvenanceView";
 import { buildProvenance } from "./provenance";
+import { changeAnchorId } from "./changes";
+import { chapterRanges, filesByChapter } from "./chapterLink";
 import { useSubagentStreams } from "./useSubagentStreams";
 import { usePersistedBoolean } from "./persistedState";
 
@@ -79,30 +81,59 @@ export function TraceViewer({
     );
   };
 
-  const pendingJump = useRef<{
-    jumpUuid: string | null;
-    promptUuid: string | null;
-  } | null>(null);
+  const pendingJump = useRef<
+    | { kind: "event"; jumpUuid: string | null; promptUuid: string | null }
+    | { kind: "chapter"; anchorUuid: string }
+    | null
+  >(null);
   const handleJump = (jumpUuid: string | null, promptUuid: string | null) => {
-    pendingJump.current = { jumpUuid, promptUuid };
+    pendingJump.current = { kind: "event", jumpUuid, promptUuid };
+    setMode("conversation");
+  };
+  const handleJumpChapter = (anchorUuid: string) => {
+    pendingJump.current = { kind: "chapter", anchorUuid };
     setMode("conversation");
   };
   useEffect(() => {
     if (mode !== "conversation" || !pendingJump.current) return;
-    const { jumpUuid, promptUuid } = pendingJump.current;
+    const pending = pendingJump.current;
     pendingJump.current = null;
     // Wait one frame so the Thread is mounted before searching for anchors.
     requestAnimationFrame(() => {
+      if (pending.kind === "chapter") {
+        document
+          .getElementById(`chapter-${pending.anchorUuid}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       // Collapsed tool groups render no [data-uuid] for their tools; fall
       // back to the prompt card that produced the edit.
       const el =
-        (jumpUuid && document.querySelector(`[data-uuid="${jumpUuid}"]`)) ||
-        (promptUuid &&
-          document.querySelector(`[data-uuid="${promptUuid}"]`)) ||
+        (pending.jumpUuid &&
+          document.querySelector(`[data-uuid="${pending.jumpUuid}"]`)) ||
+        (pending.promptUuid &&
+          document.querySelector(`[data-uuid="${pending.promptUuid}"]`)) ||
         null;
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   }, [mode]);
+
+  const chapterFiles = useMemo(() => {
+    const ranges = chapterRanges(
+      session.stream,
+      trace.ai_digest?.chapters ?? [],
+    );
+    return filesByChapter(provenance.files, ranges);
+  }, [session.stream, trace.ai_digest, provenance.files]);
+  const handleOpenFile = (path: string) => {
+    setMode("changes");
+    // Wait one frame so the ProvenanceView is mounted before scrolling.
+    requestAnimationFrame(() => {
+      document
+        .getElementById(changeAnchorId(path))
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const empty = session.stream.length === 0;
   const inChanges = mode === "changes" && hasChanges;
@@ -130,6 +161,7 @@ export function TraceViewer({
         subagentsLoading={subagentsLoading}
         canEdit={canEditTitle}
         onTraceUpdated={onTraceUpdated}
+        onOpenFile={handleOpenFile}
       />
       {empty ? (
         <div className="empty-state">
@@ -158,13 +190,19 @@ export function TraceViewer({
                   subagentsLoading={subagentsLoading}
                   digest={trace.ai_digest}
                   onJump={handleJump}
+                  onJumpChapter={handleJumpChapter}
                 />
               </div>
             </div>
           ) : (
             <div className="viewer-body">
               {trace.ai_digest?.chapters?.length ? (
-                <ChapterRail session={session} digest={trace.ai_digest} />
+                <ChapterRail
+                  session={session}
+                  digest={trace.ai_digest}
+                  chapterFiles={chapterFiles}
+                  onOpenFile={handleOpenFile}
+                />
               ) : (
                 <PromptRail session={session} />
               )}

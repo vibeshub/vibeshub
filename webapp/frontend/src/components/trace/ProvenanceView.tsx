@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Session } from "./types";
 import type {
   BlameFile,
@@ -6,12 +6,13 @@ import type {
   ProvenanceModel,
 } from "./provenance";
 import { orderRegions } from "./provenance";
+import { chapterForPos, chapterRanges, type ChapterRange } from "./chapterLink";
 import type { DiffRow } from "./diff";
 import type { NetRow } from "./netdiff";
 import { changeAnchorId } from "./changes";
 import { fmtTimeOfDay, shortenPath } from "./format";
 import { highlightLine, langFromPath } from "./highlight";
-import type { TraceDigest } from "../../types";
+import type { DigestChapter, TraceDigest } from "../../types";
 
 // ProvenanceView — the "Provenance Blame" diff: the session's net changes
 // annotated with where every line came from. Gutters carry prompt №, author
@@ -30,6 +31,7 @@ interface Props {
   subagentsLoading: boolean;
   digest?: TraceDigest | null;
   onJump: (jumpUuid: string | null, promptUuid: string | null) => void;
+  onJumpChapter: (anchorUuid: string) => void;
 }
 
 const FILE_FOLD_THRESHOLD = 80;
@@ -342,6 +344,22 @@ function NetRowView({
   );
 }
 
+// The chapters whose spans contain this file's surviving edits, in chapter
+// order, deduped. Usually one; a file reworked across chapters lists each.
+function chaptersOf(file: BlameFile, ranges: ChapterRange[]): DigestChapter[] {
+  const seen = new Set<string>();
+  const out: DigestChapter[] = [];
+  for (const h of file.hunks) {
+    if (h.superseded) continue;
+    const c = chapterForPos(ranges, h.streamPos);
+    if (c && !seen.has(c.anchor_uuid)) {
+      seen.add(c.anchor_uuid);
+      out.push(c);
+    }
+  }
+  return out;
+}
+
 // Shared file-card header for both the net and per-op views. The two differ
 // only in which counts they show (net vs surviving) and whether a per-edit
 // summary span is present, so those are props/slots rather than duplicated.
@@ -352,6 +370,8 @@ function FileHead({
   dels,
   caption,
   summary,
+  chapters,
+  onJumpChapter,
 }: {
   file: BlameFile;
   root: string | null;
@@ -359,6 +379,8 @@ function FileHead({
   dels: number;
   caption: string | undefined;
   summary?: ReactNode;
+  chapters: DigestChapter[];
+  onJumpChapter: (uuid: string) => void;
 }) {
   return (
     <>
@@ -367,6 +389,17 @@ function FileHead({
           {shortenPath(file.path, root)}
         </span>
         <span className={"prov-fstatus " + file.status}>{statusLabel(file)}</span>
+        {chapters.map((c) => (
+          <button
+            key={c.anchor_uuid}
+            type="button"
+            className="prov-fchapter"
+            title={`Jump to this chapter in the conversation: ${c.title}`}
+            onClick={() => onJumpChapter(c.anchor_uuid)}
+          >
+            {c.title} ↗
+          </button>
+        ))}
         <span className="prov-fstats">
           {adds > 0 && <span className="diff-stat-add">+{adds}</span>}
           {dels > 0 && <span className="diff-stat-del">−{dels}</span>}
@@ -384,13 +417,18 @@ function FileBlock({
   caption,
   sel,
   onSelect,
+  ranges,
+  onJumpChapter,
 }: {
   file: BlameFile;
   root: string | null;
   caption: string | undefined;
   sel: Sel | null;
   onSelect: (s: Sel) => void;
+  ranges: ChapterRange[];
+  onJumpChapter: (uuid: string) => void;
 }) {
+  const chapters = chaptersOf(file, ranges);
   const [expanded, setExpanded] = useState(false);
   const lang = langFromPath(file.path);
 
@@ -416,6 +454,8 @@ function FileBlock({
           adds={file.netAdds}
           dels={file.netDels}
           caption={caption}
+          chapters={chapters}
+          onJumpChapter={onJumpChapter}
         />
         {rows.length === 0 ? (
           <div className="prov-nodata">no net change</div>
@@ -478,6 +518,8 @@ function FileBlock({
         adds={file.adds}
         dels={file.dels}
         caption={caption}
+        chapters={chapters}
+        onJumpChapter={onJumpChapter}
         summary={
           <span className="prov-fsummary">
             · {regions.length} {regions.length === 1 ? "edit" : "edits"}
@@ -550,13 +592,17 @@ function Panel({
   sel,
   model,
   root,
+  ranges,
   onJump,
+  onJumpChapter,
   onClose,
 }: {
   sel: Sel | null;
   model: ProvenanceModel;
   root: string | null;
+  ranges: ChapterRange[];
   onJump: Props["onJump"];
+  onJumpChapter: (uuid: string) => void;
   onClose: () => void;
 }) {
   if (!sel) {
@@ -667,6 +713,7 @@ function Panel({
   const heat = rowIdx !== null ? hunk.heat[rowIdx] : 1;
   const prompt =
     hunk.promptIdx > 0 ? model.prompts[hunk.promptIdx - 1] : null;
+  const chapter = chapterForPos(ranges, hunk.streamPos);
   return (
     <aside className="prov-panel has-sel">
       <button type="button" className="prov-panel-close" onClick={onClose}>
@@ -677,6 +724,21 @@ function Panel({
         {fmtTimeOfDay(hunk.ts)}
       </h2>
       <div className="prov-chain">
+        {chapter && (
+          <div className="prov-step chapter">
+            <h3>Chapter</h3>
+            <p className="q">
+              {chapter.title}
+              <button
+                type="button"
+                className="prov-jump"
+                onClick={() => onJumpChapter(chapter.anchor_uuid)}
+              >
+                ↗
+              </button>
+            </p>
+          </div>
+        )}
         <div className="prov-step prompt">
           <h3>
             {prompt
@@ -773,10 +835,15 @@ export function ProvenanceView({
   subagentsLoading,
   digest,
   onJump,
+  onJumpChapter,
 }: Props) {
   const root = effectiveRoot(
     model.files.map((f) => f.path),
     session.meta.cwd,
+  );
+  const ranges = useMemo(
+    () => chapterRanges(session.stream, digest?.chapters ?? []),
+    [session.stream, digest],
   );
   const captions = new Map(
     (digest?.file_notes ?? []).map((n) => [n.path, n.caption] as const),
@@ -798,6 +865,8 @@ export function ProvenanceView({
               caption={captions.get(file.path)}
               sel={sel}
               onSelect={setSel}
+              ranges={ranges}
+              onJumpChapter={onJumpChapter}
             />
           ))}
           <OutcomeRows model={model} />
@@ -806,7 +875,9 @@ export function ProvenanceView({
           sel={sel}
           model={model}
           root={root}
+          ranges={ranges}
           onJump={onJump}
+          onJumpChapter={onJumpChapter}
           onClose={() => setSel(null)}
         />
       </div>

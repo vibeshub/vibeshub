@@ -151,7 +151,19 @@ function unmap(x: number, axis: BrokenAxis | null, sessionStart: number, session
   return axis.gapStart + axis.gapMs / 2;
 }
 
+// A three-minute session plots as two slivers and dead air; only sessions
+// long enough to have shape earn the chart's vertical space.
+const TIMELINE_MIN_MS = 10 * 60 * 1000;
+
 export function Timeline({ session }: Props) {
+  const { meta } = session;
+  const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
+  const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
+  if (!start || !end || end - start < TIMELINE_MIN_MS) return null;
+  return <TimelineChart session={session} />;
+}
+
+function TimelineChart({ session }: Props) {
   const { stream, meta } = session;
   const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
   const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;

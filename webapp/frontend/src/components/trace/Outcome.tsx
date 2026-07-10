@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session, StreamEvent } from "./types";
 import type { TraceSummary } from "../../types";
-import {
-  fmtDuration,
-  fmtDurationCompact,
-  shortenPath,
-} from "./format";
+import { shortenPath } from "./format";
 import { FILE_EDIT_TOOLS, type SubagentEntry } from "./changes";
 
 interface Props {
@@ -13,10 +9,12 @@ interface Props {
   trace: TraceSummary;
   subagents: SubagentEntry[];
   subagentsLoading: boolean;
+  onOpenFile?: (path: string) => void;
 }
 
 interface TouchedFile {
-  path: string;
+  path: string; // display path (shortened)
+  fullPath: string; // absolute path, the changes-tab anchor key
   kind: "new" | "mod";
 }
 
@@ -64,7 +62,7 @@ function deriveFiles(
   }
   const out: TouchedFile[] = [];
   for (const [path, kind] of kindByPath) {
-    out.push({ path: tightPath(path, root), kind });
+    out.push({ path: tightPath(path, root), fullPath: path, kind });
   }
   return out;
 }
@@ -77,24 +75,6 @@ function lastAssistantText(stream: StreamEvent[]): string | null {
   return null;
 }
 
-function StatCell({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-}) {
-  return (
-    <div className="meta-cell outcome-stat">
-      <div className="meta-label">{label}</div>
-      <div className="meta-value">{value}</div>
-      {sub && <div className="meta-sub">{sub}</div>}
-    </div>
-  );
-}
-
 const FILES_COLLAPSED = 6;
 
 export function Outcome({
@@ -102,13 +82,9 @@ export function Outcome({
   trace,
   subagents,
   subagentsLoading,
+  onOpenFile,
 }: Props) {
   const { meta, stream } = session;
-  const isTextImport = meta.sourceFormat === "terminal";
-  const start = meta.startedAt ? Date.parse(meta.startedAt) : 0;
-  const end = meta.endedAt ? Date.parse(meta.endedAt) : 0;
-  const wall = Math.max(0, end - start);
-  const distinctToolCount = Object.keys(meta.toolCounts).length;
   const subStreams = useMemo(
     () => subagents.map((s) => s.stream),
     [subagents],
@@ -147,36 +123,23 @@ export function Outcome({
   return (
     <div className="outcome-grid">
       <section className="outcome-card">
-        <div className="outcome-stats">
-          {isTextImport ? (
-            <StatCell
-              label="Active Time"
-              value="n/a"
-              sub="not available for text imports"
-            />
-          ) : (
-            <StatCell
-              label="Active Time"
-              value={fmtDurationCompact(meta.assistantThinkMs)}
-              sub={`wall: ${fmtDuration(wall)}`}
-            />
-          )}
-          <StatCell
-            label="Turns"
-            value={meta.userPromptCount}
-            sub={`${meta.assistantTextCount} replies`}
-          />
-          <StatCell
-            label="Tool calls"
-            value={meta.toolCallCount}
-            sub={`${distinctToolCount} distinct tools`}
-          />
-        </div>
         <h4>Result</h4>
-        <span className={"outcome-status " + (linkedPr ? "ok" : "neutral")}>
-          <span className="dot" />
-          {linkedPr ? "Linked PR" : "Standalone session"}
-        </span>
+        {linkedPr ? (
+          <a
+            href={trace.pr_url!}
+            target="_blank"
+            rel="noreferrer"
+            className="outcome-status ok"
+          >
+            <span className="dot" />
+            Linked PR #{trace.pr_number} ↗
+          </a>
+        ) : (
+          <span className="outcome-status neutral">
+            <span className="dot" />
+            Standalone session
+          </span>
+        )}
         {!linkedPr &&
           (summary ? (
             <>
@@ -203,19 +166,6 @@ export function Outcome({
               No closing message in this trace.
             </div>
           ))}
-        {linkedPr && (
-          <a
-            href={trace.pr_url!}
-            target="_blank"
-            rel="noreferrer"
-            className="outcome-pr"
-          >
-            <span className="pr-num">PR #{trace.pr_number}</span>
-            {trace.pr_title && (
-              <span className="pr-title">{trace.pr_title}</span>
-            )}
-          </a>
-        )}
       </section>
 
       <section className="outcome-card">
@@ -230,13 +180,24 @@ export function Outcome({
         ) : (
           <ul className="outcome-files">
             {visibleFiles.map((f) => (
-              <li key={f.path} className="outcome-file">
+              <li key={f.fullPath} className="outcome-file">
                 <span className={"outcome-badge " + f.kind}>
                   {f.kind === "new" ? "new" : "mod"}
                 </span>
-                <span className="outcome-path" title={f.path}>
-                  {f.path}
-                </span>
+                {onOpenFile ? (
+                  <button
+                    type="button"
+                    className="outcome-path outcome-path--link"
+                    title={`View diff: ${f.fullPath}`}
+                    onClick={() => onOpenFile(f.fullPath)}
+                  >
+                    {f.path}
+                  </button>
+                ) : (
+                  <span className="outcome-path" title={f.path}>
+                    {f.path}
+                  </span>
+                )}
               </li>
             ))}
             {extraFiles > 0 && (

@@ -48,8 +48,8 @@ describe("ChapterRail", () => {
     render(<ChapterRail session={sessionWith(STREAM)} digest={TWO} />);
     expect(screen.getByText("First")).toBeInTheDocument();
     expect(screen.getByText("Second")).toBeInTheDocument();
-    expect(screen.getByText("1t · 1m")).toBeInTheDocument();
-    expect(screen.getByText("2t · 20s")).toBeInTheDocument();
+    expect(screen.getByText("1 tool · 1m")).toBeInTheDocument();
+    expect(screen.getByText("2 tools · 20s")).toBeInTheDocument();
   });
 
   it("sizes bars relative to the longest chapter (longest = 100%)", () => {
@@ -81,8 +81,35 @@ describe("ChapterRail", () => {
         digest={digest([{ anchor_uuid: "a", title: "Only", caption: "" }])}
       />,
     );
-    expect(screen.getByText("2t")).toBeInTheDocument();
+    expect(screen.getByText("2 tools")).toBeInTheDocument();
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
+  });
+
+  it("renders hour-plus chapter durations as hours and minutes", () => {
+    render(
+      <ChapterRail
+        session={sessionWith([
+          up("a", "2026-01-01T00:00:00Z"),
+          tool("t1", "2026-01-01T01:01:01Z"),
+        ])}
+        digest={digest([{ anchor_uuid: "a", title: "Long", caption: "" }])}
+      />,
+    );
+    expect(screen.getByText("1 tool · 1h 1m")).toBeInTheDocument();
+  });
+
+  it("omits a zero duration instead of rendering 0s", () => {
+    render(
+      <ChapterRail
+        session={sessionWith([
+          up("a", "2026-01-01T00:00:00Z"),
+          tool("t1", "2026-01-01T00:00:00Z"),
+        ])}
+        digest={digest([{ anchor_uuid: "a", title: "Only", caption: "" }])}
+      />,
+    );
+    expect(screen.getByText("1 tool")).toBeInTheDocument();
+    expect(screen.queryByText(/0s/)).not.toBeInTheDocument();
   });
 
   it("renders an unresolved-anchor chapter title-only (never dropped)", () => {
@@ -94,5 +121,24 @@ describe("ChapterRail", () => {
     );
     expect(screen.getByText("Ghost")).toBeInTheDocument();
     expect(container.querySelector(".chapterrail-arc")).toBeNull();
+  });
+
+  it("shows file badges for a chapter and opens the diff on click", async () => {
+    const user = userEvent.setup();
+    const onOpenFile = vi.fn();
+    const chapterFiles = new Map([
+      ["a", [{ path: "/repo/src/TraceViewer.tsx", adds: 4, dels: 2 }]],
+    ]);
+    render(
+      <ChapterRail
+        session={sessionWith(STREAM)}
+        digest={TWO}
+        chapterFiles={chapterFiles}
+        onOpenFile={onOpenFile}
+      />,
+    );
+    const badge = screen.getByRole("button", { name: /TraceViewer\.tsx/ });
+    await user.click(badge);
+    expect(onOpenFile).toHaveBeenCalledWith("/repo/src/TraceViewer.tsx");
   });
 });

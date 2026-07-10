@@ -48,3 +48,26 @@ describe("ViewerTopbar share", () => {
     expect(screen.queryByRole("link", { name: /share on x/i })).toBeNull();
   });
 });
+
+describe("ViewerTopbar breadcrumb", () => {
+  it("drops the brand word when repo crumbs are present", () => {
+    render(
+      <MemoryRouter>
+        <ViewerTopbar
+          session={session}
+          trace={makeTrace()}
+          repoOwner="acme"
+          repoName="site"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("vibeshub")).toBeNull();
+    expect(screen.getByText("acme")).toBeInTheDocument();
+    expect(screen.getByText("site")).toBeInTheDocument();
+  });
+
+  it("keeps the brand word when there are no repo crumbs", () => {
+    renderTopbar(makeTrace());
+    expect(screen.getByText("vibeshub")).toBeInTheDocument();
+  });
+});

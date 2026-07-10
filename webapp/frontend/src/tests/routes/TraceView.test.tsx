@@ -537,13 +537,13 @@ describe("TraceView", () => {
     expect(container.querySelector(".meta-strip")).toBeNull();
     expect(container.querySelector(".outcome-side")).toBeNull();
 
-    // Each stat label appears in the specific card it belongs to. Catches a
-    // regression where the labels are present but land in the wrong card.
+    // The Result card links straight to the PR now; session stats moved to the
+    // hero badges strip, so the old stat labels no longer live in this card.
     const cards = Array.from(container.querySelectorAll(".outcome-card"));
     const [resultCard, filesCard] = cards;
-    expect(resultCard.textContent).toMatch(/Active Time/i);
-    expect(resultCard.textContent).toMatch(/Turns/i);
-    expect(resultCard.textContent).toMatch(/Tool calls/i);
+    expect(resultCard.textContent).toMatch(/Linked PR #7/i);
+    expect(resultCard.textContent).not.toMatch(/Active Time/i);
+    expect(resultCard.textContent).not.toMatch(/Tool calls/i);
     expect(filesCard.textContent).toMatch(/Files touched/i);
 
     // No token bar visualization anywhere.

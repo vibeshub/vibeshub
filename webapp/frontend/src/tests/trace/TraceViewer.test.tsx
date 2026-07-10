@@ -149,8 +149,8 @@ describe("TraceViewer changes mode", () => {
     fireEvent.click(screen.getByText(/open this edit in the conversation/));
     expect(window.location.hash).toBe("#chat");
     expect(screen.getByText("Show system events")).toBeTruthy();
-    // Collapsed tool groups render no [data-uuid] for tools, so the jump
-    // falls back to the prompt card and must still scroll.
+    // File edits render as standalone cards (never folded), so the jump
+    // finds the edit's own [data-uuid] anchor and scrolls to it.
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 });
