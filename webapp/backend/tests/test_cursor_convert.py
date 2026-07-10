@@ -2,10 +2,12 @@
 former cursorExport.ts converter (deleted when conversion moved
 server-side to ingest).
 
-The *.golden.jsonl fixtures are the actual output of the frontend
-converter (cursorToJsonl) over the matching *.jsonl transcript, captured
-via a one-shot vitest run before that converter was removed. They pin
-determinism: digest chapter anchor_uuids reference the synthetic
+The *.golden.jsonl fixtures started as the actual output of the
+frontend converter (cursorToJsonl) over the matching *.jsonl
+transcript, captured via a one-shot vitest run before that converter
+was removed, then had tool names/inputs rewritten when the backend
+gained Claude-dialect tool normalization (StrReplace->Edit etc.). They
+pin determinism: digest chapter anchor_uuids reference the synthetic
 cursor-rec-<n> uuids and the viewer resolves them against the same
 converted jsonl this module produces, so record order and uuid
 assignment must never drift.
@@ -65,6 +67,48 @@ def test_task_and_subagent_get_deterministic_agent_ids():
         b["id"] for b in tool_uses if b["name"] in ("Task", "Subagent")
     ]
     assert agent_ids == ["cursor-agent-0", "cursor-agent-1"]
+
+
+def test_tool_calls_are_normalized_to_claude_dialect():
+    # Cursor's native tool vocabulary maps onto the Claude names the
+    # viewer's Changes view and the digest key on: StrReplace becomes Edit
+    # with file_path, Shell becomes Bash, Read/ReadFile carry file_path.
+    # Unmapped tools (AwaitShell, Grep) pass through untouched.
+    raw = (
+        b'{"role":"assistant","message":{"content":['
+        b'{"type":"tool_use","name":"StrReplace","input":{'
+        b'"path":"/repo/a.ts","old_string":"x","new_string":"y"}},'
+        b'{"type":"tool_use","name":"Shell","input":{"command":"ls",'
+        b'"description":"list","block_until_ms":500}},'
+        b'{"type":"tool_use","name":"Read","input":{'
+        b'"path":"/repo/a.ts","limit":10}},'
+        b'{"type":"tool_use","name":"ReadFile","input":{"path":"/repo/b.ts"}},'
+        b'{"type":"tool_use","name":"AwaitShell","input":{"id":"sh-1"}},'
+        b'{"type":"tool_use","name":"Grep","input":{'
+        b'"pattern":"p","path":"/repo"}}'
+        b"]}}\n"
+    )
+    recs = _records(cursor_to_claude_jsonl(raw))
+    calls = [
+        b
+        for r in recs if r["type"] == "assistant"
+        for b in r["message"]["content"] if b["type"] == "tool_use"
+    ]
+    assert [c["name"] for c in calls] == [
+        "Edit", "Bash", "Read", "Read", "AwaitShell", "Grep",
+    ]
+    assert calls[0]["input"] == {
+        "file_path": "/repo/a.ts", "old_string": "x", "new_string": "y",
+    }
+    # Renames touch only the mapped keys; everything else survives as is.
+    assert calls[1]["input"] == {
+        "command": "ls", "description": "list", "block_until_ms": 500,
+    }
+    assert calls[2]["input"] == {"file_path": "/repo/a.ts", "limit": 10}
+    assert calls[3]["input"] == {"file_path": "/repo/b.ts"}
+    assert calls[4]["input"] == {"id": "sh-1"}
+    # Claude's Grep already takes path, so Grep is not renamed.
+    assert calls[5]["input"] == {"pattern": "p", "path": "/repo"}
 
 
 def test_looks_like_cursor_accepts_transcript():

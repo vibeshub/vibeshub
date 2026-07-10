@@ -8,9 +8,11 @@ Cursor records are already close to canonical:
 { role, message: { content: [blocks] } }. The conversion adds a
 synthetic top-level uuid per record, emits a cursor-meta marker, strips
 the <user_query>/<timestamp> envelope from user text, parses coarse
-timestamps, and assigns deterministic ids to Task/Subagent tool calls so
+timestamps, assigns deterministic ids to Task/Subagent tool calls so
 subagents nest under their spawning card (link_cursor_subagents in the
-plugin uses the same cursor-agent-<n> scheme).
+plugin uses the same cursor-agent-<n> scheme), and normalizes Cursor's
+tool vocabulary to the Claude dialect (_TOOL_RENAMES) so the viewer's
+Changes view and the digest recognize edits, reads, and shell calls.
 
 The synthetic uuids (cursor-rec-<n>) are load-bearing: digest chapter
 anchor_uuids are generated against this conversion and resolved against
@@ -39,6 +41,19 @@ def _s(value, default: str = "") -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+# Cursor's native tool vocabulary, normalized to the Claude dialect the
+# converted jsonl promises ("Claude-shaped"): the viewer's Changes view
+# keys on Edit/Write names with input.file_path, the timeline buckets on
+# Bash. name -> (claude_name, input key renames). Unmapped names pass
+# through (AwaitShell has no Claude equivalent; Grep already takes path).
+_TOOL_RENAMES: dict[str, tuple[str, dict[str, str]]] = {
+    "StrReplace": ("Edit", {"path": "file_path"}),
+    "ReadFile": ("Read", {"path": "file_path"}),
+    "Read": ("Read", {"path": "file_path"}),
+    "Shell": ("Bash", {}),
+}
 
 
 _TS_RE = re.compile(r"<timestamp>(.*?)</timestamp>", re.DOTALL)
@@ -209,10 +224,19 @@ def cursor_to_claude_jsonl(blob: bytes) -> bytes:
                         agent_n += 1
                     else:
                         tool_id = f"cursor-tool-{rec_n}"
+                    name = _s(b.get("name"))
                     inp = b.get("input")
+                    renamed = _TOOL_RENAMES.get(name)
+                    if renamed is not None:
+                        name = renamed[0]
+                        if isinstance(inp, dict):
+                            inp = {
+                                renamed[1].get(k, k): v
+                                for k, v in inp.items()
+                            }
                     push_assistant({
                         "type": "tool_use", "id": tool_id,
-                        "name": _s(b.get("name")),
+                        "name": name,
                         "input": inp if inp is not None else {},
                     }, last_ts)
 
