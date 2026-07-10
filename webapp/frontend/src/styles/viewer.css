@@ -1174,6 +1174,14 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+.vibeshub-viewer .redaction-chip {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  color: var(--faint);
+  font: 11px/1.6 var(--font-mono);
+}
 
 /* Slash-command invocation (e.g. /share-pr) shown in place of prompt text. */
 .vibeshub-viewer .slash-command {

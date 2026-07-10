@@ -173,6 +173,30 @@ export function inlineFormat(text: string): InlineSpan[] {
   return parts;
 }
 
+export type RedactionSpan = { t: "text" | "redacted"; text: string };
+
+// The upload client replaces secrets with "[REDACTED:category]" markers (see
+// plugins/cli/vibeshub_client/redact.py). Split them out so the viewer can
+// render a quiet placeholder instead of shouty bracket text.
+const REDACTION_RE = /\[REDACTED(?::([a-z0-9_-]+))?\]/gi;
+
+export function splitRedactions(text: string): RedactionSpan[] {
+  const out: RedactionSpan[] = [];
+  let last = 0;
+  for (const m of text.matchAll(REDACTION_RE)) {
+    const at = m.index ?? 0;
+    if (at > last) out.push({ t: "text", text: text.slice(last, at) });
+    out.push({
+      t: "redacted",
+      text: m[1] ? m[1].replace(/[_-]+/g, " ") : "redacted",
+    });
+    last = at + m[0].length;
+  }
+  if (out.length === 0) return [{ t: "text", text }];
+  if (last < text.length) out.push({ t: "text", text: text.slice(last) });
+  return out;
+}
+
 export function stringifyToolInput(input: unknown): string {
   if (input == null) return "";
   if (typeof input === "string") return input;

@@ -7,6 +7,7 @@ import {
   inlineFormat,
   renderMarkdownish,
   shortenPath,
+  splitRedactions,
   toolSummary,
   truncate,
 } from "../../components/trace/format";
@@ -136,6 +137,28 @@ describe("inlineFormat", () => {
   });
   it("returns plain text when no markers", () => {
     expect(inlineFormat("plain")).toEqual([{ t: "text", text: "plain" }]);
+  });
+});
+
+describe("splitRedactions", () => {
+  it("splits categorized markers out of surrounding text", () => {
+    expect(splitRedactions("key=[REDACTED:high_entropy_token] done")).toEqual([
+      { t: "text", text: "key=" },
+      { t: "redacted", text: "high entropy token" },
+      { t: "text", text: " done" },
+    ]);
+  });
+
+  it("handles bare [REDACTED] markers", () => {
+    expect(splitRedactions("[REDACTED]")).toEqual([
+      { t: "redacted", text: "redacted" },
+    ]);
+  });
+
+  it("returns plain text untouched", () => {
+    expect(splitRedactions("no secrets here")).toEqual([
+      { t: "text", text: "no secrets here" },
+    ]);
   });
 });
 

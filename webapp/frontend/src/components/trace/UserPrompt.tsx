@@ -1,5 +1,6 @@
 import type { UserPromptEvent } from "./types";
 import { fmtTimestamp } from "./format";
+import { RedactedText } from "./Markdown";
 
 interface Props {
   event: UserPromptEvent;
@@ -40,7 +41,9 @@ export function UserPrompt({ event, idx, total }: Props) {
             )}
           </div>
         ) : (
-          <div className="user-prompt-text">{event.text}</div>
+          <div className="user-prompt-text">
+            <RedactedText text={event.text} />
+          </div>
         )}
       </div>
     </div>

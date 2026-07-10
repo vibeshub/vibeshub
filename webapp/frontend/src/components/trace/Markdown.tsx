@@ -1,8 +1,30 @@
 import { Fragment, useMemo } from "react";
-import { inlineFormat, renderMarkdownish } from "./format";
+import { inlineFormat, renderMarkdownish, splitRedactions } from "./format";
 
 interface Props {
   text: string;
+}
+
+export function RedactedText({ text }: { text: string }) {
+  const spans = splitRedactions(text);
+  if (spans.length === 1 && spans[0].t === "text") return <>{text}</>;
+  return (
+    <>
+      {spans.map((s, i) =>
+        s.t === "redacted" ? (
+          <span
+            key={i}
+            className="redaction-chip"
+            title="Removed when this trace was uploaded"
+          >
+            {s.text}
+          </span>
+        ) : (
+          <Fragment key={i}>{s.text}</Fragment>
+        ),
+      )}
+    </>
+  );
 }
 
 function InlineSpans({ text, kp = "" }: { text: string; kp?: string }) {
@@ -13,7 +35,7 @@ function InlineSpans({ text, kp = "" }: { text: string; kp?: string }) {
         if (p.t === "strong") return <strong key={kp + j}>{p.text}</strong>;
         if (p.t === "em") return <em key={kp + j}>{p.text}</em>;
         if (p.t === "code") return <code key={kp + j}>{p.text}</code>;
-        return <Fragment key={kp + j}>{p.text}</Fragment>;
+        return <RedactedText key={kp + j} text={p.text} />;
       })}
     </>
   );
