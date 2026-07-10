@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 
 import { ProvenanceView } from "../../components/trace/ProvenanceView";
@@ -115,6 +115,7 @@ describe("ProvenanceView merged blocks", () => {
         subagentsLoading={false}
         digest={digest}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
     expect(screen.getByText("Tint hover states")).toBeInTheDocument();
@@ -131,6 +132,7 @@ describe("ProvenanceView merged blocks", () => {
         subagentsLoading={false}
         digest={digest}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
     const rows = document.querySelectorAll('.prov-ln[role="button"]');
@@ -147,6 +149,7 @@ describe("ProvenanceView merged blocks", () => {
         subagentsLoading={false}
         digest={digest}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
     const retriedRow = document.querySelector(".prov-ln.retried") as HTMLElement | null;
@@ -163,6 +166,7 @@ describe("ProvenanceView merged blocks", () => {
         subagentsLoading={false}
         digest={null}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
     expect(document.querySelector(".prov-fcaption")).toBeNull();
@@ -179,6 +183,7 @@ describe("ProvenanceView net diff", () => {
         subagentsLoading={false}
         digest={null}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
   }
@@ -222,6 +227,7 @@ describe("ProvenanceView net panel", () => {
         subagentsLoading={false}
         digest={null}
         onJump={() => {}}
+        onJumpChapter={vi.fn()}
       />,
     );
   }
@@ -246,5 +252,34 @@ describe("ProvenanceView net panel", () => {
     ) as HTMLElement;
     fireEvent.click(ctx);
     expect(screen.getByText(/Prompts that touched this file/)).toBeInTheDocument();
+  });
+});
+
+describe("ProvenanceView chapter chips", () => {
+  // ev()'s Edit lands at main-stream index 1, inside the span of a chapter
+  // anchored at the prompt "p1" (index 0), so the file's surviving hunk
+  // resolves to that chapter.
+  const chapterDigest: TraceDigest = {
+    ask: "a", decisions: "b", files: "c", tests: "d", dead_ends: "e",
+    chapters: [{ anchor_uuid: "p1", title: "Flip default behavior", caption: "" }],
+    file_notes: [],
+  };
+
+  it("labels a changed file with the chapter that produced it and jumps on click", () => {
+    const model = buildProvenance(session(), [], "claude-code");
+    const onJumpChapter = vi.fn();
+    render(
+      <ProvenanceView
+        model={model}
+        session={session()}
+        subagentsLoading={false}
+        digest={chapterDigest}
+        onJump={vi.fn()}
+        onJumpChapter={onJumpChapter}
+      />,
+    );
+    const chip = screen.getByRole("button", { name: /flip default behavior/i });
+    fireEvent.click(chip);
+    expect(onJumpChapter).toHaveBeenCalledWith("p1");
   });
 });

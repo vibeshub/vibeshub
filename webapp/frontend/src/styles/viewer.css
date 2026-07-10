@@ -2468,6 +2468,23 @@
   border-color: color-mix(in oklab, var(--t-write) 40%, transparent);
   border-style: dashed;
 }
+.vibeshub-viewer .prov-fchapter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dim);
+  font: 11px/1.6 var(--font-mono);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.vibeshub-viewer .prov-fchapter:hover {
+  border-color: var(--faint);
+  color: var(--strong);
+}
 .vibeshub-viewer .prov-fstats {
   margin-left: auto;
   font-family: var(--font-mono);

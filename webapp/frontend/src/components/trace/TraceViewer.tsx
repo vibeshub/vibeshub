@@ -79,26 +79,38 @@ export function TraceViewer({
     );
   };
 
-  const pendingJump = useRef<{
-    jumpUuid: string | null;
-    promptUuid: string | null;
-  } | null>(null);
+  const pendingJump = useRef<
+    | { kind: "event"; jumpUuid: string | null; promptUuid: string | null }
+    | { kind: "chapter"; anchorUuid: string }
+    | null
+  >(null);
   const handleJump = (jumpUuid: string | null, promptUuid: string | null) => {
-    pendingJump.current = { jumpUuid, promptUuid };
+    pendingJump.current = { kind: "event", jumpUuid, promptUuid };
+    setMode("conversation");
+  };
+  const handleJumpChapter = (anchorUuid: string) => {
+    pendingJump.current = { kind: "chapter", anchorUuid };
     setMode("conversation");
   };
   useEffect(() => {
     if (mode !== "conversation" || !pendingJump.current) return;
-    const { jumpUuid, promptUuid } = pendingJump.current;
+    const pending = pendingJump.current;
     pendingJump.current = null;
     // Wait one frame so the Thread is mounted before searching for anchors.
     requestAnimationFrame(() => {
+      if (pending.kind === "chapter") {
+        document
+          .getElementById(`chapter-${pending.anchorUuid}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       // Collapsed tool groups render no [data-uuid] for their tools; fall
       // back to the prompt card that produced the edit.
       const el =
-        (jumpUuid && document.querySelector(`[data-uuid="${jumpUuid}"]`)) ||
-        (promptUuid &&
-          document.querySelector(`[data-uuid="${promptUuid}"]`)) ||
+        (pending.jumpUuid &&
+          document.querySelector(`[data-uuid="${pending.jumpUuid}"]`)) ||
+        (pending.promptUuid &&
+          document.querySelector(`[data-uuid="${pending.promptUuid}"]`)) ||
         null;
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     });
@@ -158,6 +170,7 @@ export function TraceViewer({
                   subagentsLoading={subagentsLoading}
                   digest={trace.ai_digest}
                   onJump={handleJump}
+                  onJumpChapter={handleJumpChapter}
                 />
               </div>
             </div>
