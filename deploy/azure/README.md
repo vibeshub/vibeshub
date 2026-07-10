@@ -154,7 +154,7 @@ Then install the Claude Code plugin per [../../plugins/cli/README.md](../../plug
 | `VIBESHUB_TOKEN_ENCRYPTION_KEY` | Fernet key used to encrypt stored OAuth access tokens (`python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`); comma-separate `new,old` to rotate |
 | `VIBESHUB_COOKIE_SECURE` | Defaults to `true`; leave on for Azure |
 
-See [../../webapp/backend/README.md](../../webapp/backend/README.md) for the full list, including renderer + size limits.
+See [../../webapp/backend/README.md](../../webapp/backend/README.md) for the full list (core, OAuth, size limits, digest OpenAI vars). Digest agent details: [../../webapp/backend/app/agents/digest/README.md](../../webapp/backend/app/agents/digest/README.md).
 
 ## Troubleshooting
 

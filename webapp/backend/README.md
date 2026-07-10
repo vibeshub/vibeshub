@@ -100,3 +100,15 @@ generation commands for the secrets) is in
 | `VIBESHUB_SESSION_SECRET` | _(empty)_ | Signs the short-lived OAuth `state` cookie |
 | `VIBESHUB_TOKEN_ENCRYPTION_KEY` | _(empty)_ | Fernet key used to encrypt stored OAuth access tokens (comma-separate `new,old` to rotate) |
 | `VIBESHUB_COOKIE_SECURE` | `true` | Set `false` only for local HTTP dev |
+
+### Trace digest (optional)
+
+All three must be set for the summary agent to run. Missing any → upload still
+succeeds; the viewer hides the DigestPanel. Full flow, degradation modes, and
+ops queries: [app/agents/digest/README.md](app/agents/digest/README.md).
+
+| Var | Default | Notes |
+|---|---|---|
+| `VIBESHUB_OPENAI_API_KEY` | _(unset)_ | OpenAI (or compatible) API key |
+| `VIBESHUB_OPENAI_ENDPOINT` | _(unset)_ | API base URL |
+| `VIBESHUB_OPENAI_MODEL` | _(unset)_ | Model / deployment name |

@@ -1,32 +1,49 @@
-# Adding a new platform plugin
+# Platform plugins
 
-Each platform plugin (Claude Code, Cursor, Codex, ...) is a thin layer over
-the `vibeshub_client` library. Today it lives bundled inside
-[cli/vibeshub_client/](cli/vibeshub_client/) so the plugin is
-self-contained for marketplace install; when a second platform is added,
-lift it back out into a shared location and have both plugins vendor or
-symlink it.
+Claude Code, Codex, and Cursor all share one upload pipeline. The source of
+truth is [cli/](cli/):
 
-To add `<platform>`:
+- **Claude Code + Codex** install from this repo's marketplace package
+  (`plugins/cli`). Runtime detection picks the right transcript reader.
+- **Cursor** is a separate marketplace package generated from `plugins/cli` by
+  [`scripts/sync-cursor-plugin.py`](../scripts/sync-cursor-plugin.py) and
+  published at [vibeshub/vibeshub-cursor](https://github.com/vibeshub/vibeshub-cursor).
+  Do not hand-edit the generated tree; change `plugins/cli` and re-run the sync
+  script.
 
-1. Create `plugins/<platform>/` mirroring the layout of `plugins/cli/`,
-   including a `vibeshub_client/` copy so the plugin is self-contained.
-2. Implement `reader.py` with a `TranscriptReader` subclass that:
+`vibeshub_client/` lives bundled inside `plugins/cli/` (and is copied into the
+Cursor package) so each marketplace install is self-contained. Install and
+config details: [cli/README.md](cli/README.md).
+
+## How platforms are selected
+
+[`cli/platform_adapter.py`](cli/platform_adapter.py) chooses a
+`TranscriptReader` from `VIBESHUB_PLATFORM` (Cursor hooks set this explicitly),
+transcript path (`~/.claude`, `~/.codex/sessions`, `~/.cursor/projects`), or
+Codex/Claude env signals. Each reader returns a stable `platform_id` that
+becomes the `platform` field on uploaded traces.
+
+Triggers (`gh pr create`, `gh pr edit`, `git push`) are classified in
+[`cli/vibeshub_client/share_trigger.py`](cli/vibeshub_client/share_trigger.py);
+all platforms call the shared `run_share_pipeline()`.
+
+## Adding another platform
+
+1. Add a `TranscriptReader` subclass next to `reader.py` / `codex_reader.py` /
+   `cursor_reader.py` that:
    - returns the transcript JSONL path for the active session
-   - returns a stable `platform_id` string (this becomes the `platform` field
-     on uploaded traces)
-3. Configure the platform's hook/event surface to invoke the shared
-   `run_share_pipeline()` when a PR is created or updated. The Claude Code
-   plugin uses a `PostToolUse` hook on `Bash` that matches `gh pr create`,
-   `gh pr edit`, and `git push` (the latter two re-share the existing trace
-   for the current branch's open PR); other platforms will have different
-   surfaces. Triggers are classified in
-   [cli/vibeshub_client/share_trigger.py](cli/vibeshub_client/share_trigger.py).
-4. Add a slash command (or its platform equivalent) for manual share + delete.
-5. Document install + config in a `README.md` modeled on
-   `plugins/cli/README.md`.
+   - returns a stable `platform_id` string
+2. Wire it into `platform_adapter.select_adapter()`.
+3. Hook the platform's event surface so PR create/update/push invokes
+   `run_share_pipeline()` (Claude/Codex: `PostToolUse` on `Bash`; Cursor:
+   `afterShellExecution`).
+4. Add a slash command (or platform equivalent) for manual share + delete.
+5. If the platform needs its own marketplace package (like Cursor), extend
+   `scripts/sync-cursor-plugin.py` or add a sibling generator — keep
+   `plugins/cli` as the shared source.
+6. Document install + config in [cli/README.md](cli/README.md).
 
-The server doesn't need to change to accept a new platform — the `platform`
-field is free-form on `/api/ingest`. The viewer parses Claude Code's JSONL
-shape; if your platform emits a different shape, the parser will skip records
-it doesn't recognize and show whatever it can extract.
+The server accepts any free-form `platform` on `/api/ingest`. Non-Claude
+transcript shapes are converted to Claude-shaped JSONL at ingest (see
+`webapp/backend/app/codex_convert.py` and `cursor_convert.py`); the viewer and
+digest agent always read that converted stream.

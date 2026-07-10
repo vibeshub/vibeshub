@@ -14,7 +14,7 @@ How a trace gets from an AI coding session onto the pull request it produced. Th
 7. The plugin posts that URL as a comment on the PR the first time; when a digest exists, the comment includes the summary. Subsequent updates refresh the same trace.
 8. Visiting the URL loads the SPA and renders the JSONL as a trace viewer (hero + digest panel + chapter jumps + collapsible tool cards + prompt rail + activity timeline + light/dark theme + syntax-highlighted code/diffs).
 9. Private-repo traces are gated: the backend checks the signed-in viewer's GitHub access to the repo (via their OAuth token) before serving the trace. Viewers grant private access with an opt-in "Enable private repositories" login.
-10. Web upload (`/upload`) and standalone (no-repo) traces are also supported; those uploads use a session cookie rather than a `gh` bearer token.
+10. Web upload (`/vibeviewer`; `/upload` redirects there) and standalone (no-repo) traces are also supported; those uploads use a session cookie rather than a `gh` bearer token.
 
 ## Adding a platform
 

@@ -13,7 +13,7 @@
   <a href="https://vibeshub.ai"><img alt="deploy" src="https://img.shields.io/badge/deploy-vibeshub.ai-3fb950"></a>
   <img alt="version" src="https://img.shields.io/badge/version-v0.5.2-1f6feb">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-3-D07843">
-  <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-8957e5">
+  <img alt="python" src="https://img.shields.io/badge/python-plugin%203.9%2B%20%7C%20backend%203.12%E2%80%933.13-8957e5">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-6e7681">
 </p>
 
@@ -114,7 +114,7 @@ vibeshub/
 │   │                   # GitHub OAuth, session cookies, repo-access gating, blob storage
 │   │                   # agents/digest: trace summary agent + chapter anchors
 │   └── frontend/       # React + Vite SPA; build copies dist/ → backend/frontend_dist/
-│                       # Landing, /home, /upload, /privacy, /:owner, /:owner/:repo,
+│                       # Landing, /home, /vibeviewer, /privacy, /:owner, /:owner/:repo,
 │                       # /:owner/:repo/pull/:number, /t/:shortId trace viewer
 ├── deploy/azure/       # Dockerfile + deploy.sh + Portal/CLI walkthroughs
 └── docs/superpowers/   # design spec + implementation plans
@@ -133,13 +133,15 @@ Per-component docs:
 <summary><b>Local development</b></summary>
 
 ```bash
-# Backend (FastAPI on :8000), in-memory SQLite, /tmp blob dir
+# Backend (FastAPI on :8000), in-memory SQLite, /tmp blob dir — needs Python 3.12–3.13
 ./env/bin/pip install -e "webapp/backend[dev]"
 ./env/bin/uvicorn app.main:app --reload --app-dir webapp/backend
 
 # Frontend (Vite on :5173), proxies /api → backend:8000
 cd webapp/frontend && npm install && npm run dev
 ```
+
+The plugin hooks run on the user's `python3` (3.9+). The backend requires 3.12–3.13.
 
 GitHub OAuth is optional locally: auth routes return `503 oauth_not_configured` until `VIBESHUB_GITHUB_OAUTH_CLIENT_ID`, `VIBESHUB_SESSION_SECRET`, and `VIBESHUB_TOKEN_ENCRYPTION_KEY` are set. See the [backend README](webapp/backend/README.md) for the full list.
 
