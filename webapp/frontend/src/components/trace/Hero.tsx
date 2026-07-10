@@ -52,7 +52,7 @@ function HeroEyebrow({
       )}
       <span>{trace.platform === "codex" ? "Codex CLI" : trace.platform === "cursor" ? "Cursor" : trace.platform}</span>
       <span>·</span>
-      <span>SESSION · {id}</span>
+      <span>{id ? `SESSION · ${id}` : "SESSION"}</span>
       {date && (
         <>
           <span>·</span>
