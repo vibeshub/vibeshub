@@ -119,6 +119,8 @@ function editStats(
 ): { adds: number; dels: number } | null {
   if (!FILE_EDIT_TOOLS.has(event.name)) return null;
   if (typeof event.input.file_path !== "string") return null;
+  // A failed call changed nothing, so there is no diff to advertise.
+  if (event.result?.isError) return null;
   const rows = buildWriteRows(
     event.input,
     extractPatch(event.result?.toolUseResult?.structuredPatch),

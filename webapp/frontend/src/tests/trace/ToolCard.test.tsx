@@ -62,6 +62,22 @@ describe("ToolCard edit diffstat", () => {
     expect(stat!.textContent).toContain("−1");
   });
 
+  it("shows no diffstat when the edit call failed", () => {
+    const event = editEvent();
+    event.result = { content: "old_string not found", isError: true };
+    const { container } = render(
+      <ToolCard
+        event={event}
+        root={null}
+        followingPrompt={null}
+        shortId="abc"
+        agents={[]}
+        progress={[]}
+      />,
+    );
+    expect(container.querySelector(".tool-diffstat")).toBeNull();
+  });
+
   it("shows no diffstat for non-edit tools", () => {
     const { container } = render(
       <ToolCard
