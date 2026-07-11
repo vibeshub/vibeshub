@@ -68,6 +68,10 @@ def test_hooks_json_is_cursor_format(tmp_path):
     sync.generate(out=out, source=_PLUGIN_SRC)
     data = json.loads((out / "hooks" / "hooks.json").read_text())
 
+    # Cursor's hooks-config validator requires a top-level integer version
+    # and silently rejects the entire config without it, so the plugin loads
+    # but its hooks never fire.
+    assert data["version"] == 1
     assert set(data["hooks"]) == {"afterShellExecution"}
     entries = data["hooks"]["afterShellExecution"]
     assert len(entries) == 1
