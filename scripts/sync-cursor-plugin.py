@@ -104,6 +104,9 @@ def _plugin_json(version: str) -> str:
 
 def _hooks_json() -> str:
     data = {
+        # Required by Cursor's hooks-config validator; without it the whole
+        # hooks file is silently rejected and the plugin's hooks never run.
+        "version": 1,
         "hooks": {
             "afterShellExecution": [
                 {
