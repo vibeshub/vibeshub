@@ -140,8 +140,11 @@ test. Cursor's `plugin.json` is generated from the same value — see
 <summary><b>Local development</b></summary>
 
 ```bash
-# Backend (FastAPI on :8000), in-memory SQLite, /tmp blob dir — needs Python 3.12–3.13
+# One-time: repo-root venv (Python 3.12–3.13; gitignored as env/)
+python3.13 -m venv env   # or python3.12 -m venv env
 ./env/bin/pip install -e "webapp/backend[dev]"
+
+# Backend (FastAPI on :8000), in-memory SQLite, /tmp blob dir
 ./env/bin/uvicorn app.main:app --reload --app-dir webapp/backend
 
 # Frontend (Vite on :5173), proxies /api → backend:8000

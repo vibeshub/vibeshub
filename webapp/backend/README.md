@@ -9,10 +9,13 @@ Requires Python 3.12–3.13.
 
 ## Local dev
 
-From repo root:
+From repo root (venv lives at `env/`, gitignored):
 
 ```bash
+# One-time bootstrap if env/ does not exist yet
+python3.13 -m venv env   # or python3.12 -m venv env
 ./env/bin/pip install -e "webapp/backend[dev]"
+
 cd webapp/backend
 ../../env/bin/uvicorn app.main:app --reload
 ```
