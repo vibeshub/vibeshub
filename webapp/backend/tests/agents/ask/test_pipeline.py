@@ -216,3 +216,54 @@ async def test_github_disabled_emits_notice_and_omits_tools(
         for t in client.responses.parse.call_args.kwargs["tools"]
     ]
     assert "search_prs" not in names
+
+
+async def test_multi_call_response_respects_budget(
+    _env, db_session, monkeypatch,
+):
+    # One response asks for 10 tools at once; the budget is 8.
+    calls = [
+        _fn_call("search_sessions", {"query": f"q{i}"}, call_id=f"c{i}")
+        for i in range(10)
+    ]
+    final = _final_response(AskAnswer(answer_markdown="best effort"))
+    client = _mock_client(monkeypatch, [_tool_response(*calls), final])
+    events = await _collect(run_ask(await _ctx(db_session), "why?"))
+
+    # Only the first 8 tools run (and emit status); the last 2 do not.
+    status_events = [e for e in events if e.event == "status"]
+    assert len(status_events) == 8
+
+    # Every one of the 10 call_ids is still answered on the next turn.
+    second_input = client.responses.parse.call_args_list[1].kwargs["input"]
+    outputs = [
+        i for i in second_input
+        if isinstance(i, dict) and i.get("type") == "function_call_output"
+    ]
+    assert len(outputs) == 10
+    exhausted = json.dumps({"error": "tool budget exhausted"})
+    assert [o["output"] for o in outputs[-2:]] == [exhausted, exhausted]
+    assert all(o["output"] != exhausted for o in outputs[:8])
+
+    # Budget spent -> the follow-up is a forced final call with no tools.
+    assert client.responses.parse.call_args_list[1].kwargs["tools"] == []
+    assert events[-1].event == "done"
+    assert events[-1].data == {"best_effort": True}
+
+
+async def test_response_output_echoed_into_next_input(
+    _env, db_session, monkeypatch,
+):
+    fn = _fn_call("search_sessions", {"query": "healthcheck"}, call_id="cX")
+    final = _final_response(AskAnswer(answer_markdown="done"))
+    client = _mock_client(monkeypatch, [_tool_response(fn), final])
+    await _collect(run_ask(await _ctx(db_session), "why?"))
+
+    second_input = client.responses.parse.call_args_list[1].kwargs["input"]
+    # The model's own output item is echoed back verbatim (same object)...
+    assert any(item is fn for item in second_input)
+    idx = next(k for k, item in enumerate(second_input) if item is fn)
+    # ...immediately followed by the matching function_call_output.
+    output = second_input[idx + 1]
+    assert output["type"] == "function_call_output"
+    assert output["call_id"] == "cX"

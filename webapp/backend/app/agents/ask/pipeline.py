@@ -81,12 +81,10 @@ async def run_ask(
 ) -> AsyncIterator[AskEvent]:
     client = get_client()
     model = get_model()
+    started = time.monotonic()
     if client is None:
-        await record_run(
-            ctx.session, agent_name="repo_ask", trace_id=None, model=None,
-            input_tokens=0, output_tokens=0, latency_ms=0,
-            outcome=Outcome.SKIP_NO_CONFIG,
-        )
+        await _record(ctx, None, 0, 0, started, Outcome.SKIP_NO_CONFIG,
+                      tool_calls=0)
         yield AskEvent("error", {
             "code": "llm_unavailable", "message": _LLM_DOWN_MESSAGE,
         })
@@ -100,7 +98,6 @@ async def run_ask(
         "role": "user",
         "content": user_prompt(ctx.repo_full_name, question),
     }]
-    started = time.monotonic()
     tool_calls = 0
     in_tok = out_tok = 0
     best_effort = False
@@ -139,7 +136,22 @@ async def run_ask(
             if getattr(item, "type", None) == "function_call"
         ]
         if calls and not force_final:
+            # Echo the model's own output items (function_call +
+            # reasoning) back verbatim so the follow-up turn stays valid
+            # under the Responses API; then answer every call_id in order.
+            input_items.extend(response.output)
             for call in calls:
+                if tool_calls >= _MAX_TOOL_CALLS:
+                    # Budget spent mid-response: answer the call_id so the
+                    # API contract holds, but run nothing further.
+                    input_items.append({
+                        "type": "function_call_output",
+                        "call_id": call.call_id,
+                        "output": json.dumps(
+                            {"error": "tool budget exhausted"}
+                        ),
+                    })
+                    continue
                 tool_calls += 1
                 try:
                     args = json.loads(call.arguments or "{}")
@@ -166,12 +178,6 @@ async def run_ask(
                             "message": _GITHUB_DOWN_MESSAGE,
                         })
                     return
-                input_items.append({
-                    "type": "function_call",
-                    "call_id": call.call_id,
-                    "name": call.name,
-                    "arguments": call.arguments,
-                })
                 input_items.append({
                     "type": "function_call_output",
                     "call_id": call.call_id,
