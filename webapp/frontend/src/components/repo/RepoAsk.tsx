@@ -85,6 +85,7 @@ export function RepoAsk({
         repo,
         q,
         (ev) => {
+          if (controller.signal.aborted) return;
           if (ev.kind === "status") setStatusText(ev.text);
           if (ev.kind === "notice") setNotice(ev.message);
           if (ev.kind === "delta") setAnswer((prev) => prev + ev.text);

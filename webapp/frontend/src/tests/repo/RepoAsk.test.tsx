@@ -107,4 +107,31 @@ describe("RepoAsk", () => {
     await userEvent.keyboard("{Escape}");
     expect(onActiveChange).toHaveBeenLastCalledWith(false);
   });
+
+  it("ignores events after abort", async () => {
+    let captured: {
+      onEvent: (e: AskEvent) => void;
+      signal: AbortSignal;
+    } | null = null;
+    askRepoMock.mockImplementation(
+      (
+        _o: string, _r: string, _q: string,
+        onEvent: (e: AskEvent) => void,
+        signal: AbortSignal,
+      ) => {
+        captured = { onEvent, signal };
+        return new Promise<void>(() => {});
+      },
+    );
+    renderAsk({ active: true });
+    const input = screen.getByPlaceholderText("Ask about this repo");
+    await userEvent.type(input, "why{Enter}");
+    await waitFor(() => expect(captured).not.toBeNull());
+    // Escape aborts the in-flight ask via close().
+    await userEvent.keyboard("{Escape}");
+    expect(captured!.signal.aborted).toBe(true);
+    // A trailing event from the aborted stream must be ignored.
+    captured!.onEvent({ kind: "delta", text: "stale trailing answer" });
+    expect(screen.queryByText(/stale trailing answer/)).not.toBeInTheDocument();
+  });
 });
