@@ -21,8 +21,9 @@ directly. We skip the retrieval layer and ship the answer experience as v1.
 
 Positioning holds from the old spec: the moat is reasoning that was never
 committed anywhere (dead ends, rejected alternatives, constraints discovered
-mid-session). Cold start still prioritizes importing real local session
-history over synthesizing from git.
+mid-session). Cold start (repos with no traces yet) is deliberately out of
+scope here and will be resolved in a separate spec; v1 targets repos that
+already have traces.
 
 ## Decisions
 
@@ -42,10 +43,9 @@ history over synthesizing from git.
   repo-read-access dependency.
 - Failure honesty: a GitHub tool failure mid-ask is surfaced to the user
   with a sign-in prompt, not silently degraded to sessions-only.
-- Cold start: unchanged flagship, a plugin command that imports the
-  developer's existing local session history for the repo. The GitHub PR
-  backfill filler is no longer needed; live GitHub tools cover an empty
-  corpus from day one.
+- Cold start: out of scope, resolved separately. v1 only serves repos that
+  already have traces; the ask box does not render on a repo with zero
+  traces.
 
 ## Data model
 
@@ -188,40 +188,9 @@ Answer panel states:
 - error: the `error` message; `github_auth_required` renders a sign-in
   button
 
-Empty repo: the empty state leads with the import pitch ("your past
-sessions are already on your machine, run /vibeshub:import-history"). The
-ask box still works day one because GitHub tools give the agent material
-even with zero sessions. No em-dashes in any user-facing copy.
-
-## Cold start (flagship): local session history import
-
-Unchanged from the superseded spec except that imported traces are indexed
-as FTS docs only (no embedding step). Summary:
-
-Plugin command (Claude Code only in v1) `/vibeshub:import-history` that:
-
-1. Locates the current repo's session files under `~/.claude/projects/`
-   (project dirs are keyed by cwd; verify against the git remote).
-2. Filters to non-trivial sessions (minimum message count) and dedupes
-   against already-uploaded traces by `session_id`.
-3. Matches sessions to PRs only via explicit PR URLs found in the
-   transcript; otherwise leaves the session PR-less. No fuzzy heuristics.
-4. Shows a summary and asks for confirmation before uploading, capped at
-   the newest 100 sessions per run.
-5. Uploads through the existing pipeline, redaction included, with a
-   `backfill` marker in the upload metadata.
-
-Backend prerequisite: the upload API accepts `repo_full_name` without a
-`pr_number` (a repo-attributed standalone trace). `is_private` is
-snapshotted from repo visibility at ingest, reusing the existing visibility
-lookup from the PR upload path. These traces appear in the repo page traces
-tab and are indexed like any other; only traces with no repo at all stay
-out of the corpus.
-
-Imported sessions flow through the normal digest pipeline, so each costs
-one digest LLM call; the per-run cap plus dedupe keeps re-runs cheap.
-Upload-time redaction quirks apply to backfilled transcripts the same as
-live ones (no reliance on thinking text or cwd fields).
+The ask box renders only when the repo has at least one trace; the
+zero-trace experience belongs to the separate cold-start spec. No em-dashes
+in any user-facing copy.
 
 ## Error handling
 
@@ -239,39 +208,28 @@ live ones (no reliance on thinking text or cwd fields).
   pattern: digest-to-docs explosion, FTS search and the SQLite LIKE
   fallback, private-doc gating, the tool loop driven by scripted fake
   tool-call sequences (including the abort-on-GitHub-failure path and the
-  step cap), SSE event framing, rate limits, token selection (viewer vs
-  server vs none), and repo-attributed standalone uploads.
-- Plugin pytest: import-history session discovery, session_id dedupe, PR
-  URL matching from transcript text, and the confirmation cap. Tested
-  against a real uploaded trace fixture, not synthetic transcripts.
-- Frontend vitest: ask box behavior, streaming render, error and sign-in
-  states.
+  step cap), SSE event framing, rate limits, and token selection (viewer vs
+  server vs none).
+- Frontend vitest: ask box behavior (including not rendering on a
+  zero-trace repo), streaming render, error and sign-in states.
 - Playwright e2e: excluded (broken on main pre-existing).
 
 ## Build order
 
-Two shippable milestones:
-
-1. Ask agent: `search_documents` table + ingest + backfill script, the six
-   tools, the agent loop, the SSE endpoint, and the repo page UI. Useful
-   day one on any public repo via GitHub tools alone.
-2. Local history import: repo-attributed standalone uploads on the backend,
-   then the plugin import command. Turns the corpus differentiated.
-
-Milestone 2 depends on milestone 1's table and ingest but not its UI; they
-get separate implementation plans.
+One shippable milestone: `search_documents` table + ingest + backfill
+script, the seven tools, the agent loop, the SSE endpoint, and the repo
+page UI. Cold start (local history import or any other corpus acquisition)
+gets its own spec and plan later; nothing here blocks on it.
 
 ## Out of scope / phase 2
 
 - Embeddings, pgvector, or any vector retrieval (revisit only if FTS
   recall provably limits answer quality at real corpus sizes).
+- Cold start: local session history import, PR backfill, and the
+  zero-trace repo experience (separate spec).
 - A keyword-search results UI.
 - Conversation history / follow-up questions on an answer.
 - MCP/agent-facing surface.
 - Global and profile-scoped asks.
 - Transcript message-level indexing.
 - PR review threads and commit-message search.
-- Cursor and Codex local history import (Claude Code first; the command
-  and backend attribution carry over).
-- Fuzzy session-to-PR matching; v1 only trusts explicit PR URLs found in
-  the transcript.
