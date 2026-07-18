@@ -586,6 +586,11 @@ async def delete_trace(
     elif trace.blob_path:
         keys_to_delete.append(trace.blob_path)
 
+    # Trace soft-delete also drops its search documents (the FK cascade
+    # only covers hard deletes).
+    from app.search.index import delete_trace_documents
+    await delete_trace_documents(session, trace.id)
+
     # Soft-delete the row, then best-effort blob cleanup.
     trace.deleted_at = utcnow()
     await session.commit()
