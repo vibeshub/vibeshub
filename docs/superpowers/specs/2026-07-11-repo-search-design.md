@@ -1,7 +1,8 @@
 # Repo search: code and semantic search over session history
 
 Date: 2026-07-11
-Status: approved
+Status: superseded by 2026-07-18-repo-ask-design.md (agent-based ask
+replaces embeddings retrieval)
 
 ## Problem
 
