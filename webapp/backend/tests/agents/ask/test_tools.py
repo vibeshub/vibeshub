@@ -1,7 +1,6 @@
 import base64
 
 import pytest
-import respx
 
 from app.agents.ask.tools import (
     AskGitHubError,
@@ -120,6 +119,51 @@ async def test_get_pr_includes_body_and_files(db_session, respx_mock):
     assert out["title"] == "Fix auth"
     assert out["files"] == ["app/auth.py"]
     assert out["url"] == "https://github.com/alice/x/pull/7"
+
+
+async def test_list_commits_parses_and_truncates(db_session, respx_mock):
+    respx_mock.get("https://api.github.test/repos/alice/x/commits").respond(
+        200,
+        json=[
+            {
+                "sha": "abcdef0123456789abcdef0123456789abcdef01",
+                "commit": {
+                    "message": "Fix auth bug\n\nLonger body explaining why",
+                    "author": {"date": "2026-07-02T00:00:00Z"},
+                },
+                "author": {"login": "alice"},
+                "html_url": "https://github.com/alice/x/commit/abcdef0",
+            },
+            {
+                "sha": "1234567890123456789012345678901234567890",
+                "commit": {
+                    "message": "Tidy up",
+                    "author": {"date": "2026-07-01T00:00:00Z"},
+                },
+                "author": None,
+                "html_url": "https://github.com/alice/x/commit/1234567",
+            },
+        ],
+    )
+    out = await execute_tool(
+        _ctx(db_session), "list_commits", {"path": "app/auth.py"},
+    )
+    assert out["commits"] == [
+        {
+            "sha": "abcdef0",
+            "message": "Fix auth bug",
+            "date": "2026-07-02T00:00:00Z",
+            "author": "alice",
+            "url": "https://github.com/alice/x/commit/abcdef0",
+        },
+        {
+            "sha": "1234567",
+            "message": "Tidy up",
+            "date": "2026-07-01T00:00:00Z",
+            "author": None,
+            "url": "https://github.com/alice/x/commit/1234567",
+        },
+    ]
 
 
 async def test_get_file_decodes_and_truncates(db_session, respx_mock):
