@@ -134,8 +134,9 @@ never surfaces a private trace.
 
 - Signed-in viewer: their stored OAuth token (own rate-limit bucket, and
   grants whatever private access they have).
-- Anonymous viewer on a public repo: a server-level token
-  (`VIBESHUB_GITHUB_TOKEN`), because unauthenticated API calls would share
+- Anonymous viewer on a public repo: the existing server-level token
+  setting (`VIBESHUB_GITHUB_FALLBACK_TOKEN`, already consumed by
+  `PublicGitHubClient`), because unauthenticated API calls would share
   one 60/hr bucket on the server's IP.
 - Anonymous with no server token configured (dev edge): GitHub tools are
   omitted from the tool list up front; the run proceeds sessions-only and
