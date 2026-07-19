@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -109,29 +109,39 @@ describe("RepoAsk", () => {
   });
 
   it("ignores events after abort", async () => {
-    let captured: {
+    const calls: Array<{
       onEvent: (e: AskEvent) => void;
       signal: AbortSignal;
-    } | null = null;
+    }> = [];
     askRepoMock.mockImplementation(
       (
         _o: string, _r: string, _q: string,
         onEvent: (e: AskEvent) => void,
         signal: AbortSignal,
       ) => {
-        captured = { onEvent, signal };
+        calls.push({ onEvent, signal });
         return new Promise<void>(() => {});
       },
     );
     renderAsk({ active: true });
     const input = screen.getByPlaceholderText("Ask about this repo");
     await userEvent.type(input, "why{Enter}");
-    await waitFor(() => expect(captured).not.toBeNull());
-    // Escape aborts the in-flight ask via close().
+    await waitFor(() => expect(calls).toHaveLength(1));
+    const firstOnEvent = calls[0].onEvent;
+    // Escape aborts stream #1 via close().
     await userEvent.keyboard("{Escape}");
-    expect(captured!.signal.aborted).toBe(true);
-    // A trailing event from the aborted stream must be ignored.
-    captured!.onEvent({ kind: "delta", text: "stale trailing answer" });
+    expect(calls[0].signal.aborted).toBe(true);
+    // Ask #2 puts the panel back into streaming.
+    await userEvent.type(input, "why again{Enter}");
+    await waitFor(() => expect(calls).toHaveLength(2));
+    const secondOnEvent = calls[1].onEvent;
+    // A trailing delta from aborted stream #1 must not leak into
+    // ask #2's answer, while ask #2's own delta renders.
+    act(() => {
+      firstOnEvent({ kind: "delta", text: "stale trailing answer" });
+      secondOnEvent({ kind: "delta", text: "fresh answer" });
+    });
+    expect(screen.getByText(/fresh answer/)).toBeInTheDocument();
     expect(screen.queryByText(/stale trailing answer/)).not.toBeInTheDocument();
   });
 });
