@@ -53,6 +53,22 @@ describe("DigestPanel", () => {
     expect(screen.queryByText("Land")).not.toBeInTheDocument();
   });
 
+  it("trims surrounding whitespace on group items", () => {
+    render(
+      <DigestPanel
+        digest={{
+          ...sampleDigest,
+          decisions: ["  padded item  "],
+          dead_ends: [],
+          learnings: [],
+        }}
+      />,
+    );
+    const value = screen.getByText("padded item");
+    // Raw textContent, not the RTL-normalized match, proves the trim.
+    expect(value.textContent).toBe("padded item");
+  });
+
   it("renders nothing when the ask is blank and every list is empty", () => {
     const { container } = render(
       <DigestPanel

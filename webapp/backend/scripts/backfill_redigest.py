@@ -56,7 +56,13 @@ async def _subagent_blobs(store: BlobStore, trace: Trace) -> dict[str, bytes]:
 async def redigest_all(
     session: AsyncSession, store: BlobStore,
 ) -> dict[str, int]:
-    counts = {"redigested": 0, "no_digest": 0, "no_blob": 0, "v1_skipped": 0}
+    counts = {
+        "redigested": 0,
+        "skipped_unchanged": 0,
+        "no_digest": 0,
+        "no_blob": 0,
+        "v1_skipped": 0,
+    }
     trace_ids = (await session.execute(
         select(Trace.id).where(Trace.deleted_at.is_(None))
         .order_by(Trace.created_at)
@@ -76,12 +82,22 @@ async def redigest_all(
         if blob is None:
             counts["no_blob"] += 1
             continue
+        before = trace.digest_input_hash
         digest = await compute_digest(
             session, trace, blob=blob,
             subagent_blobs=await _subagent_blobs(store, trace),
         )
-        counts["redigested" if digest is not None else "no_digest"] += 1
-        await index_trace_documents(session, trace)
+        if digest is None:
+            counts["no_digest"] += 1
+        elif trace.digest_input_hash == before:
+            # Cache hit: prompt-aware hash already matched, no fresh LLM call.
+            counts["skipped_unchanged"] += 1
+        else:
+            counts["redigested"] += 1
+        # Re-index only on a real digest; re-indexing a failed re-digest would
+        # delete the old summary-body coverage and reinsert strictly less.
+        if digest is not None:
+            await index_trace_documents(session, trace)
         # Commit per trace so a stopped run keeps its progress.
         await session.commit()
         print(f"{trace.short_id}: {'ok' if digest is not None else 'no digest'}")

@@ -84,6 +84,7 @@ async def test_redigests_old_traces_and_reindexes(
     counts = await redigest_all(db_session, _store)
 
     assert counts["redigested"] == 1
+    assert counts["skipped_unchanged"] == 0
     assert client.responses.parse.call_count == 1
     assert trace.digest_json["decisions"] == NEW_PAYLOAD["decisions"]
     types = {d.source_type for d in (await db_session.execute(
@@ -108,7 +109,8 @@ async def test_second_run_skips_llm_call(
 
     # Resumable: the prompt-aware hash now matches, so no second LLM call.
     assert client.responses.parse.call_count == 1
-    assert counts["redigested"] == 1
+    assert counts["skipped_unchanged"] == 1
+    assert counts["redigested"] == 0
 
 
 @pytest.mark.asyncio

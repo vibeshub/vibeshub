@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from pydantic import BaseModel, Field, ValidationError, field_validator
+
+log = logging.getLogger("vibeshub.api.schemas")
 
 
 # Note: IngestRequest is gone — /api/ingest now takes raw tar bytes via the
@@ -44,7 +48,11 @@ def _digest_or_none(cls, value):
         return value
     try:
         return TraceDigest.model_validate(value)
-    except ValidationError:
+    except ValidationError as exc:
+        log.warning(
+            "ai_digest failed TraceDigest validation; hiding digest: %s",
+            str(exc)[:200],
+        )
         return None
 
 

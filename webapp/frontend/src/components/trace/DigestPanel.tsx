@@ -19,7 +19,9 @@ export function DigestPanel({ digest }: Props) {
   const groups = GROUPS.map(({ key, label }) => ({
     key,
     label,
-    items: (digest[key] ?? []).filter((s) => s.trim() !== ""),
+    items: (digest[key] ?? [])
+      .filter((s) => s.trim() !== "")
+      .map((s) => s.trim()),
   })).filter((g) => g.items.length > 0);
   if (!ask && groups.length === 0) return null;
   return (
