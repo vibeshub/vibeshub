@@ -62,7 +62,9 @@ async def test_get_session_returns_digest(db_session):
         _ctx(db_session), "get_session", {"trace_short_id": "abc12345"},
     )
     assert out["ask"] == "Add a /healthcheck route"
-    assert out["dead_ends"].startswith("Briefly considered")
+    assert out["dead_ends"] == DIGEST["dead_ends"]
+    assert out["learnings"] == DIGEST["learnings"]
+    assert "files" not in out
     assert len(out["chapters"]) == 2
 
 

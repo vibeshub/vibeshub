@@ -190,7 +190,7 @@ class SearchDocument(Base):
     trace_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("traces.id", ondelete="CASCADE"), index=True
     )
-    # "summary" | "chapter" | "files"
+    # "summary" | "decision" | "dead_end" | "learning" | "chapter" | "files"
     source_type: Mapped[str] = mapped_column(String(16))
     title: Mapped[str] = mapped_column(Text)
     body: Mapped[str] = mapped_column(Text)

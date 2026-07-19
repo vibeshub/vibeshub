@@ -178,7 +178,7 @@ async def _get_session(ctx: ToolContext, args: dict):
         "decisions": digest.get("decisions"),
         "dead_ends": digest.get("dead_ends"),
         "tests": digest.get("tests"),
-        "files": digest.get("files"),
+        "learnings": digest.get("learnings") or [],
         "chapters": digest.get("chapters") or [],
         "file_notes": digest.get("file_notes") or [],
     }

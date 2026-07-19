@@ -20,7 +20,8 @@ log = logging.getLogger("vibeshub.search.index")
 
 
 def explode_digest(trace: Trace) -> list[SearchDocument]:
-    """Digest -> up to 12 unsaved rows (1 summary + <=10 chapters + 1 files)."""
+    """Digest -> unsaved rows: 1 summary + per-item decision/dead_end/
+    learning docs + <=10 chapters + 1 files."""
     digest = trace.digest_json or {}
     title = (
         trace.title or trace.pr_title or digest.get("ask") or "Untitled session"
@@ -33,14 +34,25 @@ def explode_digest(trace: Trace) -> list[SearchDocument]:
         is_private=trace.is_private,
     )
     summary_body = " ".join(
-        s for s in (
-            digest.get("ask"), digest.get("decisions"),
-            digest.get("dead_ends"), digest.get("tests"),
-        ) if s
+        s for s in (digest.get("ask"), digest.get("tests")) if s
     )
     docs = [SearchDocument(
         source_type="summary", title=title, body=summary_body, **common,
     )]
+    for source_type, key in (
+        ("decision", "decisions"),
+        ("dead_end", "dead_ends"),
+        ("learning", "learnings"),
+    ):
+        items = digest.get(key)
+        # Pre-backfill rows hold prose strings here; don't iterate those.
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, str) and item.strip():
+                docs.append(SearchDocument(
+                    source_type=source_type, title=title, body=item, **common,
+                ))
     for ch in digest.get("chapters") or []:
         docs.append(SearchDocument(
             source_type="chapter",

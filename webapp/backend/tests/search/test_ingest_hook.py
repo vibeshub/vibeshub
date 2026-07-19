@@ -58,8 +58,10 @@ async def test_upload_with_digest_indexes_documents(
         rows = (await session.execute(
             select(SearchDocument)
         )).scalars().all()
-        assert len(rows) == 4
-        assert {r.source_type for r in rows} == {"summary", "chapter", "files"}
+        assert len(rows) == 7
+        assert {r.source_type for r in rows} == {
+            "summary", "decision", "dead_end", "learning", "chapter", "files",
+        }
         assert all(r.repo_full_name == "alice/repo" for r in rows)
 
 
