@@ -19,10 +19,10 @@ export interface FileNote {
 
 export interface TraceDigest {
   ask: string;
-  decisions: string;
-  files: string;
+  decisions: string[];
+  dead_ends: string[];
+  learnings: string[];
   tests: string;
-  dead_ends: string;
   chapters: DigestChapter[];
   file_notes?: FileNote[];
 }
