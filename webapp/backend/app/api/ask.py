@@ -49,7 +49,9 @@ def _sse(event: str, data: dict) -> str:
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        # Right-most entry is appended by our own proxy; left entries are
+        # client-supplied and spoofable.
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -133,10 +135,13 @@ async def ask_repo(
     )
 
     async def stream():
-        async for ev in run_ask(ctx, question):
-            yield _sse(ev.event, ev.data)
-        # run_ask adds agent_run rows to this session; make them durable.
-        await session.commit()
+        try:
+            async for ev in run_ask(ctx, question):
+                yield _sse(ev.event, ev.data)
+        finally:
+            # run_ask adds agent_run rows to this session; make them
+            # durable even when the client disconnects mid-stream.
+            await session.commit()
 
     return StreamingResponse(
         stream(),

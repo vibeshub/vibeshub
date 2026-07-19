@@ -1,5 +1,6 @@
 from sqlalchemy import select
 
+from tests._auth_helpers import authed_cookies
 from tests.test_traces import make_bundle, _ingest_headers
 from tests.search.test_index import DIGEST
 
@@ -78,6 +79,41 @@ async def test_delete_trace_removes_documents(
     assert resp.status_code == 204
 
     SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(SearchDocument)
+        )).scalars().all()
+        assert rows == []
+
+
+async def test_patch_clearing_association_removes_documents(
+    client, respx_mock, monkeypatch,
+):
+    from app.storage.models import SearchDocument
+
+    _mock_github(respx_mock)
+    _patch_digest(monkeypatch)
+    short_id = _ingest(client, respx_mock)
+
+    # Docs exist after a public ingest.
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(SearchDocument)
+        )).scalars().all()
+        assert rows, "expected search documents after public ingest"
+
+    # The ingest mock authenticates the uploader as "alice".
+    cookies, _ = await authed_cookies(client, login="alice")
+    resp = client.patch(
+        f"/api/traces/{short_id}",
+        json={"repo_full_name": None, "pr_url": None},
+        cookies=cookies,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["repo_full_name"] is None
+
+    # Clearing the association back to standalone drops the stale docs.
     async with SessionLocal() as session:
         rows = (await session.execute(
             select(SearchDocument)

@@ -73,7 +73,7 @@ export function RepoPage() {
 
   const traceCount = data.stats.trace_count;
   const description =
-    `${owner}/${repo} on vibeshub — ` +
+    `${owner}/${repo} on vibeshub: ` +
     (traceCount > 0
       ? `${traceCount} Claude Code session${traceCount === 1 ? "" : "s"} from this repository.`
       : "Claude Code sessions for this repository.");

@@ -175,3 +175,25 @@ async def test_anonymous_rate_limited_429(client, monkeypatch):
     )
     assert resp.status_code == 429
     assert resp.headers.get("Retry-After") == "3600"
+
+
+async def test_spoofed_forwarded_for_left_does_not_reset_limit(
+    client, monkeypatch,
+):
+    """A client-controlled left-most XFF entry must not create a fresh rate
+    bucket; the trusted right-most (proxy-appended) entry keys the limit."""
+    await _seed_trace(client)
+    monkeypatch.setattr(
+        "app.api.ask.run_ask",
+        _fake_run_ask([AskEvent("done", {"best_effort": False})]),
+    )
+    for i in range(5):
+        assert client.post(
+            "/api/repos/alice/x/ask", json={"question": "why?"},
+            headers={"X-Forwarded-For": f"spoof{i}, 10.0.0.1"},
+        ).status_code == 200
+    resp = client.post(
+        "/api/repos/alice/x/ask", json={"question": "why?"},
+        headers={"X-Forwarded-For": "spoof-final, 10.0.0.1"},
+    )
+    assert resp.status_code == 429
