@@ -37,3 +37,55 @@ describe("collectOps captures file content for the net diff", () => {
     expect(ops[0].finalContent).toBeNull();
   });
 });
+
+describe("collectOps attributes subagent edits to the dispatching tool", () => {
+  function promptEvent(uuid: string): StreamEvent {
+    return { kind: "user_prompt", text: "do it", ts: "2026-06-19T10:00:00Z", uuid };
+  }
+  function dispatch(name: string): StreamEvent {
+    return {
+      kind: "tool_use",
+      name,
+      input: { subagent_type: "refactor", prompt: "go" },
+      id: "toolu_dispatch",
+      ts: "2026-06-19T10:00:01Z",
+      msgId: "m1",
+      uuid: "u-dispatch",
+      result: null,
+    };
+  }
+  const subEdit: StreamEvent = {
+    kind: "tool_use",
+    name: "Edit",
+    input: { file_path: "/r/sub.ts", old_string: "x", new_string: "y" },
+    id: "toolu_sub",
+    ts: "2026-06-19T10:00:02Z",
+    msgId: "m2",
+    uuid: "u-sub",
+    result: null,
+  };
+
+  it.each(["Agent", "Task", "Subagent", "spawn_agent"])(
+    "links a %s dispatch to the prompt that was active",
+    (name) => {
+      const { ops } = collectOps(
+        [promptEvent("p1"), dispatch(name)],
+        [
+          {
+            agent: {
+              agent_id: "a1",
+              tool_use_id: "toolu_dispatch",
+              agent_type: "refactor",
+              description: "",
+              message_count: 1,
+            },
+            stream: [subEdit],
+          },
+        ],
+      );
+      expect(ops).toHaveLength(1);
+      expect(ops[0].prompt.ordinal).toBe(1);
+      expect(ops[0].jumpUuid).toBe("u-dispatch");
+    },
+  );
+});

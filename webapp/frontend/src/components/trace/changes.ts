@@ -1,4 +1,5 @@
 import type { AgentSummary } from "../../types";
+import { isSubagentTool } from "./tools";
 import type {
   StreamEvent,
   ToolUseEvent,
@@ -217,7 +218,7 @@ export function collectOps(
     if (e.name === "Read" && typeof e.input.file_path === "string") {
       reads.add(e.input.file_path);
     }
-    if (e.name === "Task") {
+    if (isSubagentTool(e.name)) {
       taskByToolId.set(e.id, { uuid: e.uuid || null, prompt: current, pos });
     }
     if (FILE_EDIT_TOOLS.has(e.name)) {

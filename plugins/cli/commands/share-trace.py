@@ -62,6 +62,16 @@ def _server_base(server_url: str) -> str:
     return server_url.rstrip("/")
 
 
+def _plugin_user_agent() -> str:
+    # Cloudflare bot protection bans urllib's default Python-urllib/x.y
+    # signature (403 error code 1010); every request must carry ours.
+    from vibeshub_client.version import PLUGIN_VERSION
+    return f"vibeshub-plugin/{PLUGIN_VERSION}"
+
+
+_USER_AGENT = _plugin_user_agent()
+
+
 async def _delete_by_short_id(short_id: str, server_url: str) -> None:
     from urllib import error as urllib_error
     from urllib import request as urllib_request
@@ -71,7 +81,10 @@ async def _delete_by_short_id(short_id: str, server_url: str) -> None:
     def _do_delete(token: str) -> tuple[int, str]:
         req = urllib_request.Request(
             f"{_server_base(server_url)}/api/traces/{short_id}",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "User-Agent": _USER_AGENT,
+            },
             method="DELETE",
         )
         try:
@@ -79,6 +92,8 @@ async def _delete_by_short_id(short_id: str, server_url: str) -> None:
                 return resp.status, resp.read().decode("utf-8", errors="replace")
         except urllib_error.HTTPError as e:
             return e.code, e.read().decode("utf-8", errors="replace")
+        except (urllib_error.URLError, OSError) as e:
+            return 0, str(e)
 
     token = get_gh_token()
     status, body = await asyncio.to_thread(_do_delete, token)
@@ -100,13 +115,19 @@ async def _delete_by_pr(pr_url: str, server_url: str) -> None:
     )
 
     def _list() -> list[dict] | None:
+        req = urllib_request.Request(
+            list_url, headers={"User-Agent": _USER_AGENT}
+        )
         try:
-            with urllib_request.urlopen(list_url, timeout=15.0) as resp:
+            with urllib_request.urlopen(req, timeout=15.0) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib_error.HTTPError as e:
             if e.code == 404:
                 return None
             print(f"list failed: HTTP {e.code}", file=sys.stderr)
+            return None
+        except (urllib_error.URLError, OSError) as e:
+            print(f"list failed: {e}", file=sys.stderr)
             return None
         return data.get("traces", [])
 

@@ -204,3 +204,11 @@ describe("toolSummary", () => {
     expect(summary.length).toBeLessThanOrEqual(80);
   });
 });
+
+describe("toolSummary update_plan", () => {
+  it("does not throw when plan is not an array", () => {
+    expect(toolSummary("update_plan", { plan: "not a list" }, null)).toBe(
+      "0/0 steps",
+    );
+  });
+});

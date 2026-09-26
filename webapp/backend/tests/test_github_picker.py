@@ -1,3 +1,4 @@
+import httpx
 import pytest
 import respx
 
@@ -102,3 +103,35 @@ async def test_repo_prs_404_for_missing_repo(
         "/api/github/repo-prs?repo=alice/missing", cookies=cookies
     )
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_my_repos_cache_is_per_user(
+    client, respx_mock: respx.MockRouter,
+):
+    """Two users hitting the same path within the cache TTL must each get
+    their own GitHub data; the cache must be keyed on the viewer token."""
+    alice, _ = await authed_cookies(
+        client, login="alice", access_token="gho_alice"
+    )
+    bob, _ = await authed_cookies(
+        client, github_id=101, login="bob", access_token="gho_bob"
+    )
+
+    def by_token(request):
+        auth = request.headers.get("Authorization", "")
+        who = "alice" if auth.endswith("gho_alice") else "bob"
+        return httpx.Response(200, json=[
+            {"full_name": f"{who}/secret", "name": "secret",
+             "private": True},
+        ])
+
+    respx_mock.get(f"{API}/user/repos").mock(side_effect=by_token)
+
+    r = client.get("/api/github/my-repos", cookies=alice)
+    assert r.status_code == 200
+    assert [x["full_name"] for x in r.json()["repos"]] == ["alice/secret"]
+
+    r = client.get("/api/github/my-repos", cookies=bob)
+    assert r.status_code == 200
+    assert [x["full_name"] for x in r.json()["repos"]] == ["bob/secret"]

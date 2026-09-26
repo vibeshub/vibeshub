@@ -15,11 +15,24 @@ class RedactionReport:
 # Order matters: more specific patterns first, since text replacement is
 # applied sequentially and overlaps would otherwise be partially shadowed.
 _PATTERNS: list[tuple[str, re.Pattern[bytes]]] = [
+    # PEM blocks first: their body is base64 and would otherwise be chewed
+    # up piecemeal by the aws_secret pattern, leaving the header intact.
+    ("private_key", re.compile(
+        rb"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+        re.DOTALL,
+    )),
     ("anthropic_key", re.compile(rb"sk-ant-[A-Za-z0-9_\-]{20,}")),
-    ("openai_key", re.compile(rb"sk-[A-Za-z0-9]{40,}")),
+    # Classic `sk-...` keys plus project/service-account/admin keys
+    # (`sk-proj-...`), whose extra dash stops the classic pattern short.
+    ("openai_key", re.compile(rb"sk-(?:(?:proj|svcacct|admin)-)?[A-Za-z0-9_\-]{40,}")),
+    ("github_pat", re.compile(rb"github_pat_[A-Za-z0-9_]{22,}")),
     ("github_token", re.compile(rb"gh[pousr]_[A-Za-z0-9]{30,}")),
+    ("slack_token", re.compile(rb"xox[abpr]-[A-Za-z0-9\-]{10,}")),
     ("aws_access_key_id", re.compile(rb"AKIA[0-9A-Z]{16}")),
-    ("aws_secret_access_key", re.compile(rb"(?<![A-Za-z0-9/+])[A-Za-z0-9/+]{40}(?![A-Za-z0-9/+])")),
+    # The lookbehind excludes a backslash so the letter of a JSON escape
+    # (`\n`, `\t`) can't be counted as the 40th char; that used to corrupt
+    # the escape and make the whole line unparseable.
+    ("aws_secret_access_key", re.compile(rb"(?<![A-Za-z0-9/+\\])[A-Za-z0-9/+]{40}(?![A-Za-z0-9/+])")),
     ("jwt", re.compile(rb"eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}")),
     # KEY=value where value looks high-entropy and >= 16 chars
     ("env_assignment", re.compile(rb"([A-Z][A-Z0-9_]{2,}_(?:KEY|TOKEN|SECRET|PASSWORD|PASS))=([A-Za-z0-9/+=_\-]{16,})")),

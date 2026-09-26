@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,10 +17,13 @@ class SessionPaths:
 
 def _encode_cwd(cwd: str) -> str:
     """
-    Claude Code's transcript directory uses the absolute cwd with `/` replaced
-    by `-`. For `/Users/x/repo` this gives `-Users-x-repo`.
+    Claude Code's transcript directory is the absolute cwd with every
+    non-alphanumeric character replaced by `-` (not just `/`). For
+    `/Users/x/repo` this gives `-Users-x-repo`; for a worktree at
+    `/Users/x/repo/.claude/worktrees/feat` it gives
+    `-Users-x-repo--claude-worktrees-feat`.
     """
-    return cwd.replace("/", "-")
+    return re.sub(r"[^A-Za-z0-9]", "-", cwd)
 
 
 def _find_subagents_dir(home: Path, transcript_dir: Path, session_id: str) -> Path | None:
@@ -72,6 +76,17 @@ class ClaudeCodeTranscriptReader(TranscriptReader):
                         subagents_dir=_find_subagents_dir(home, c.parent, session_id),
                     )
             time.sleep(0.2)
+
+        # Last resort: the session id is globally unique, so scan every
+        # project dir (same trick as _find_subagents_dir). Covers a shell
+        # that drifted out of the project root and any encoding surprise.
+        projects = home / ".claude" / "projects"
+        for match in sorted(projects.glob(f"*/{session_id}.jsonl")):
+            if match.is_file():
+                return SessionPaths(
+                    main_jsonl=match,
+                    subagents_dir=_find_subagents_dir(home, match.parent, session_id),
+                )
 
         # Final probe: even when main isn't found, surface subagents/ if it
         # exists (aborted-parent edge case).

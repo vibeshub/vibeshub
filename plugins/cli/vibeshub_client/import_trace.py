@@ -116,7 +116,11 @@ def claude_dest(claude_home: Path, cwd: str, session_uuid: str) -> Path:
     # bad response, not a session.
     if not _SESSION_UUID_RE.match(session_uuid) or ".." in session_uuid:
         raise ImportTraceError(f"unexpected session id: {session_uuid}")
-    encoded = cwd.replace("/", "-")
+    # Claude Code replaces every non-alphanumeric character with "-", so a
+    # worktree at /x/repo/.claude/worktrees/feat lives under
+    # -x-repo--claude-worktrees-feat. Anything else lands in a directory
+    # Claude never reads, and `claude --resume` can't find the session.
+    encoded = re.sub(r"[^A-Za-z0-9]", "-", cwd)
     return claude_home / "projects" / encoded / f"{session_uuid}.jsonl"
 
 

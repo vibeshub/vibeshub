@@ -235,7 +235,9 @@ async def get_user_overview(
         .where(
             or_(
                 Trace.owner_login == login,
-                Trace.repo_full_name.startswith(prefix),
+                # autoescape: a login like "%" or "a_b" must not act as a
+                # LIKE wildcard and sweep in other users' repos.
+                Trace.repo_full_name.startswith(prefix, autoescape=True),
             ),
             Trace.deleted_at.is_(None),
         )

@@ -207,13 +207,14 @@ def test_delete_by_pr_happy_path(capsys):
     delete_resp = _fake_http_response(204, "")
 
     def fake_urlopen(req_or_url, *args, **kwargs):
-        # First call is the GET list (a str URL), second is the DELETE.
-        if isinstance(req_or_url, str):
-            assert req_or_url == (
+        # First call is the GET list, second is the DELETE. Both are
+        # Request objects so they can carry the plugin User-Agent.
+        if req_or_url.get_method() == "GET":
+            assert req_or_url.full_url == (
                 "https://vibeshub.ai/api/traces/alice/repo/pull/7"
             )
             return list_resp
-        assert req_or_url.method == "DELETE"
+        assert req_or_url.get_method() == "DELETE"
         return delete_resp
 
     with patch("vibeshub_client.gh_token.get_gh_token", return_value="tok"), \
@@ -292,3 +293,45 @@ def test_share_allows_codex_manual_upload_without_session_id(capsys):
     assert select.call_args.args[0]["plugin_root"].endswith(
         "/.codex/plugins/cache/vibeshub/vibeshub/0.4.0"
     )
+
+
+# --- Cloudflare: every request must carry the plugin User-Agent ---
+
+
+def test_delete_by_short_id_sends_plugin_user_agent():
+    import asyncio
+    from vibeshub_client.version import PLUGIN_VERSION
+
+    mod = _load_share_trace()
+    with patch("vibeshub_client.gh_token.get_gh_token", return_value="tok"), \
+         patch("urllib.request.urlopen",
+               return_value=_fake_http_response(204, "")) as urlopen:
+        asyncio.run(mod._delete_by_short_id("abc1234567", "https://vibeshub.ai"))
+    req = urlopen.call_args.args[0]
+    assert req.get_header("User-agent") == f"vibeshub-plugin/{PLUGIN_VERSION}"
+
+
+def test_delete_by_pr_sends_plugin_user_agent():
+    import asyncio
+    from vibeshub_client.version import PLUGIN_VERSION
+
+    mod = _load_share_trace()
+    with patch("urllib.request.urlopen",
+               return_value=_fake_http_response(
+                   200, json.dumps({"traces": []}))) as urlopen:
+        asyncio.run(mod._delete_by_pr(
+            "https://github.com/alice/repo/pull/7", "https://vibeshub.ai"))
+    req = urlopen.call_args.args[0]
+    assert req.get_header("User-agent") == f"vibeshub-plugin/{PLUGIN_VERSION}"
+
+
+def test_delete_by_short_id_network_error_is_reported(capsys):
+    import asyncio
+    from urllib import error as urllib_error
+
+    mod = _load_share_trace()
+    with patch("vibeshub_client.gh_token.get_gh_token", return_value="tok"), \
+         patch("urllib.request.urlopen",
+               side_effect=urllib_error.URLError("connection refused")):
+        asyncio.run(mod._delete_by_short_id("abc1234567", "https://vibeshub.ai"))
+    assert "delete failed" in capsys.readouterr().err

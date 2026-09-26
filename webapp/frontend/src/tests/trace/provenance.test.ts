@@ -497,6 +497,25 @@ describe("subagents", () => {
     expect(m.attribution.slices.find((s) => s.key === "human")!.lines).toBe(0);
   });
 
+  it("recognises current Claude Code's Agent tool as a subagent dispatch", () => {
+    const stream = [
+      prompt("p1", "refactor the module"),
+      tool("Agent", "t-task", { subagent_type: "refactor", prompt: "go" }),
+    ];
+    const entries: SubagentEntry[] = [
+      {
+        agent: agent({ tool_use_id: "id-t-task", agent_type: "refactor" }),
+        stream: [
+          tool("Edit", "s1", { file_path: "/r/c.ts", old_string: "u", new_string: "v" }),
+        ],
+      },
+    ];
+    const m = build(stream, entries);
+    const sub = m.files.find((f) => f.path === "/r/c.ts")!;
+    expect(sub.hunks[0].agentType).toBe("refactor");
+    expect(sub.hunks[0].promptIdx).toBe(1);
+  });
+
   it("links read-only research subagents to later hunks from the same prompt", () => {
     const stream = [
       prompt("p1", "rethink the diff view"),

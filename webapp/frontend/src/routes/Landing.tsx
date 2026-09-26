@@ -478,7 +478,7 @@ export function Landing() {
                   <span className={styles.wayMiniCmd}>&gt; /handoff</span>
                   {"\n"}
                   <span className={styles.ok}>
-                    → uploaded · codex resume 0198a4 ✓
+                    → uploaded · codex resume 0198a4-… ✓
                   </span>
                 </pre>
               </div>

@@ -96,6 +96,8 @@ function renderBody(
     case "TaskUpdate":
       return <TaskBody mode="update" input={event.input} />;
     case "Agent":
+    case "Task":
+    case "Subagent":
     case "spawn_agent":
       return (
         <AgentBody

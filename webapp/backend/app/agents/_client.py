@@ -19,6 +19,8 @@ from openai import OpenAI
 _ENV_API_KEY = "VIBESHUB_OPENAI_API_KEY"
 _ENV_ENDPOINT = "VIBESHUB_OPENAI_ENDPOINT"
 _ENV_MODEL = "VIBESHUB_OPENAI_MODEL"
+_TIMEOUT_SECONDS = 120.0
+_MAX_RETRIES = 1
 
 
 def get_client() -> OpenAI | None:
@@ -27,7 +29,12 @@ def get_client() -> OpenAI | None:
     model = os.environ.get(_ENV_MODEL, "")
     if not (api_key and endpoint and model):
         return None
-    return OpenAI(base_url=endpoint, api_key=api_key)
+    # Bound the call: the SDK default is a 600s timeout with 2 retries,
+    # which could pin a request for 30 minutes on a hung endpoint.
+    return OpenAI(
+        base_url=endpoint, api_key=api_key,
+        timeout=_TIMEOUT_SECONDS, max_retries=_MAX_RETRIES,
+    )
 
 
 def get_model() -> str:

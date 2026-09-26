@@ -38,6 +38,23 @@ const TOOL_META: Record<string, ToolMeta> = {
   Subagent: { cat: "agent", label: "Subagent" },
 };
 
+/**
+ * Every tool name that dispatches a subagent, across platforms and Claude
+ * Code versions: current Claude Code emits "Agent", older transcripts and the
+ * Cursor converter emit "Task"/"Subagent", Codex emits "spawn_agent". Anything
+ * that links a subagent stream back to its dispatch must use this set.
+ */
+export const SUBAGENT_TOOLS: ReadonlySet<string> = new Set([
+  "Agent",
+  "Task",
+  "Subagent",
+  "spawn_agent",
+]);
+
+export function isSubagentTool(name: string): boolean {
+  return SUBAGENT_TOOLS.has(name);
+}
+
 export function toolCat(name: string): ToolCategory {
   return TOOL_META[name]?.cat ?? "other";
 }

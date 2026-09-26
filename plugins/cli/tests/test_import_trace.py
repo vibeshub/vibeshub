@@ -321,3 +321,11 @@ def test_run_import_claude_collision_re_ids(monkeypatch, tmp_path, capsys):
     assert [r["sessionId"] for r in records] == [new_id, new_id]
     assert [r["uuid"] for r in records] == ["u0", "u1"]
     assert f"claude --resume {new_id}" in capsys.readouterr().out
+
+
+def test_claude_dest_encodes_worktree_cwd_like_claude_code():
+    p = claude_dest(
+        Path("/x/.claude"), "/Users/y/repo/.claude/worktrees/feat", "abc-def")
+    assert str(p) == (
+        "/x/.claude/projects/-Users-y-repo--claude-worktrees-feat/abc-def.jsonl"
+    )

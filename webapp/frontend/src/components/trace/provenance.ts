@@ -1,4 +1,5 @@
 import type { Session, StreamEvent, ToolUseEvent } from "./types";
+import { isSubagentTool } from "./tools";
 import type { EditOp, SubagentEntry } from "./changes";
 import {
   collectOps,
@@ -435,7 +436,7 @@ function collectAgentFacts(
   let ordinal = 0;
   stream.forEach((e, pos) => {
     if (e.kind === "user_prompt") ordinal += 1;
-    else if (e.kind === "tool_use" && e.name === "Task") {
+    else if (e.kind === "tool_use" && isSubagentTool(e.name)) {
       taskPos.set(e.id, { pos, ordinal });
     }
   });

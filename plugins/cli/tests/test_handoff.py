@@ -306,3 +306,30 @@ def test_handoff_md_invokes_the_command_script():
     body = (_HANDOFF_PATH.parent / "handoff.md").read_text(encoding="utf-8")
     assert "commands/handoff.py" in body
     assert "—" not in body
+
+
+def test_handoff_warns_when_upload_is_standalone_public(monkeypatch, capsys):
+    mod = _load_handoff()
+
+    async def fake_pipeline(*, reader, hook_input, options):
+        return types.SimpleNamespace(
+            uploaded=True,
+            trace_url="https://vibeshub.ai/t/abc123",
+            skip_reason=None,
+        )
+
+    def fake_run_import(ref, target, *, server, cwd, checkout):
+        print("resume with: codex resume 0191-abc")
+        return 0
+
+    _wire(mod, monkeypatch, pipeline=fake_pipeline, run_import=fake_run_import)
+    monkeypatch.setattr(mod, "_resolve_target", lambda *, arg: (None, None))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sess-1")
+
+    with pytest.raises(SystemExit) as exc:
+        mod.main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "standalone (public) trace" in captured.err
+    assert captured.out.rstrip().endswith("resume with: codex resume 0191-abc")
