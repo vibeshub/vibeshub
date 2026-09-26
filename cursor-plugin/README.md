@@ -10,7 +10,7 @@ team can see how a change was actually built.
 > [`vibeshub/vibeshub-cursor`](https://github.com/vibeshub/vibeshub-cursor).
 > Send changes to `plugins/cli`.
 
-Version: 0.6.1
+Version: 0.6.2
 
 ## What it does
 
