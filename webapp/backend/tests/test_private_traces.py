@@ -331,3 +331,16 @@ async def test_user_overview_mixed_public_private_for_anonymous(
     # Stats reflect only the visible public subset.
     assert body["stats"]["trace_count"] == 1
     assert body["stats"]["repo_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_user_namespace_lookup_escapes_like_wildcards(
+    client, respx_mock
+):
+    # "%" as a login must not become LIKE '%/%' and return every repo trace.
+    _ingest(client, respx_mock, private=False)
+    assert client.get("/api/users/alice").json()["traces"] != []
+    resp = client.get("/api/users/%25")
+    assert resp.status_code == 200
+    assert resp.json()["traces"] == []
+    assert resp.json()["repos"] == []

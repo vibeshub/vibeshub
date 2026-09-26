@@ -15,6 +15,7 @@ Never raises. Returns the validated Digest on success, None otherwise.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import time
@@ -84,7 +85,11 @@ async def compute_digest(
     model = get_model()
     started = time.monotonic()
     try:
-        response = client.responses.parse(
+        # The OpenAI client is synchronous; run it off the event loop so a
+        # multi-second (or hung) LLM call doesn't stall every other request
+        # on this worker.
+        response = await asyncio.to_thread(
+            client.responses.parse,
             model=model,
             instructions=SYSTEM_PROMPT,
             input=distilled,

@@ -141,3 +141,52 @@ describe("ToolCard hooks", () => {
     expect(getByText("PostToolUse:Bash")).toBeInTheDocument();
   });
 });
+
+describe("ToolCard subagent bodies", () => {
+  function renderOpen(ev: ToolUseEvent) {
+    const utils = render(
+      <ToolCard
+        event={ev}
+        root={null}
+        followingPrompt={null}
+        shortId="abc"
+        agents={[]}
+        progress={[]}
+      />,
+    );
+    fireEvent.click(utils.container.querySelector("button[aria-expanded]")!);
+    return utils;
+  }
+
+  it.each(["Agent", "Task", "Subagent", "spawn_agent"])(
+    "renders the subagent body for a %s tool call",
+    (name) => {
+      const { container } = renderOpen({
+        ...toolEvent(),
+        name,
+        input: { subagent_type: "Explore", prompt: "scout" },
+      });
+      expect(container.querySelector(".subagent-card")).not.toBeNull();
+    },
+  );
+
+  it("does not crash when AskUserQuestion questions is not an array", () => {
+    expect(() =>
+      renderOpen({
+        ...toolEvent(),
+        name: "AskUserQuestion",
+        input: { questions: '[{"question":"?"}]' },
+      }),
+    ).not.toThrow();
+  });
+
+  it("does not crash when update_plan plan is not an array", () => {
+    expect(() =>
+      renderOpen({
+        ...toolEvent(),
+        name: "update_plan",
+        input: { plan: "step one" },
+      }),
+    ).not.toThrow();
+  });
+});

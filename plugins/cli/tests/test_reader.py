@@ -156,3 +156,43 @@ def test_find_session_paths_no_subagents(tmp_path: Path, monkeypatch):
     )
     assert paths.main_jsonl == target
     assert paths.subagents_dir is None
+
+
+def test_encode_cwd_matches_claude_code_for_worktrees_and_punctuation():
+    # Claude Code replaces every non-alphanumeric character with "-", not
+    # just "/": ~/.claude/projects has dirs like
+    # "-Users-x-git-tandem--claude-worktrees-review-flag".
+    from reader import _encode_cwd
+    assert _encode_cwd("/Users/x/git/tandem/.claude/worktrees/review-flag") == \
+        "-Users-x-git-tandem--claude-worktrees-review-flag"
+    assert _encode_cwd("/Users/x/my_app/foo.js") == "-Users-x-my-app-foo-js"
+    assert _encode_cwd("/Users/x/repo") == "-Users-x-repo"
+
+
+def test_find_session_locates_transcript_in_worktree(tmp_path: Path, monkeypatch):
+    cwd = tmp_path / "repo" / ".claude" / "worktrees" / "feat"
+    cwd.mkdir(parents=True)
+    home = tmp_path / "fakehome"
+    from reader import _encode_cwd
+    transcripts_dir = home / ".claude" / "projects" / _encode_cwd(str(cwd))
+    transcripts_dir.mkdir(parents=True)
+    target = transcripts_dir / "sess-1.jsonl"
+    target.write_text("{}\n")
+    monkeypatch.setenv("HOME", str(home))
+    found = ClaudeCodeTranscriptReader().find_session(
+        {"session_id": "sess-1", "cwd": str(cwd)})
+    assert found == target
+
+
+def test_find_session_falls_back_to_scanning_projects(tmp_path: Path, monkeypatch):
+    # The session id is globally unique; if the cwd encoding misses (shell
+    # drifted into a subdir, unusual path), find it anywhere under projects.
+    home = tmp_path / "fakehome"
+    other = home / ".claude" / "projects" / "-somewhere-else"
+    other.mkdir(parents=True)
+    target = other / "sess-2.jsonl"
+    target.write_text("{}\n")
+    monkeypatch.setenv("HOME", str(home))
+    found = ClaudeCodeTranscriptReader().find_session(
+        {"session_id": "sess-2", "cwd": str(tmp_path / "repo")})
+    assert found == target

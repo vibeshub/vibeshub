@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from collections import OrderedDict
@@ -35,7 +36,11 @@ class GitHubUpstreamError(Exception):
         self.body = body
 
 
-CacheKey = Tuple[str, FrozenSet[Tuple[str, str]]]
+# (token identity, path, params). The token identity is a short hash of the
+# bearer token actually sent upstream, so responses fetched with one user's
+# token are never served to another user (or to anonymous fallback-token
+# callers). All fallback-token callers share one identity and one cache.
+CacheKey = Tuple[str, str, FrozenSet[Tuple[str, str]]]
 
 
 @dataclass
@@ -44,6 +49,10 @@ class _Entry:
     payload: Any
     expires_at: float  # monotonic seconds
     link: Optional[str]
+
+
+def _token_id(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
 
 
 class PublicGitHubClient:
@@ -108,6 +117,7 @@ class PublicGitHubClient:
         token = self._select_token(viewer_token)
         ttl = self._ttl if ttl_seconds is None else ttl_seconds
         key = self._key(
+            token,
             "POST /graphql",
             {"q": query, "v": json.dumps(variables, sort_keys=True)},
         )
@@ -176,9 +186,9 @@ class PublicGitHubClient:
 
     # --- internals --------------------------------------------------------
 
-    def _key(self, path: str, params: dict | None) -> CacheKey:
+    def _key(self, token: str, path: str, params: dict | None) -> CacheKey:
         items = frozenset((k, str(v)) for k, v in (params or {}).items())
-        return (path, items)
+        return (_token_id(token), path, items)
 
     def _select_token(self, viewer_token: str | None) -> str:
         token = viewer_token or self._fallback_token
@@ -194,7 +204,7 @@ class PublicGitHubClient:
         params: dict | None,
     ) -> tuple[Any, Optional[str]]:
         token = self._select_token(viewer_token)
-        key = self._key(path, params)
+        key = self._key(token, path, params)
         now = monotonic()
 
         cached = self._cache.get(key)

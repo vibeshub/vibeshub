@@ -203,3 +203,71 @@ def test_login_default_does_not_request_repo_scope(client):
     assert resp.status_code in (302, 307)
     location = resp.headers["location"]
     assert "repo" not in location
+
+
+def _login_as(client, respx_mock, *, github_id: int, login: str, token: str):
+    respx_mock.reset()
+    r = client.get("/api/auth/github/login", follow_redirects=False)
+    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+    respx_mock.post("https://github.com/login/oauth/access_token").respond(
+        200, json={"access_token": token, "scope": "read:user,user:email"}
+    )
+    respx_mock.get("https://api.github.test/user").respond(
+        200, json={"id": github_id, "login": login, "name": login, "avatar_url": ""}
+    )
+    respx_mock.get("https://api.github.test/user/emails").respond(200, json=[])
+    return client.get(
+        f"/api/auth/github/callback?code=c&state={state}", follow_redirects=False
+    )
+
+
+@pytest.mark.asyncio
+async def test_login_with_reused_github_login_does_not_500(
+    client, respx_mock: respx.MockRouter
+):
+    # github_id=42 owned "foo", renamed away; github_id=99 now owns "foo".
+    assert _login_as(client, respx_mock, github_id=42, login="foo", token="t1").status_code == 303
+    r = _login_as(client, respx_mock, github_id=99, login="foo", token="t2")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/"
+
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        new_owner = (await session.execute(
+            select(User).where(User.github_login == "foo")
+        )).scalar_one()
+        assert new_owner.github_id == 99
+        old = (await session.execute(
+            select(User).where(User.github_id == 42)
+        )).scalar_one()
+        assert old.github_login != "foo"
+
+
+@pytest.mark.asyncio
+async def test_rename_carries_trace_ownership_and_login_reuse_does_not(
+    client, respx_mock: respx.MockRouter
+):
+    from app.storage.models import Trace
+
+    _login_as(client, respx_mock, github_id=42, login="alice", token="t1")
+    SessionLocal = client.app.state.session_maker
+    async with SessionLocal() as session:
+        session.add(Trace(
+            short_id="abc12345", owner_login="alice", platform="web",
+            byte_size=10, message_count=1, is_private=False,
+        ))
+        await session.commit()
+
+    # Someone else takes "alice": the trace must NOT become theirs.
+    _login_as(client, respx_mock, github_id=99, login="alice", token="t2")
+    async with SessionLocal() as session:
+        t = (await session.execute(select(Trace))).scalar_one()
+        assert t.owner_login != "alice"
+        displaced = t.owner_login
+
+    # The original user logs in under their new name: ownership follows.
+    _login_as(client, respx_mock, github_id=42, login="alice-new", token="t3")
+    async with SessionLocal() as session:
+        t = (await session.execute(select(Trace))).scalar_one()
+        assert t.owner_login == "alice-new"
+        assert t.owner_login != displaced

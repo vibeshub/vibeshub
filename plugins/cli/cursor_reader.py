@@ -11,6 +11,19 @@ def _projects_root() -> Path:
     return Path.home() / ".cursor" / "projects"
 
 
+def _workspace_project_dir(hook_input: dict) -> Path | None:
+    """Cursor names a project dir after the workspace root with "/" turned
+    into "-" and the leading slash dropped (/Users/x/repo -> Users-x-repo).
+    Returns that dir when the payload names a workspace root and the dir
+    exists; None otherwise."""
+    roots = hook_input.get("workspace_roots")
+    root = roots[0] if isinstance(roots, list) and roots else None
+    if not isinstance(root, str) or not root:
+        return None
+    candidate = _projects_root() / root.strip("/").replace("/", "-")
+    return candidate if candidate.is_dir() else None
+
+
 def _subagents_dir(main_jsonl: Path) -> Path | None:
     d = main_jsonl.parent / "subagents"
     return d if d.is_dir() else None
@@ -36,12 +49,27 @@ class CursorTranscriptReader(TranscriptReader):
         # 3. Newest agent transcript by mtime (the just-finished session). The
         # glob matches only main transcripts (<proj>/agent-transcripts/<uuid>/
         # <uuid>.jsonl); subagent files live one level deeper and are excluded.
-        transcripts = sorted(
-            _projects_root().glob("*/agent-transcripts/*/*.jsonl"),
-            key=lambda f: f.stat().st_mtime,
-            reverse=True,
-        )
-        main = transcripts[0] if transcripts else _projects_root() / "missing.jsonl"
+        # Scope the search to this workspace's project dir when we can name
+        # it, so a more recently active Cursor window on a *different* (maybe
+        # private) repo is never picked up and uploaded against this PR.
+        scopes = [_projects_root()]
+        project_dir = _workspace_project_dir(hook_input)
+        if project_dir is not None:
+            scopes.insert(0, project_dir)
+        for scope in scopes:
+            pattern = (
+                "agent-transcripts/*/*.jsonl" if scope != _projects_root()
+                else "*/agent-transcripts/*/*.jsonl"
+            )
+            transcripts = sorted(
+                scope.glob(pattern),
+                key=lambda f: f.stat().st_mtime,
+                reverse=True,
+            )
+            if transcripts:
+                main = transcripts[0]
+                return SessionPaths(main_jsonl=main, subagents_dir=_subagents_dir(main))
+        main = _projects_root() / "missing.jsonl"
         return SessionPaths(main_jsonl=main, subagents_dir=_subagents_dir(main))
 
     def link_subagents(self, paths: SessionPaths, hook_input: dict) -> list:

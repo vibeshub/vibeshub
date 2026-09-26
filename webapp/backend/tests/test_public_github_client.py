@@ -248,7 +248,33 @@ async def test_locks_dict_pruned_on_lru_eviction(respx_mock: respx.MockRouter):
     await c.get_json("/users/b", viewer_token=None)
     await c.get_json("/users/c", viewer_token=None)  # evicts /users/a
     # /users/a was evicted; its lock should be gone too.
-    keys = {k[0] for k in c._locks}
+    keys = {k[1] for k in c._locks}  # key = (token_id, path, params)
     assert "/users/a" not in keys
     assert "/users/b" in keys
     assert "/users/c" in keys
+
+
+@pytest.mark.asyncio
+async def test_cache_is_partitioned_by_token(respx_mock: respx.MockRouter):
+    """A response fetched with one viewer's token must never be served
+    from cache to a caller using a different token (or the fallback)."""
+    calls: list[str] = []
+
+    def handler(request):
+        calls.append(request.headers["Authorization"])
+        return httpx.Response(200, json={"seen_by": request.headers["Authorization"]})
+
+    respx_mock.get(f"{API}/user/repos").mock(side_effect=handler)
+    c = PublicGitHubClient(API, fallback_token="fb", ttl_seconds=60)
+
+    a = await c.get_json("/user/repos", viewer_token="tok_alice")
+    b = await c.get_json("/user/repos", viewer_token="tok_bob")
+    anon = await c.get_json("/user/repos", viewer_token=None)
+    a_again = await c.get_json("/user/repos", viewer_token="tok_alice")
+
+    assert a == {"seen_by": "Bearer tok_alice"}
+    assert b == {"seen_by": "Bearer tok_bob"}
+    assert anon == {"seen_by": "Bearer fb"}
+    assert a_again == a
+    # Three distinct identities -> three upstream calls; the repeat is a hit.
+    assert calls == ["Bearer tok_alice", "Bearer tok_bob", "Bearer fb"]

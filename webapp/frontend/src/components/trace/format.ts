@@ -225,7 +225,9 @@ export function toolSummary(
     case "apply_patch":
       return shortenPath(s("file_path") || "", root);
     case "update_plan": {
-      const plan = (input.plan as Array<{ status?: string }>) || [];
+      const plan = Array.isArray(input.plan)
+        ? (input.plan as Array<{ status?: string } | null>)
+        : [];
       const done = plan.filter((p) => p?.status === "completed").length;
       return `${done}/${plan.length} steps`;
     }
@@ -258,6 +260,8 @@ export function toolSummary(
     case "Skill":
       return s("skill") || "";
     case "Agent":
+    case "Task":
+    case "Subagent":
       return (
         s("description") ||
         (s("subagent_type") ? `dispatch ${s("subagent_type")}` : "")

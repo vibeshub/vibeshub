@@ -20,6 +20,11 @@ describe("parseJsonl", () => {
     expect(records).toEqual([{ a: 1 }, { b: 2 }]);
   });
 
+  it("drops lines that parse to something other than an object", () => {
+    const records = parseJsonl('null\n42\n"str"\n[1]\n{"x":1}\n');
+    expect(records).toEqual([{ x: 1 }]);
+  });
+
   it("swallows blank and unparseable lines", () => {
     const records = parseJsonl("\n{not json}\n{\"x\":42}\n\n");
     expect(records).toEqual([{ x: 42 }]);
@@ -691,5 +696,19 @@ describe("progressByTool", () => {
     expect(grouped.get("t2")?.length).toBe(1);
     // a progress event with no parentToolUseID is not in the map
     expect([...grouped.keys()].sort()).toEqual(["t1", "t2"]);
+  });
+});
+
+describe("buildSession robustness", () => {
+  it("ignores null entries inside a message content array", () => {
+    const records = parseJsonl(
+      [
+        JSON.stringify({ type: "user", uuid: "u1", timestamp: "2026-01-01T00:00:00Z",
+          message: { role: "user", content: [null, { type: "text", text: "hi" }] } }),
+        JSON.stringify({ type: "assistant", uuid: "a1", timestamp: "2026-01-01T00:00:01Z",
+          message: { role: "assistant", content: [null, { type: "text", text: "yo" }] } }),
+      ].join("\n") + "\n",
+    );
+    expect(() => buildSession(records)).not.toThrow();
   });
 });

@@ -7,7 +7,7 @@ import httpx
 from authlib.integrations.base_client.errors import MismatchingStateError
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,7 @@ from app.auth.sessions import (
 )
 from app.deps import get_app_settings, get_session
 from app.settings import Settings
-from app.storage.models import User
+from app.storage.models import Trace, User
 
 
 log = logging.getLogger(__name__)
@@ -72,6 +72,86 @@ def _set_session_cookie(response: Response, sid: str, *, secure: bool) -> None:
 
 
 # --- routes -----------------------------------------------------------------
+
+
+def _displaced_login(github_id: int) -> str:
+    """Placeholder login for a user whose GitHub login was taken by someone
+    else. A leading hyphen is invalid on GitHub, so it can never collide with
+    a real login; it is replaced on that user's next sign-in."""
+    return f"-displaced-{github_id}"
+
+
+async def _repoint_trace_owner(
+    session: AsyncSession, old_login: str, new_login: str
+) -> None:
+    """Trace ownership is keyed on the mutable github_login. Whenever a
+    user's login changes, carry their traces along so they neither lose
+    them nor hand them to whoever takes the old login next."""
+    await session.execute(
+        update(Trace)
+        .where(Trace.owner_login == old_login)
+        .values(owner_login=new_login)
+    )
+
+
+async def _upsert_user(
+    session: AsyncSession,
+    profile: dict,
+    primary_email: str | None,
+    encrypted_access_token: str,
+    scopes_str: str,
+) -> User:
+    github_id = profile["id"]
+    login = profile["login"]
+
+    # GitHub logins are reusable: if another row still holds this login
+    # (its owner renamed and hasn't signed in since), evict it first, or
+    # the unique index fails and this user can never log in. Their traces
+    # follow the placeholder so the new holder of the login doesn't
+    # inherit them.
+    holder = (await session.execute(
+        select(User).where(
+            User.github_login == login, User.github_id != github_id
+        )
+    )).scalar_one_or_none()
+    if holder is not None:
+        placeholder = _displaced_login(holder.github_id)
+        log.warning(
+            "auth.login.displaced login=%s from_github_id=%s to_github_id=%s",
+            login, holder.github_id, github_id,
+        )
+        holder.github_login = placeholder
+        await session.flush()
+        await _repoint_trace_owner(session, login, placeholder)
+
+    existing = (await session.execute(
+        select(User).where(User.github_id == github_id)
+    )).scalar_one_or_none()
+    if existing is None:
+        existing = User(
+            github_id=github_id,
+            github_login=login,
+            name=profile.get("name"),
+            avatar_url=profile.get("avatar_url"),
+            email=primary_email,
+            encrypted_access_token=encrypted_access_token,
+            token_scopes=scopes_str,
+        )
+        session.add(existing)
+        await session.flush()
+        return existing
+
+    old_login = existing.github_login
+    existing.github_login = login
+    existing.name = profile.get("name")
+    existing.avatar_url = profile.get("avatar_url")
+    existing.email = primary_email
+    existing.encrypted_access_token = encrypted_access_token
+    existing.token_scopes = scopes_str
+    await session.flush()
+    if old_login != login:
+        await _repoint_trace_owner(session, old_login, login)
+    return existing
 
 
 @router.get("/me")
@@ -181,45 +261,19 @@ async def github_callback(
     )
 
     cipher = TokenCipher(settings.token_encryption_key)
-    existing = (await session.execute(
-        select(User).where(User.github_id == profile["id"])
-    )).scalar_one_or_none()
-    if existing is None:
-        existing = User(
-            github_id=profile["id"],
-            github_login=profile["login"],
-            name=profile.get("name"),
-            avatar_url=profile.get("avatar_url"),
-            email=primary_email,
-            encrypted_access_token=cipher.encrypt(access_token),
-            token_scopes=scopes_str,
+    encrypted = cipher.encrypt(access_token)
+    try:
+        existing = await _upsert_user(
+            session, profile, primary_email, encrypted, scopes_str,
         )
-        session.add(existing)
-        try:
-            await session.flush()
-        except IntegrityError:
-            # TODO: a concurrent callback for the same github_id won this race
-            # and inserted first. Rollback our pending insert, reload the
-            # existing row, and update it instead.
-            await session.rollback()
-            existing = (await session.execute(
-                select(User).where(User.github_id == profile["id"])
-            )).scalar_one()
-            existing.github_login = profile["login"]
-            existing.name = profile.get("name")
-            existing.avatar_url = profile.get("avatar_url")
-            existing.email = primary_email
-            existing.encrypted_access_token = cipher.encrypt(access_token)
-            existing.token_scopes = scopes_str
-            await session.flush()
-    else:
-        existing.github_login = profile["login"]
-        existing.name = profile.get("name")
-        existing.avatar_url = profile.get("avatar_url")
-        existing.email = primary_email
-        existing.encrypted_access_token = cipher.encrypt(access_token)
-        existing.token_scopes = scopes_str
-        await session.flush()
+    except IntegrityError:
+        # A concurrent callback for the same github_id won the insert race.
+        # Roll back our pending insert and redo the upsert against the row
+        # that now exists.
+        await session.rollback()
+        existing = await _upsert_user(
+            session, profile, primary_email, encrypted, scopes_str,
+        )
 
     sid = await create_session(session, existing.id)
     await session.commit()

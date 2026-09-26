@@ -38,7 +38,9 @@ function pickChosen(result: ToolResult | null): string | null {
 }
 
 export function AskUserBody({ input, result, followingPrompt }: Props) {
-  const qs = (input.questions as Question[]) ?? [];
+  // A rejected/malformed call can carry questions as a string; never let a
+  // bad tool input take the whole page down.
+  const qs = Array.isArray(input.questions) ? (input.questions as Question[]) : [];
   const chosen = pickChosen(result);
 
   return (

@@ -10,13 +10,26 @@ import type {
 
 type AnyRec = Record<string, unknown>;
 
+function isRec(v: unknown): v is AnyRec {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+// Content arrays from real transcripts occasionally carry null or scalar
+// entries; iterate only the object blocks so one bad entry can't throw.
+function contentBlocks(content: unknown): AnyRec[] {
+  return Array.isArray(content) ? content.filter(isRec) : [];
+}
+
 export function parseJsonl(text: string): AnyRec[] {
   const out: AnyRec[] = [];
   for (const line of text.split("\n")) {
     const t = line.trim();
     if (!t) continue;
     try {
-      out.push(JSON.parse(t));
+      const v: unknown = JSON.parse(t);
+      // A line like `null` or `42` is valid JSON but not a record; keep only
+      // objects so downstream `r.type` reads never throw.
+      if (isRec(v)) out.push(v);
     } catch {
       // swallow unparseable lines
     }
@@ -252,7 +265,7 @@ export function buildSession(records: AnyRec[]): Session {
           meta.firstPrompt = msg.content;
         }
       } else if (Array.isArray(msg.content)) {
-        for (const c of msg.content as AnyRec[]) {
+        for (const c of contentBlocks(msg.content)) {
           if (c.type !== "text" || typeof c.text !== "string" || !c.text) {
             continue;
           }
@@ -270,7 +283,7 @@ export function buildSession(records: AnyRec[]): Session {
     }
     if (r.type === "user" && msg && Array.isArray(msg.content)) {
       const sourceId = getStr(r, "sourceToolUseID");
-      for (const c of msg.content as AnyRec[]) {
+      for (const c of contentBlocks(msg.content)) {
         if (c.type === "tool_result") {
           const id = String(c.tool_use_id);
           const prev = toolResultsById.get(id);
@@ -311,7 +324,7 @@ export function buildSession(records: AnyRec[]): Session {
     if (r.type === "assistant" && r.message) {
       const msg = r.message as AnyRec;
       const msgId = String(msg.id ?? "");
-      const content = (msg.content as AnyRec[]) ?? [];
+      const content = contentBlocks(msg.content);
       const blockIdx = content.length - 1;
       if (blockIdx < 0) continue;
       const block = content[blockIdx];
@@ -374,7 +387,7 @@ export function buildSession(records: AnyRec[]): Session {
           }
         }
       } else if (Array.isArray(msg.content)) {
-        for (const c of msg.content as AnyRec[]) {
+        for (const c of contentBlocks(msg.content)) {
           if (
             c.type === "text" &&
             typeof c.text === "string" &&

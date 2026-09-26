@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, fetchSessionJsonl, fetchTrace } from "../api";
 import type { TraceSummary } from "../types";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { NotFound } from "./NotFound";
@@ -125,19 +126,21 @@ export function TraceView() {
       {body.kind === "loading" && <LoadingState label="Loading trace…" />}
       {body.kind === "error" && <ErrorState message={body.message} />}
       {body.kind === "ready" && session && (
-        <TraceViewer
-          trace={head.trace}
-          session={session}
-          shortId={head.trace.short_id}
-          rawHref={`/api/traces/${head.trace.short_id}/raw`}
-          repoOwner={repoParts[0]}
-          repoName={repoParts[1]}
-          ownerControls={ownerControls}
-          canEditTitle={isOwner}
-          onTraceUpdated={(updated) =>
-            setHead({ kind: "ready", trace: updated })
-          }
-        />
+        <ErrorBoundary label="This trace">
+          <TraceViewer
+            trace={head.trace}
+            session={session}
+            shortId={head.trace.short_id}
+            rawHref={`/api/traces/${head.trace.short_id}/raw`}
+            repoOwner={repoParts[0]}
+            repoName={repoParts[1]}
+            ownerControls={ownerControls}
+            canEditTitle={isOwner}
+            onTraceUpdated={(updated) =>
+              setHead({ kind: "ready", trace: updated })
+            }
+          />
+        </ErrorBoundary>
       )}
     </div>
   );

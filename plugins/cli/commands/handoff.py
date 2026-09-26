@@ -118,6 +118,17 @@ async def _upload(
     if not result.uploaded:
         print(f"skipped: {result.skip_reason}", file=sys.stderr)
         return None
+    if pr_url is None and repo_full_name is None:
+        # Same warning share-trace prints: with no PR and no GitHub repo
+        # (scratch dir, non-GitHub remote) the trace is a standalone,
+        # public page. Say so instead of letting a local Claude-to-Codex
+        # hop silently publish the conversation.
+        print(
+            "note: no PR or GitHub repo found, so this is a standalone "
+            "(public) trace. You can make it private from the trace page "
+            "in the vibeshub UI.",
+            file=sys.stderr,
+        )
     return result
 
 
