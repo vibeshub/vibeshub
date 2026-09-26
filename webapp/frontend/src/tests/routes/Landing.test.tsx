@@ -88,10 +88,10 @@ describe("Landing", () => {
     expect(container).not.toHaveTextContent("contribute");
   });
 
-  it("advertises plugin version 0.6.1 across landing install surfaces", () => {
+  it("advertises plugin version 0.6.2 across landing install surfaces", () => {
     const { container } = renderPage();
 
-    expect(screen.getByText("0.6.1")).toBeInTheDocument();
+    expect(screen.getByText("0.6.2")).toBeInTheDocument();
     expect(container).toHaveTextContent("USER_AGENT=vibeshub/0.6");
     expect(container).not.toHaveTextContent("0.4.0");
     expect(container).not.toHaveTextContent("vibeshub/0.4");
