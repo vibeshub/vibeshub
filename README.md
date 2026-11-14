@@ -1,5 +1,5 @@
 > [!WARNING]
-> **vibeshub has been sunset.** The hosted service at vibeshub.ai was shut down in November 2026. Uploaded traces, digests, and accounts have been deleted, and trace links in old pull request comments no longer resolve. The plugins no longer have a server to upload to, so please uninstall them. This repository stays up as a reference under the MIT license and is no longer maintained; everything below describes the project as it was.
+> **vibeshub has been sunset.** The hosted service at vibeshub.ai was shut down in November 2026. Uploaded traces, digests, and accounts have been deleted, and trace links in old pull request comments no longer resolve. The plugins no longer have a server to upload to, so please uninstall them. This repository stays up as a reference and is no longer maintained; everything below describes the project as it was.
 
 <!-- HERO BANNER -->
 <p align="center">
