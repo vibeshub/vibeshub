@@ -1,3 +1,6 @@
+> [!WARNING]
+> **vibeshub has been sunset.** The hosted service at vibeshub.ai was shut down in November 2026. Uploaded traces, digests, and accounts have been deleted, and trace links in old pull request comments no longer resolve. The plugins no longer have a server to upload to, so please uninstall them. This repository stays up as a reference under the MIT license and is no longer maintained; everything below describes the project as it was.
+
 <!-- HERO BANNER -->
 <p align="center">
   <a href="https://vibeshub.ai">
@@ -10,7 +13,7 @@
 
 <!-- BADGES -->
 <p align="center">
-  <a href="https://vibeshub.ai"><img alt="deploy" src="https://img.shields.io/badge/deploy-vibeshub.ai-3fb950"></a>
+  <img alt="status" src="https://img.shields.io/badge/status-sunset-6e7681">
   <img alt="version" src="https://img.shields.io/badge/version-v0.6.2-1f6feb" title="Single product version (plugin + webapp)">
   <img alt="platforms" src="https://img.shields.io/badge/platforms-3-D07843">
   <img alt="python" src="https://img.shields.io/badge/python-plugin%203.9%2B%20%7C%20backend%203.12%E2%80%933.13-8957e5">
@@ -38,6 +41,8 @@ Traces are portable, not just viewable: hand off a live session from Claude Code
 <p align="center"><sub><i>The trace viewer: hero, AI digest, chapter jumps, collapsible tool cards.</i></sub></p>
 
 ## Quick start
+
+> The hosted service is gone, so these instructions only work against a self-hosted backend (see **Deploying** below).
 
 Install the plugin in your AI coding tool. The next time you run `gh pr create` (or push a branch that already has a PR), your trace is uploaded and linked automatically.
 
