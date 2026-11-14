@@ -1,5 +1,10 @@
 # vibeshub for Cursor
 
+> **vibeshub has been sunset.** The hosted service at vibeshub.ai was shut down
+> in November 2026 and uploaded traces have been deleted. This plugin no longer
+> has a server to upload to, so please uninstall it. The code stays up as a
+> reference and is no longer maintained.
+
 Upload your **Cursor agent** conversation traces to
 [vibeshub](https://vibeshub.ai/) when you open or update a pull request, so your
 team can see how a change was actually built.
